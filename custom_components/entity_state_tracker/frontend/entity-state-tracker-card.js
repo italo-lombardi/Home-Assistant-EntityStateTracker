@@ -798,7 +798,11 @@ class EntityStateTrackerCard extends LitElement {
         durSecs = (a.breakdown_seconds || {})[s.state];
         pct = (a.breakdown_pct || {})[s.state];
       } else {
-        durSecs = Number(s.state); // duration sensor native value = seconds
+        // Prefer the raw seconds attr (HA serves s.state already unit-converted
+        // to hours, so Number(s.state) here is unit-ambiguous). Fall back only
+        // for older backends without duration_seconds.
+        durSecs =
+          a.duration_seconds != null ? Number(a.duration_seconds) : Number(s.state);
         pct = a.percent;
       }
       const pctNum = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
@@ -917,7 +921,10 @@ class EntityStateTrackerCard extends LitElement {
       // Specific mode: DurationSensor emits `percent` (in-state %) but NOT
       // window_seconds. Derive the "rest" slice from the percentage so the pie
       // is always two slices (in-state vs rest), scaled off the in-state secs.
-      const inSecs = Number(pick.state) || 0;
+      // Prefer the raw seconds attr; pick.state is unit-converted to hours by
+      // HA and thus unit-ambiguous. Fall back for older backends.
+      const inSecs =
+        (a.duration_seconds != null ? Number(a.duration_seconds) : Number(pick.state)) || 0;
       const inPct = a.percent != null ? Number(a.percent) : null;
       const restPct = inPct != null ? Math.max(0, 100 - inPct) : null;
       // Recover rest seconds proportionally: inSecs / inPct == total / 100.
@@ -1083,7 +1090,13 @@ class EntityStateTrackerCard extends LitElement {
         return this._isBreakdown(s) ? Number((s.attrs || {}).unaccounted_seconds) || 0 : 0;
       if (this._isBreakdown(s)) return ((s.attrs || {}).breakdown_seconds || {})[st] || 0;
       const tracked = ((s.attrs || {}).tracked_states || []).join(", ") || "tracked";
-      return st === tracked ? Number(s.state) || 0 : 0;
+      // Prefer raw seconds attr; s.state is HA-unit-converted (hours) and thus
+      // ambiguous. Fall back for older backends.
+      const secs =
+        (s.attrs || {}).duration_seconds != null
+          ? Number((s.attrs || {}).duration_seconds)
+          : Number(s.state);
+      return st === tracked ? secs || 0 : 0;
     };
     const pctFor = (s, st) => {
       if (st === GAP_ROW) {

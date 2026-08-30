@@ -330,6 +330,12 @@ def test_duration_attributes_without_target() -> None:
     sensor = DurationSensor(coord, "today")
     attrs = sensor.extra_state_attributes
     assert attrs["percent"] == 66.7
+    # duration_seconds is the RAW tracked seconds (== native_value), independent
+    # of HA's native→suggested (seconds→hours) unit conversion on the state, so
+    # the card has an unambiguous seconds figure. heat 1800 + auto 600 = 2400.
+    assert attrs["duration_seconds"] == 2400
+    assert attrs["duration_seconds"] == sensor.native_value
+    assert isinstance(attrs["duration_seconds"], int)
     assert attrs["tracked_states"] == ["heat", "auto"]
     # source_entity names the tracked entity so the card can show it (Part A).
     assert attrs["source_entity"] == "climate.living_room"
@@ -403,6 +409,7 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
         "previous_state",
         "percent",
         "compliance_percent",
+        "duration_seconds",
         "window_start",
         "data_start",
         "window_coverage",

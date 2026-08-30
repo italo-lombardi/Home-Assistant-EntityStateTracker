@@ -179,6 +179,7 @@ class DurationSensor(_FrameSensor):
             "previous_state",
             "percent",
             "compliance_percent",
+            "duration_seconds",
             "window_start",
             "data_start",
             "window_coverage",
@@ -204,6 +205,12 @@ class DurationSensor(_FrameSensor):
             "source_entity": self.coordinator.entity_id,
             "frame": self._frame,
             "percent": result.percent,
+            # Raw tracked seconds, independent of HA's native→suggested unit
+            # conversion on the STATE (which serves hours). The card reads this
+            # for an unambiguous seconds figure; identical to native_value.
+            "duration_seconds": _tracked_seconds(
+                result, self.coordinator.tracked_states
+            ),
             "tracked_states": self.coordinator.tracked_states,
             "target_states": self.coordinator.target_states,
             "window_start": result.window_start,
