@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "¿Qué estados cuentan como conformes?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "El cumplimiento se calcula como el porcentaje de cada período que la entidad pasó en alguno de los estados que elijas aquí. Estos estados son independientes de los estados seguidos: puedes evaluar el cumplimiento sobre un estado que no sigues de otro modo (por ejemplo, seguir cuánto tiempo un difusor está 'on', pero marcar 'off' como el estado conforme/deseado). Prerrellenado con tus estados seguidos por comodidad; cámbialo libremente. También puedes escribir un estado que no esté en la lista.",
         "data": {
           "target": "Estado(s) conforme(s)",
           "target_threshold": "Umbral de cumplimiento (%, opcional)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Los estados que cuentan como conformes/deseados. Se contabiliza el tiempo pasado en cualquiera de ellos. Independiente de los estados seguidos: elige cualquier estado que la entidad pueda tener.",
           "target_threshold": "Si se establece, un sensor binario «Conforme» se activa cuando el porcentaje de cumplimiento alcanza o supera este valor. Déjalo vacío para omitir el umbral."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Los últimos 30 días locales completos.",
           "month": "Desde el día 1 de este mes.",
           "year": "Desde el 1 de enero.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "El conjunto de estados considerados conformes. Estar en cualquiera de ellos cuenta. Independiente de los estados seguidos: elige cualquier estado que la entidad pueda tener. Solo se usa cuando la puntuación de cumplimiento está habilitada.",
           "target_threshold": "Si se establece, un sensor binario «Conforme» se activa cuando el porcentaje de cumplimiento alcanza o supera este valor. Déjalo vacío para omitir el umbral.",
           "min_state_duration": "Si la entidad seguida cambia a un estado y sale de él más rápido que este número de segundos, ese breve momento se ignora — su tiempo se añade al estado anterior y no cuenta como un cambio separado. Úsalo para filtrar sensores que parpadean o rebotan. Ponlo en 0 para contar cada cambio, por breve que sea."
         }
@@ -140,16 +140,16 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Restablecer historial",
+      "description": "Borra el historial diario persistente de Entity State Tracker. Los períodos largos se reconstruyen a partir de los datos del recorder cuando siguen disponibles. Esto no se puede deshacer.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Confirmar",
+          "description": "Debe estar activado para realizar el restablecimiento. Protege contra la pérdida accidental del historial."
         },
         "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
+          "name": "Entidad seguida",
+          "description": "Limita el restablecimiento a los trackers que vigilan esta entidad seguida. Déjalo vacío para restablecer todos los Entity State Tracker. Esta es la entidad que vigila un tracker, no el propio sensor del tracker."
         }
       }
     }
@@ -162,10 +162,10 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Establece «confirm» en true para restablecer el historial. Esto borra el historial persistente y no se puede deshacer."
     },
     "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
+      "message": "Ningún Entity State Tracker está siguiendo {entity_id}. Comprueba el ID de la entidad, o déjalo vacío para restablecer todos los trackers."
     }
   }
 }

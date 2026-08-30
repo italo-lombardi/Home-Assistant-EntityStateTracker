@@ -6,7 +6,7 @@
         "description": "Wybierz encję, aby śledzić, jak długo przebywa w swoich stanach w wielu przedziałach czasowych.",
         "data": {
           "entity": "Encja do śledzenia",
-          "name": "Nazwa (opcjonalnie)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Encja, której czasy trwania stanów będą mierzone. Jedna encja na tracker — wskaż pomocnika grupy, aby zagregować kilka.",

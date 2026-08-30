@@ -6,7 +6,7 @@
         "description": "選擇一個實體，以追蹤它在多個時間範圍內處於各狀態的時長。",
         "data": {
           "entity": "要追蹤的實體",
-          "name": "名稱（選填）"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "將測量其狀態時長的實體。每個追蹤器一個實體——指向群組助手以彙總多個實體。",

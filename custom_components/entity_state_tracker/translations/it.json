@@ -6,7 +6,7 @@
         "description": "Scegli un'entità per tracciare quanto tempo trascorre nei suoi stati su più intervalli di tempo.",
         "data": {
           "entity": "Entità da tracciare",
-          "name": "Nome (opzionale)"
+          "name": "Nome (facoltativo)"
         },
         "data_description": {
           "entity": "L'entità di cui verranno misurate le durate degli stati. Un'entità per tracker — punta a un helper di gruppo per aggregarne diverse.",
@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Quali stati contano come conformi?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "La conformità è calcolata come la percentuale di ogni intervallo di tempo in cui l'entità si è trovata in uno degli stati scelti qui. Questi stati sono indipendenti dagli stati monitorati: puoi valutare la conformità su uno stato che altrimenti non monitori (ad esempio, monitorare per quanto tempo un diffusore è 'on', ma contrassegnare 'off' come stato conforme/desiderato). Precompilato con i tuoi stati monitorati per comodità; modificabile liberamente. Puoi anche digitare uno stato non elencato.",
         "data": {
           "target": "Stato/i conforme/i",
           "target_threshold": "Soglia di conformità (%, opzionale)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Gli stati che contano come conformi/desiderati. Viene conteggiato il tempo trascorso in uno qualsiasi di essi. Indipendente dagli stati monitorati: scegli qualsiasi stato che l'entità può assumere.",
           "target_threshold": "Se impostato, un sensore binario «Conforme» si attiva quando la percentuale di conformità raggiunge o supera questo valore. Lascia vuoto per saltare la soglia."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Gli ultimi 30 giorni locali interi.",
           "month": "Dal 1° di questo mese.",
           "year": "Dal 1° gennaio.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "L'insieme degli stati considerati conformi. Trovarsi in uno qualsiasi di essi conta. Indipendente dagli stati monitorati: scegli qualsiasi stato che l'entità può assumere. Usato solo quando la valutazione della conformità è abilitata.",
           "target_threshold": "Se impostato, un sensore binario «Conforme» si attiva quando la percentuale di conformità raggiunge o supera questo valore. Lascia vuoto per saltare la soglia.",
           "min_state_duration": "Se l'entità monitorata passa a uno stato e ne esce più velocemente di questo numero di secondi, quel breve momento viene ignorato — il suo tempo viene invece aggiunto allo stato precedente e non conta come cambiamento separato. Usalo per filtrare sensori che sfarfallano o rimbalzano. Imposta 0 per contare ogni cambiamento, per quanto breve."
         }
@@ -140,16 +140,16 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Reimposta cronologia",
+      "description": "Cancella la cronologia giornaliera persistente di Entity State Tracker. Gli intervalli lunghi vengono ricostruiti dai dati del recorder quando ancora disponibili. Questa operazione non può essere annullata.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Conferma",
+          "description": "Deve essere abilitato per eseguire il ripristino. Protegge dalla perdita accidentale della cronologia."
         },
         "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
+          "name": "Entità monitorata",
+          "description": "Limita il ripristino ai tracker che osservano questa entità monitorata. Lascia vuoto per reimpostare ogni Entity State Tracker. Questa è l'entità che un tracker osserva, non il sensore del tracker stesso."
         }
       }
     }
@@ -162,10 +162,10 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Imposta «confirm» su true per reimpostare la cronologia. Questo cancella la cronologia persistente e non può essere annullato."
     },
     "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
+      "message": "Nessun Entity State Tracker sta monitorando {entity_id}. Controlla l'ID dell'entità, oppure lascia vuoto per reimpostare tutti i tracker."
     }
   }
 }

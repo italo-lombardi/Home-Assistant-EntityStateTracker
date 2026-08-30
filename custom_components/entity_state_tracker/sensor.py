@@ -38,7 +38,7 @@ from .const import (
     TRANSLATION_KEY_DURATION,
 )
 from .coordinator import EntityStateTrackerCoordinator
-from .helpers import frame_label, tracker_device_name, unique_id
+from .helpers import frame_entity_id, frame_label, tracker_device_name, unique_id
 from .models import FrameResult
 from .write_dedup import DedupCoordinatorSensor
 
@@ -92,6 +92,17 @@ class _FrameSensor(DedupCoordinatorSensor):
         super().__init__(coordinator)
         self._frame = frame
         self._attr_unique_id = unique_id(
+            coordinator.entry.entry_id, frame, self._metric
+        )
+        # Pin entity_id so the card's DOMAIN_PREFIX discovery always finds us.
+        # With has_entity_name=True, HA would otherwise slugify the (custom)
+        # device name into the object_id and drop the "entity_state_tracker_"
+        # prefix the card matches on — a custom-named tracker would vanish from
+        # the card. Mirrors Entity Availability, which pins self.entity_id too.
+        # TRADEOFF: this changes existing installs' entity_ids (history survives
+        # via unique_id in the registry; hardcoded dashboard/template refs to the
+        # OLD slugified ids break). Accepted at v0.1.0 (see CHANGELOG).
+        self.entity_id = frame_entity_id(
             coordinator.entry.entry_id, frame, self._metric
         )
         self._attr_translation_key = self._translation_key

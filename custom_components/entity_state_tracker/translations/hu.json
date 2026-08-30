@@ -6,7 +6,7 @@
         "description": "Válasszon egy entitást annak követéséhez, hogy mennyi időt tölt az állapotaiban több időszakon keresztül.",
         "data": {
           "entity": "Követendő entitás",
-          "name": "Név (opcionális)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Az entitás, amelynek állapotidőtartamait mérni fogjuk. Egy entitás követőnként — mutasson egy csoportsegédre több összesítéséhez.",

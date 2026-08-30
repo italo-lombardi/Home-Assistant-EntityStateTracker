@@ -6,7 +6,7 @@
         "description": "Bir varlığın, birden çok zaman aralığı boyunca durumlarında ne kadar süre kaldığını izlemek için bir varlık seçin.",
         "data": {
           "entity": "İzlenecek varlık",
-          "name": "Ad (isteğe bağlı)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Durum sürelerinin ölçüleceği varlık. İzleyici başına bir varlık — birkaçını toplamak için bir grup yardımcısına yönlendirin.",

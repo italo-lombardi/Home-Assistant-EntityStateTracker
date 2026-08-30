@@ -6,7 +6,7 @@
         "description": "选择一个实体，以跟踪它在多个时间范围内处于各状态的时长。",
         "data": {
           "entity": "要跟踪的实体",
-          "name": "名称（可选）"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "将测量其状态时长的实体。每个跟踪器一个实体——指向分组助手以聚合多个实体。",

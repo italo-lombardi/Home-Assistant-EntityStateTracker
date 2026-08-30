@@ -6,7 +6,7 @@
         "description": "Vyberte entitu pro sledování, jak dlouho se nachází ve svých stavech napříč více časovými obdobími.",
         "data": {
           "entity": "Entita ke sledování",
-          "name": "Název (volitelné)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Entita, jejíž doby trvání stavů se budou měřit. Jedna entita na sledování — nasměrujte na skupinového pomocníka pro agregaci více entit.",

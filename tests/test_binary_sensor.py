@@ -5,6 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock
 
 from homeassistant.core import HomeAssistant
+from homeassistant.util import slugify
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.entity_state_tracker.binary_sensor import (
@@ -110,6 +111,12 @@ async def test_currently_in_state_attributes(
     assert sensor.unique_id == (
         f"{specific_config_entry.entry_id}__{TRANSLATION_KEY_CURRENTLY_IN_STATE}"
     )
+    # entity_id PINNED to the card-discoverable stem (shares the tracker's
+    # device prefix; no frame token since binary sensors are frameless).
+    assert sensor.entity_id == (
+        "binary_sensor.entity_state_tracker_"
+        f"{slugify(specific_config_entry.entry_id)}_currently_in_state"
+    )
     assert sensor.device_info["identifiers"] == {
         (DOMAIN, specific_config_entry.entry_id)
     }
@@ -175,6 +182,10 @@ async def test_compliant_attributes(
     assert sensor.translation_key == TRANSLATION_KEY_COMPLIANT
     assert sensor.unique_id == (
         f"{compliance_config_entry.entry_id}__{TRANSLATION_KEY_COMPLIANT}"
+    )
+    assert sensor.entity_id == (
+        "binary_sensor.entity_state_tracker_"
+        f"{slugify(compliance_config_entry.entry_id)}_compliant"
     )
     assert sensor.device_info["identifiers"] == {
         (DOMAIN, compliance_config_entry.entry_id)

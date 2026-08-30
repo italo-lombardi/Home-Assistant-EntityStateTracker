@@ -288,6 +288,37 @@ def test_duration_entity_descriptors() -> None:
     assert sensor.suggested_display_precision == 1
     assert sensor.state_class == SensorStateClass.MEASUREMENT
     assert sensor.unique_id == "est_entry_today_duration"
+    # entity_id is PINNED to the card-discoverable slug (§card parity): metric
+    # LABEL slug ("duration") + frame LABEL slug ("today"), NOT the metric/frame
+    # keys — so the card's DOMAIN_PREFIX discovery always finds a custom-named
+    # tracker.
+    assert sensor.entity_id == "sensor.entity_state_tracker_est_entry_duration_today"
+
+
+def test_frame_sensor_entity_id_pinned_frame_label_slug() -> None:
+    """A multi-token frame label slugifies into the pinned entity_id."""
+    frames = ["24h"]
+    data = TrackerData(frames={f: _frame_result() for f in frames})
+    coord = _fake_coordinator(
+        mode=MODE_SPECIFIC,
+        enabled_frames=frames,
+        tracked_states=["heat"],
+        target_states=None,
+        data=data,
+        entry_id="e_multi",
+    )
+    sensor = DurationSensor(coord, "24h")
+    assert (
+        sensor.entity_id == "sensor.entity_state_tracker_e_multi_duration_last_24_hours"
+    )
+
+
+def test_breakdown_sensor_entity_id_uses_state_breakdown_metric_slug() -> None:
+    """Breakdown sensor pins the "state_breakdown" metric slug (not "breakdown")."""
+    coord = _breakdown_coord()
+    coord.entry.entry_id = "e_bd"
+    sensor = BreakdownSensor(coord, "today")
+    assert sensor.entity_id == "sensor.entity_state_tracker_e_bd_state_breakdown_today"
 
 
 def test_duration_attributes_without_target() -> None:

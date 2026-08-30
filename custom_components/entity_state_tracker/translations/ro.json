@@ -6,7 +6,7 @@
         "description": "Alege o entitate pentru a urmări cât timp petrece în stările sale de-a lungul mai multor intervale de timp.",
         "data": {
           "entity": "Entitate de urmărit",
-          "name": "Nume (opțional)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Entitatea ale cărei durate de stare vor fi măsurate. O entitate per urmăritor — indică un ajutor de grup pentru a agrega mai multe.",

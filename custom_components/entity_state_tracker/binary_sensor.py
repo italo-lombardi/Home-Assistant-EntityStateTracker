@@ -28,7 +28,7 @@ from .const import (
     TRANSLATION_KEY_CURRENTLY_IN_STATE,
 )
 from .coordinator import EntityStateTrackerCoordinator
-from .helpers import tracker_device_name, unique_id
+from .helpers import binary_entity_id, tracker_device_name, unique_id
 from .write_dedup import DedupCoordinatorBinarySensor
 
 # The compliant sensor keys today's frame — the only window whose compliance is
@@ -88,6 +88,11 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
         self._attr_unique_id = unique_id(
             coordinator.entry.entry_id, "", TRANSLATION_KEY_CURRENTLY_IN_STATE
         )
+        # Pin entity_id so it shares the tracker's card-discoverable stem (see
+        # sensor.py _FrameSensor.__init__ for the rationale + v0.1.0 tradeoff).
+        self.entity_id = binary_entity_id(
+            coordinator.entry.entry_id, TRANSLATION_KEY_CURRENTLY_IN_STATE
+        )
         self._attr_device_info = _device_info(coordinator)
 
     @property
@@ -126,6 +131,11 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
         super().__init__(coordinator)
         self._attr_unique_id = unique_id(
             coordinator.entry.entry_id, "", TRANSLATION_KEY_COMPLIANT
+        )
+        # Pin entity_id so it shares the tracker's card-discoverable stem (see
+        # sensor.py _FrameSensor.__init__ for the rationale + v0.1.0 tradeoff).
+        self.entity_id = binary_entity_id(
+            coordinator.entry.entry_id, TRANSLATION_KEY_COMPLIANT
         )
         self._attr_device_info = _device_info(coordinator)
         # Prefer today's frame; fall back to whichever frame is first enabled so

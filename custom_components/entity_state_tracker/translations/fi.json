@@ -6,7 +6,7 @@
         "description": "Valitse entiteetti seurataksesi, kuinka kauan se viettää tiloissaan useiden aikajaksojen aikana.",
         "data": {
           "entity": "Seurattava entiteetti",
-          "name": "Nimi (valinnainen)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Entiteetti, jonka tilojen kestot mitataan. Yksi entiteetti seuraajaa kohti — osoita ryhmäavustajaan yhdistääksesi useita.",

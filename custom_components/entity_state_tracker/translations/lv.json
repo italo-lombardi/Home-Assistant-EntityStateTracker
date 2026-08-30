@@ -6,7 +6,7 @@
         "description": "Izvēlieties entītiju, lai sekotu, cik ilgi tā pavada savos stāvokļos vairākos laika posmos.",
         "data": {
           "entity": "Sekojamā entītija",
-          "name": "Nosaukums (neobligāts)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Entītija, kuras stāvokļu ilgumi tiks mērīti. Viena entītija uz sekotāju — norādiet uz grupas palīgu, lai apkopotu vairākas.",

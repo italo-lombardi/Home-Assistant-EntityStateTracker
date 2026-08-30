@@ -6,7 +6,7 @@
         "description": "Välj en entitet för att spåra hur länge den befinner sig i sina tillstånd över flera tidsperioder.",
         "data": {
           "entity": "Entitet att spåra",
-          "name": "Namn (valfritt)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Entiteten vars tillståndslängder mäts. En entitet per spårare — peka på en grupphjälpare för att aggregera flera.",

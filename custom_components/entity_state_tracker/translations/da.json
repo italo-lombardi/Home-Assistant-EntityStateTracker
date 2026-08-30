@@ -6,7 +6,7 @@
         "description": "Vælg en entitet for at spore, hvor længe den befinder sig i sine tilstande over flere tidsrum.",
         "data": {
           "entity": "Entitet, der skal spores",
-          "name": "Navn (valgfrit)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Entiteten, hvis tilstandsvarigheder måles. Én entitet pr. sporer — peg på en gruppehjælper for at samle flere.",

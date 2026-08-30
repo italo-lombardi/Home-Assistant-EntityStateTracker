@@ -6,7 +6,7 @@
         "description": "Pasirinkite objektą, kad stebėtumėte, kiek laiko jis praleidžia savo būsenose per kelis laiko tarpsnius.",
         "data": {
           "entity": "Stebimas objektas",
-          "name": "Pavadinimas (neprivaloma)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Objektas, kurio būsenų trukmės bus matuojamos. Vienas objektas vienam sekikliui — nurodykite grupės pagalbininką keliems sujungti.",

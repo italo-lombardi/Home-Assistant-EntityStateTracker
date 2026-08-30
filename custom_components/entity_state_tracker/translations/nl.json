@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Welke toestanden tellen als conform?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Naleving wordt berekend als het percentage van elk tijdvenster dat de entiteit in een van de hier gekozen statussen doorbracht. Deze statussen staan los van de gevolgde statussen — je kunt naleving beoordelen op een status die je verder niet volgt (bijvoorbeeld bijhouden hoe lang een diffuser 'on' is, maar 'off' markeren als de conforme/gewenste status). Voor het gemak vooraf ingevuld met je gevolgde statussen; vrij te wijzigen. Je kunt ook een niet-vermelde status typen.",
         "data": {
           "target": "Conforme toestand(en)",
           "target_threshold": "Nalevingsdrempel (%, optioneel)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "De statussen die als conform/gewenst tellen. De tijd in een ervan wordt meegeteld. Los van de gevolgde statussen — kies elke status die de entiteit kan hebben.",
           "target_threshold": "Indien ingesteld, gaat een binaire sensor «Conform» aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "De laatste 30 hele lokale dagen.",
           "month": "Sinds de 1e van deze maand.",
           "year": "Sinds 1 januari.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "De verzameling statussen die als conform gelden. In een ervan zijn telt mee. Los van de gevolgde statussen — kies elke status die de entiteit kan hebben. Alleen gebruikt wanneer nalevingsscore is ingeschakeld.",
           "target_threshold": "Indien ingesteld, gaat een binaire sensor «Conform» aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan.",
           "min_state_duration": "Als de gevolgde entiteit sneller dan dit aantal seconden in een toestand komt en er weer uit gaat, wordt dat korte moment genegeerd — de tijd ervan wordt in plaats daarvan bij de vorige toestand opgeteld en telt niet als een aparte wijziging. Gebruik het om flikkerende of stuiterende sensoren te filteren. Stel in op 0 om elke wijziging te tellen, hoe kort ook."
         }
@@ -140,16 +140,16 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Geschiedenis wissen",
+      "description": "Wist de opgeslagen dagelijkse geschiedenis voor Entity State Tracker. Lange tijdvensters worden opnieuw opgebouwd uit recorder-gegevens waar nog beschikbaar. Dit kan niet ongedaan worden gemaakt.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Bevestigen",
+          "description": "Moet ingeschakeld zijn om het wissen uit te voeren. Beschermt tegen onbedoeld verlies van geschiedenis."
         },
         "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
+          "name": "Gevolgde entiteit",
+          "description": "Beperkt het wissen tot de tracker(s) die deze gevolgde entiteit bewaken. Laat leeg om elke Entity State Tracker te wissen. Dit is de entiteit die een tracker bewaakt, niet de sensor van de tracker zelf."
         }
       }
     }
@@ -162,10 +162,10 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Stel „confirm” in op true om de geschiedenis te wissen. Dit wist de opgeslagen geschiedenis en kan niet ongedaan worden gemaakt."
     },
     "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
+      "message": "Geen enkele Entity State Tracker volgt {entity_id}. Controleer de entiteits-ID, of laat leeg om alle trackers te wissen."
     }
   }
 }

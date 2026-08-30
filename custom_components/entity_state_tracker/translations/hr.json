@@ -6,7 +6,7 @@
         "description": "Odaberi entitet za praćenje koliko dugo provodi u svojim stanjima kroz više vremenskih razdoblja.",
         "data": {
           "entity": "Entitet za praćenje",
-          "name": "Naziv (neobavezno)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "Entitet čija će se trajanja stanja mjeriti. Jedan entitet po pratitelju — usmjeri na grupni pomoćnik za objedinjavanje više njih.",

@@ -6,7 +6,7 @@
         "description": "Trieu una entitat per fer un seguiment de quant de temps passa en els seus estats en diversos períodes de temps.",
         "data": {
           "entity": "Entitat a seguir",
-          "name": "Nom (opcional)"
+          "name": "Name (optional)"
         },
         "data_description": {
           "entity": "L'entitat les durades d'estat de la qual es mesuraran. Una entitat per seguidor — apunteu a un ajudant de grup per agregar-ne diverses.",
