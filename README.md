@@ -140,7 +140,7 @@ Per **enabled frame**, one **duration sensor**:
 |--------|-------|
 | State | Seconds spent in the tracked states during the frame (`device_class: duration`, unit seconds, suggested display in hours, 1 dp) |
 | `state_class` | `measurement` |
-| Key attributes | `percent`, `compliance_percent` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`count`, `avg_duration`, `previous_state`) |
+| Key attributes | `source_entity`, `percent`, `compliance_percent` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`count`, `avg_duration`, `previous_state`) |
 
 The frame's **percent** and **compliance percent** (when a target is set) ride along as attributes on the duration sensor — read them in templates or with a template trigger. For pass/fail automation, a `compliant` binary sensor is created when a threshold is set:
 
@@ -161,7 +161,7 @@ The `compliant` binary sensor also exposes `compliance_percent`, `target`, `targ
 
 | Entity | State | Attributes |
 |--------|-------|------------|
-| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `breakdown_seconds` `{state: int}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
+| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `breakdown_seconds` `{state: int}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
 
 - **Every state literal gets its own row** — `unavailable`, `unknown`, and `none` are counted as ordinary state names against a single wall-clock denominator, so the rows sum to ~100% of the covered window.
 - **A new state seen at runtime becomes a new key**, accumulating from first-seen. No entity is created, no restart is needed. One INFO log line is written and an `entity_state_tracker_new_state` event always fires — automations can react to it with no extra configuration.

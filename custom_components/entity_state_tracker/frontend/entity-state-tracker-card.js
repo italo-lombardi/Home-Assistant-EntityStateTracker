@@ -188,6 +188,31 @@ function fmtDate(iso) {
   });
 }
 
+// Compact "changed 2 h ago" / "since 14:32"-style suffix for the source
+// entity's last_changed. Same-day → clock time ("since 14:32"); older → a
+// coarse relative age ("changed 3 d ago"). Locale clock, no external deps.
+function fmtLastChanged(iso) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  const now = Date.now();
+  const diffMs = now - d.getTime();
+  if (diffMs < 0) return "";
+  const sameDay = new Date().toDateString() === d.toDateString();
+  if (sameDay) {
+    return `since ${d.toLocaleTimeString(undefined, {
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+  }
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 60) return `changed ${mins} min ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `changed ${hrs} h ago`;
+  const days = Math.floor(hrs / 24);
+  return `changed ${days} d ago`;
+}
+
 // Match a tracker sensor's object_id against the frame-label slugs. Entity ids
 // look like `sensor.entity_state_tracker_<device>_<metric>_<label_slug>`, e.g.
 // `..._sun_state_breakdown_last_24_hours`. We find which label-slug the id ENDS
@@ -344,6 +369,25 @@ const cardStyles = css`
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+  }
+
+  .header-text {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .source-context {
+    font-size: 12px;
+    color: var(--est-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
+  }
+
+  .source-context .current {
+    color: var(--est-text-primary);
+    font-weight: 500;
   }
 
   .body {
@@ -639,10 +683,37 @@ class EntityStateTrackerCard extends LitElement {
     return html`<ha-card>
       <div class="card-header">
         <ha-icon class="header-icon" icon="mdi:chart-timeline-variant"></ha-icon>
-        <div class="title">${title}</div>
+        <div class="header-text">
+          <div class="title">${title}</div>
+          ${this._renderSourceContext(sensors)}
+        </div>
       </div>
       <div class="body">${body}</div>
     </ha-card>`;
+  }
+
+  // Per-card context for the tracked SOURCE entity (all frames share one
+  // source). Reads the `source_entity` attribute the backend exposes on every
+  // frame sensor; resolves its friendly name + live state + last_changed from
+  // hass.states. Degrades to nothing when the attribute is absent (older
+  // sensor) or the source entity isn't in hass (unloaded/unknown).
+  _renderSourceContext(sensors) {
+    const sourceId = (sensors[0]?.attrs || {}).source_entity;
+    if (!sourceId) return nothing;
+    const st = this.hass.states[sourceId];
+    const friendly = (st && st.attributes && st.attributes.friendly_name) || sourceId;
+    if (!st) {
+      return html`<div class="source-context">
+        Tracking: ${friendly} · unavailable
+      </div>`;
+    }
+    const changed = fmtLastChanged(st.last_changed);
+    return html`<div class="source-context">
+      Tracking: ${friendly} ·
+      <span class="current">${st.state}</span>${changed
+        ? html` · ${changed}`
+        : nothing}
+    </div>`;
   }
 
   _deriveTitle(sensors) {
@@ -723,27 +794,41 @@ class EntityStateTrackerCard extends LitElement {
     });
   }
 
-  // "entered 12× · avg 5 min" from counts/avg_duration. For a specific-mode
-  // sensor with a single tracked state we sum; for breakdown we show the
-  // dominant state's row. "entered" (not "opened") because states are arbitrary.
+  // Self-explanatory per-state transition line, state name ADJACENT to the
+  // count so it reads unambiguously as "this state, entered N times, avg M per
+  // visit". Breakdown: stateKey = the row's state. Specific: label from
+  // tracked_states (1 → its name; several → "tracked states"). Renders
+  // "on — 2 visits · avg 5 min"; drops the "— …" tail when the state is unknown
+  // (specific mode with no tracked_states) so it never dangles a bare count.
   _transitionLine(attrs, stateKey) {
     const counts = attrs.counts || {};
     const avg = attrs.avg_duration || {};
     let count;
     let avgSecs;
+    let label;
     if (stateKey != null) {
       count = counts[stateKey];
       avgSecs = avg[stateKey];
+      label = stateKey;
     } else {
       const keys = Object.keys(counts);
       count = keys.reduce((n, k) => n + (counts[k] || 0), 0);
       // Weighted-ish: just show avg of the first tracked state if present.
       avgSecs = keys.length ? avg[keys[0]] : null;
+      const tracked = Array.isArray(attrs.tracked_states)
+        ? attrs.tracked_states
+        : null;
+      if (tracked && tracked.length === 1) label = tracked[0];
+      else if (tracked && tracked.length > 1) label = "tracked states";
+      else label = null;
     }
     if (count == null || count === 0) return nothing;
-    const avgTxt = avgSecs != null ? ` · avg ${fmtDuration(avgSecs)}` : "";
+    const visits = `${count} ${count === 1 ? "visit" : "visits"}`;
+    const avgTxt = avgSecs != null ? ` · avg ${fmtDuration(avgSecs)} per visit` : "";
+    // State name adjacent to the count. No label (specific mode, no tracked
+    // states) → plain "N visits", never a dangling bare count.
     return html`<div class="transitions">
-      entered ${count}×${avgTxt}
+      ${label != null ? `${label} — ${visits}` : visits}${avgTxt}
     </div>`;
   }
 

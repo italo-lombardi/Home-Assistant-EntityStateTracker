@@ -328,6 +328,8 @@ def test_duration_attributes_without_target() -> None:
     attrs = sensor.extra_state_attributes
     assert attrs["percent"] == 66.7
     assert attrs["tracked_states"] == ["heat", "auto"]
+    # source_entity names the tracked entity so the card can show it (Part A).
+    assert attrs["source_entity"] == "climate.living_room"
     assert attrs["window_coverage"] == 0.9
     assert attrs["has_gap"] is True
     assert attrs["data_start"] == "2026-08-29T00:00:00+00:00"
@@ -400,6 +402,8 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
     # Config attributes stay recorded — they don't churn.
     assert "tracked_states" not in unrecorded
     assert "target_states" not in unrecorded
+    # source_entity is config-stable → RECORDED (not stripped from recorder).
+    assert "source_entity" not in unrecorded
     # last_seen was dropped entirely — no longer an attribute at all.
     assert "last_seen" not in unrecorded
 
@@ -460,6 +464,8 @@ def test_breakdown_attributes_sorted_by_seconds_desc() -> None:
     coord = _breakdown_coord()
     sensor = BreakdownSensor(coord, "today")
     attrs = sensor.extra_state_attributes
+    # source_entity names the tracked entity so the card can show it (Part A).
+    assert attrs["source_entity"] == "climate.living_room"
     # heat 1800 > off 1200 > auto 600.
     assert list(attrs["breakdown_seconds"]) == ["heat", "off", "auto"]
     assert attrs["breakdown_seconds"]["heat"] == 1800

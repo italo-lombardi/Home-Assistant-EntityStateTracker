@@ -169,8 +169,9 @@ class DurationSensor(_FrameSensor):
     # essentially every transition on the today frame, so recording them writes
     # a state_attributes row per changed tick and defeats hash-dedup. percent /
     # compliance_percent stay queryable here as attributes (via templates), just
-    # not recorded. tracked_states/target_states are config and stay recorded.
-    # The ledger holds the history; live UI/templates still read attrs.
+    # not recorded. tracked_states/target_states/source_entity are config and
+    # stay recorded. The ledger holds the history; live UI/templates still read
+    # attrs.
     _unrecorded_attributes = frozenset(
         {
             "counts",
@@ -195,11 +196,12 @@ class DurationSensor(_FrameSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return percent, compliance, window bounds, and transition metrics."""
+        """Return source entity, percent, compliance, bounds, transition metrics."""
         result = self._result
         if result is None:
             return None
         attrs: dict[str, Any] = {
+            "source_entity": self.coordinator.entity_id,
             "percent": result.percent,
             "tracked_states": self.coordinator.tracked_states,
             "target_states": self.coordinator.target_states,
@@ -256,7 +258,7 @@ class BreakdownSensor(_FrameSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return the full per-state breakdown, states sorted by seconds desc."""
+        """Return source entity + full per-state breakdown, sorted by seconds desc."""
         result = self._result
         if result is None:
             return None
@@ -272,6 +274,7 @@ class BreakdownSensor(_FrameSensor):
         breakdown_pct = {s: result.breakdown_pct.get(s) for s in order}
         breakdown_pct["unaccounted"] = result.breakdown_pct.get("unaccounted")
         return {
+            "source_entity": self.coordinator.entity_id,
             "breakdown_seconds": {s: int(result.breakdown_seconds[s]) for s in order},
             "breakdown_pct": breakdown_pct,
             "counts": {s: result.counts.get(s, 0) for s in order},
