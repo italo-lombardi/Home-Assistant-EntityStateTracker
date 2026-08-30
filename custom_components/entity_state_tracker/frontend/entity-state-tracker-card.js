@@ -473,6 +473,12 @@ const cardStyles = css`
     background: var(--success-color, #4caf50);
   }
 
+  .bar-compliance-label {
+    font-size: 12px;
+    color: var(--est-text-secondary);
+    margin-top: 3px;
+  }
+
   .transitions {
     font-size: 12px;
     color: var(--est-text-secondary);
@@ -510,8 +516,9 @@ const cardStyles = css`
   }
 
   .legend {
-    flex: 1;
+    flex: 0 1 auto;
     min-width: 140px;
+    max-width: 260px;
   }
 
   .legend-item {
@@ -531,7 +538,7 @@ const cardStyles = css`
   }
 
   .legend-value {
-    margin-left: auto;
+    margin-left: 12px;
     color: var(--est-text-secondary);
     white-space: nowrap;
   }
@@ -832,15 +839,21 @@ class EntityStateTrackerCard extends LitElement {
           ></div>
         </div>
         ${a.compliance_percent != null
-          ? html`<div class="bar-compliance">
-              <div
-                class="fill"
-                style="width:${Math.max(
-                  0,
-                  Math.min(100, Number(a.compliance_percent))
-                )}%"
-              ></div>
-            </div>`
+          ? html`<div class="bar-compliance-label">
+                compliance ${fmtPct(a.compliance_percent)}${a.target_threshold !=
+                null
+                  ? ` (target ≥ ${a.target_threshold}%)`
+                  : ""}
+              </div>
+              <div class="bar-compliance">
+                <div
+                  class="fill"
+                  style="width:${Math.max(
+                    0,
+                    Math.min(100, Number(a.compliance_percent))
+                  )}%"
+                ></div>
+              </div>`
           : nothing}
         ${this._transitionLine(a, this._isBreakdown(s) ? s.state : null)}
       </div>`;
