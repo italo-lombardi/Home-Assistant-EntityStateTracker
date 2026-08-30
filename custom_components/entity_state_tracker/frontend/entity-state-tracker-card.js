@@ -68,8 +68,6 @@ const css =
       );
   })();
 
-const DOMAIN_PREFIX = "sensor.entity_state_tracker_";
-
 // Canonical frame order + labels, mirroring helpers.py `_FRAME_LABELS`.
 const FRAME_ORDER = ["today", "yesterday", "24h", "7d", "30d", "month", "year"];
 const FRAME_LABELS = {
@@ -232,6 +230,49 @@ function stemOf(entityId) {
   return stem;
 }
 
+// The metric slug an entity_id carries (immediately before the frame label),
+// or null. Used to pick the right attribute fingerprint. state_breakdown is
+// checked first (longest-first, mirrors METRIC_SLUGS ordering).
+function metricOf(entityId) {
+  const m = _matchFrame(entityId);
+  if (!m) return null;
+  const stem = entityId.slice(0, entityId.length - m.slug.length - 1);
+  for (const metric of METRIC_SLUGS) {
+    if (stem.endsWith(`_${metric}`)) return metric;
+  }
+  return null;
+}
+
+// Prefix-INDEPENDENT tracker discovery. HA does not rename entities already
+// registered under a custom object_id, so we can't rely on the pinned
+// `sensor.entity_state_tracker_` prefix to find every tracker. Instead we
+// fingerprint a frame sensor by SHAPE + ATTRIBUTES:
+//   1. id is a `sensor.*` (the frame sensors the card charts; the
+//      binary_sensor compliant/currently_in_state helpers aren't frame sensors).
+//   2. id tail = `_<metric>_<framelabelslug>` — a known metric slug
+//      (state_breakdown|duration) immediately followed by a known frame-label
+//      slug (via _matchFrame / metricOf, both longest-match).
+//   3. attribute fingerprint on the live state (the false-positive guard):
+//        state_breakdown → has `breakdown_seconds` AND `window_seconds`;
+//        duration        → has `tracked_states` AND `window_start`.
+//      These are EST-unique (sensor.py extra_state_attributes), so a foreign
+//      `sensor.foo_duration_today` without them is correctly excluded.
+// A sensor briefly missing its attributes at cold start fails (3) and is
+// picked up on the next hass update once the coordinator has refreshed.
+function isTrackerSensor(hass, id) {
+  if (!hass || !id.startsWith("sensor.")) return false;
+  const metric = metricOf(id);
+  if (!metric) return false;
+  const st = hass.states[id];
+  const a = st && st.attributes;
+  if (!a) return false;
+  if (metric === "state_breakdown") {
+    return a.breakdown_seconds != null && a.window_seconds != null;
+  }
+  // metric === "duration"
+  return a.tracked_states != null && a.window_start != null;
+}
+
 // Discover the distinct tracker stems present in `hass`, each paired with a
 // representative sensor entity_id (the first frame sensor of that tracker) — the
 // value the card's `entity` config expects. Mirrors EA's `_getGroupOptions`
@@ -241,8 +282,7 @@ function trackerOptions(hass) {
   if (!hass) return [];
   const byStem = new Map();
   for (const id of Object.keys(hass.states)) {
-    if (!id.startsWith(DOMAIN_PREFIX)) continue;
-    if (!frameFromEntityId(id)) continue;
+    if (!isTrackerSensor(hass, id)) continue;
     const stem = stemOf(id);
     // Keep the first sensor seen per stem as the representative `entity` value.
     if (!byStem.has(stem)) byStem.set(stem, id);
@@ -256,9 +296,13 @@ function trackerOptions(hass) {
     .sort((a, b) => a.label.localeCompare(b.label));
 }
 
-// Prettify a tracker stem's device segment into a human label (Title Case).
+// Prettify a tracker stem into a human label (Title Case). The stem is a device
+// object_id with any `sensor.` prefix. We strip only the leading `sensor.` (NOT
+// a fixed integration prefix — that broke custom-named trackers, yielding "").
+// A pinned/default tracker stem `sensor.entity_state_tracker_sun` → "Entity
+// State Tracker Sun"; a custom `sensor.italo_all` → "Italo All".
 function prettifyStem(stem) {
-  const device = stem.slice(DOMAIN_PREFIX.length);
+  const device = String(stem).replace(/^sensor\./, "");
   if (!device) return "Entity State Tracker";
   return device
     .split("_")
@@ -490,9 +534,10 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   static getStubConfig(hass) {
-    // Preview: find any tracker sensor and offer its stem as the entity.
+    // Preview: find any tracker sensor (shape+attr, prefix-independent) and
+    // offer it as the entity. Harmless literal fallback if none is found.
     const match = Object.keys(hass.states).find((id) =>
-      id.startsWith(DOMAIN_PREFIX)
+      isTrackerSensor(hass, id)
     );
     return {
       entity: match || "sensor.entity_state_tracker_example_breakdown_today",
@@ -540,9 +585,8 @@ class EntityStateTrackerCard extends LitElement {
     const stem = this._stemOf(configured);
     const out = [];
     for (const id of Object.keys(this.hass.states)) {
-      if (!id.startsWith(DOMAIN_PREFIX)) continue;
+      if (!isTrackerSensor(this.hass, id)) continue;
       const frame = frameFromEntityId(id);
-      if (!frame) continue;
       if (this._stemOf(id) !== stem) continue;
       const st = this.hass.states[id];
       out.push({ entity_id: id, frame, state: st.state, attrs: st.attributes });
@@ -999,7 +1043,7 @@ class EntityStateTrackerCardEditor extends LitElement {
       const stem = stemOf(configured);
       const frames = new Set();
       for (const id of Object.keys(this.hass.states)) {
-        if (!id.startsWith(DOMAIN_PREFIX)) continue;
+        if (!isTrackerSensor(this.hass, id)) continue;
         const frame = frameFromEntityId(id);
         if (frame && stemOf(id) === stem) frames.add(frame);
       }
