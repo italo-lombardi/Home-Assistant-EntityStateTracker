@@ -28,7 +28,7 @@ own config entries via the REST config-flow — no hardcoded entity IDs from the
 live HA. Every EST entity is discovered via the entity-registry websocket by its
 predictable unique_id (``<entry_id>_<frame>_<metric>``), so no entity_id guessing.
 
-Edge cases covered (EC1-EC15, plus sub-checks). See tests/integration/README.md.
+Edge cases covered (EC1-EC16, plus sub-checks). See tests/integration/README.md.
 """
 
 from __future__ import annotations
@@ -272,26 +272,6 @@ def entity_registry_enable(entity_id: str) -> None:
             "entity_id": entity_id,
             "disabled_by": None,
         }
-    )
-
-
-def persistent_notifications() -> list[dict]:
-    """Return the list of active persistent notifications (websocket API).
-
-    In this HA build persistent notifications are NOT exposed as
-    ``persistent_notification.*`` state entities — they live only behind the
-    ``persistent_notification/get`` websocket command.
-    """
-    res = _ws_command({"type": "persistent_notification/get"})
-    if not res or not res.get("success"):
-        return []
-    return res.get("result") or []
-
-
-def has_notification(notification_id: str) -> bool:
-    """True when a persistent notification with ``notification_id`` is active."""
-    return any(
-        n.get("notification_id") == notification_id for n in persistent_notifications()
     )
 
 
@@ -551,6 +531,34 @@ def ec1_specific_duration_sensors():
             chk(
                 f"EC1 duration state numeric ({frame})", numeric, True, f"state={val!r}"
             )
+    # Duration sensor carries the full config-context + bounds attribute set.
+    today_dur = eid_for(entry, "today", M_DURATION, reg)
+    if today_dur:
+        attrs = gs(today_dur).get("attributes", {})
+        for key in (
+            "source_entity",
+            "frame",
+            "percent",
+            "duration_seconds",
+            "tracked_states",
+            "target_states",
+            "window_start",
+            "data_start",
+            "window_coverage",
+            "has_gap",
+        ):
+            chk(
+                f"EC1 duration attr '{key}' present",
+                key in attrs,
+                True,
+                f"keys={list(attrs)}",
+            )
+        chk(
+            "EC1 duration source_entity = tracked entity",
+            attrs.get("source_entity"),
+            eid,
+        )
+        chk("EC1 duration frame = today", attrs.get("frame"), "today")
     return entry, eid
 
 
@@ -590,6 +598,22 @@ def ec2_ec3_duration_rises_and_currently(entry, eid):
         curr_state,
         "on",
     )
+    # CurrentlyInState carries config context + the live current_state.
+    if curr:
+        cattrs = gs(curr).get("attributes", {})
+        for key in ("source_entity", "tracked_states", "current_state"):
+            chk(
+                f"EC2 currently attr '{key}' present",
+                key in cattrs,
+                True,
+                f"keys={list(cattrs)}",
+            )
+        chk(
+            "EC2 currently source_entity = tracked entity",
+            cattrs.get("source_entity"),
+            eid,
+        )
+        chk("EC2 currently current_state = on", cattrs.get("current_state"), "on")
     d0 = float(gs(today_dur).get("state") or 0)
     # The duration sensor state is minute-rounded (recorder-row reduction), so a
     # sub-minute dwell floors to 0 and wouldn't register. Stay in-state for just
@@ -705,6 +729,29 @@ def ec4_compliance():
         True,
         f"compliance_percent={cp}",
     )
+    # Compliant binary sensor mirrors the compliance config as attributes.
+    if compliant:
+        battrs = gs(compliant).get("attributes", {})
+        for key in (
+            "source_entity",
+            "compliance_percent",
+            "tracked_states",
+            "target_states",
+            "target_threshold",
+            "frame",
+        ):
+            chk(
+                f"EC4 compliant attr '{key}' present",
+                key in battrs,
+                True,
+                f"keys={list(battrs)}",
+            )
+        chk("EC4 compliant target_states = [on]", battrs.get("target_states"), ["on"])
+        chk(
+            "EC4 compliant target_threshold = 0",
+            float(battrs.get("target_threshold")),
+            0.0,
+        )
 
     # Now raise the threshold above the actual computed percent via options flow →
     # Compliant must flip OFF. The tiny live percent is well under 99.
@@ -821,12 +868,9 @@ def ec5_ec6_ec7_allstates():
         True,
         f"breakdown={gs(today_bd).get('attributes', {}).get('breakdown_seconds', {})}",
     )
-    # persistent_notification always created (new-state notify forced on, task
-    # #34). Notifications live behind the persistent_notification/get WS API
-    # (not state entities).
-    notif_id = f"{DOMAIN}_{entry}_brandnew_state"
-    found = wait_until(lambda: has_notification(notif_id))
-    chk("EC6 persistent_notification created", found, True, f"notif_id={notif_id}")
+    # A new state is EVENT-ONLY by design (build your own notification in an
+    # automation). The integration fires NO persistent_notification — asserting
+    # the event above (EC6) is the whole contract.
 
     print(
         "\n=== EC7: unavailable/unknown counted as ordinary breakdown rows ===",
@@ -905,10 +949,15 @@ def ec9_unrecorded(entry_allstates, eid_allstates, today_bd):
     )
     attrs = gs(today_bd).get("attributes", {})
     for key in (
+        "source_entity",
+        "frame",
         "breakdown_seconds",
         "breakdown_pct",
         "counts",
         "avg_duration",
+        "previous_state",
+        "window_seconds",
+        "unaccounted_seconds",
         "window_coverage",
         "has_gap",
     ):
@@ -918,6 +967,14 @@ def ec9_unrecorded(entry_allstates, eid_allstates, today_bd):
             True,
             f"keys={list(attrs)}",
         )
+    # breakdown_pct is balanced to sum to 100 with a trailing 'unaccounted' key.
+    pct = attrs.get("breakdown_pct", {})
+    chk(
+        "EC9 breakdown_pct carries 'unaccounted' balancing key",
+        "unaccounted" in pct,
+        True,
+        f"breakdown_pct={pct}",
+    )
     # Best-effort: confirm the churny attr is NOT in recorder history.
     try:
         hist = api(
@@ -995,6 +1052,32 @@ def ec10_reset_ledger(entry_allstates, eid_allstates, today_bd):
 
     dc = wait_for(_daycount, 0, timeout=WAIT_FOR_TIMEOUT)
     chk("EC10 ledger cleared after confirm:true (day_count=0)", dc, 0)
+
+    # Diagnostics payload shape: beyond `ledger`, it carries entry/coordinator/
+    # frames/store blocks. Assert the top-level structure once here.
+    raw = api("GET", f"/api/diagnostics/config_entry/{entry_allstates}")
+    data = raw.get("data", raw)
+    for block in ("entry", "coordinator", "frames", "ledger", "store"):
+        chk(
+            f"EC10 diagnostics carries '{block}' block",
+            block in data,
+            True,
+            f"keys={list(data)}",
+        )
+    coord = data.get("coordinator", {})
+    for key in (
+        "entity_id",
+        "mode",
+        "tracked_states",
+        "enabled_frames",
+        "last_update_success",
+    ):
+        chk(
+            f"EC10 diagnostics coordinator.'{key}' present",
+            key in coord,
+            True,
+            f"coord_keys={list(coord)}",
+        )
 
 
 def ec11_options_flow_frame_toggle():
@@ -1183,6 +1266,79 @@ def ec15_card_resource():
         )
 
 
+def ec16_targeted_reset():
+    """EC16: reset_ledger entity_id target → only the matching tracker's ledger clears;
+    a target matching no tracker raises (reset_no_match).
+    """
+    print(
+        "\n=== EC16: reset_ledger entity_id target resets only that tracker ===",
+        flush=True,
+    )
+    eid_a = make_entity("tgt_a", "on")
+    eid_b = make_entity("tgt_b", "on")
+    entry_a = create_tracker(eid_a, "all_states", frames={"today": True})
+    entry_b = create_tracker(eid_b, "all_states", frames={"today": True})
+    wait_entities(entry_a, min_count=1)
+    wait_entities(entry_b, min_count=1)
+
+    # Accrue on BOTH so each ledger has data to clear.
+    for e in (eid_a, eid_b):
+        ss(e, "on")
+        time.sleep(3)
+        ss(e, "off")
+        ss(e, "on")
+
+    def _day_count(entry_id):
+        raw = api("GET", f"/api/diagnostics/config_entry/{entry_id}")
+        data = raw.get("data", raw)
+        return (data.get("ledger") or {}).get("day_count")
+
+    wait_until(lambda: (_day_count(entry_a) or 0) >= 1)
+    wait_until(lambda: (_day_count(entry_b) or 0) >= 1)
+
+    # Target ONLY entity A.
+    status, _ = api_status(
+        "POST",
+        f"/api/services/{DOMAIN}/reset_ledger",
+        {"confirm": True, "entity_id": eid_a},
+    )
+    chk(
+        "EC16 targeted reset success (2xx)",
+        200 <= status < 300,
+        True,
+        f"status={status}",
+    )
+
+    dca = wait_for(lambda: _day_count(entry_a), 0, timeout=WAIT_FOR_TIMEOUT)
+    chk("EC16 targeted tracker A ledger cleared (day_count=0)", dca, 0)
+    # B must be untouched (still holds ≥1 day).
+    chk(
+        "EC16 non-targeted tracker B ledger untouched (day_count≥1)",
+        (_day_count(entry_b) or 0) >= 1,
+        True,
+        f"B_day_count={_day_count(entry_b)}",
+    )
+
+    # A target matching no tracker → reset_no_match (HTTP >=400), nothing cleared.
+    status_nm, body_nm = api_status(
+        "POST",
+        f"/api/services/{DOMAIN}/reset_ledger",
+        {"confirm": True, "entity_id": "sensor.est_no_such_tracker_xyz"},
+    )
+    chk(
+        "EC16 unmatched target → error status (>=400)",
+        status_nm >= 400,
+        True,
+        f"status={status_nm} body={body_nm}",
+    )
+    chk(
+        "EC16 tracker B still untouched after unmatched reset",
+        (_day_count(entry_b) or 0) >= 1,
+        True,
+        f"B_day_count={_day_count(entry_b)}",
+    )
+
+
 def ec12_restart_persistence():
     """EC12: create tracker, accrue, restart HA → ledger survives (closed-day buckets intact).
 
@@ -1359,6 +1515,9 @@ def main():
 
         if ec_enabled(15):
             ec15_card_resource()
+
+        if ec_enabled(16):
+            ec16_targeted_reset()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

@@ -88,8 +88,8 @@ is deleted at the end unless `EST_SMOKE_KEEP=1`.
 
 `websocket-client` (present in a standard HA environment) is required for the
 entity-registry discovery, the `entity_state_tracker_new_state` event capture
-(EC6), the Lovelace-resource check (EC15) and the persistent-notification check
-(EC6). If it is absent, discovery-dependent ECs cannot run.
+(EC6) and the Lovelace-resource check (EC15). If it is absent, discovery-dependent
+ECs cannot run.
 
 ## What is covered
 
@@ -100,7 +100,7 @@ entity-registry discovery, the `entity_state_tracker_new_state` event capture
 | EC3 | Non-tracked state → CurrentlyInState = off; duration does not accrue |
 | EC4 | Compliance enabled → Compliant binary sensor exists; Compliant flips as threshold crosses the computed compliance_percent (read off the duration sensor's `compliance_percent` attribute) |
 | EC5 | All-states tracker → a BreakdownSensor per frame; dominant = current state |
-| EC6 | New state at runtime → breakdown gains the key, `entity_state_tracker_new_state` event fires with `{entry_id, entity_id, state}`, persistent_notification created |
+| EC6 | New state at runtime → breakdown gains the key, `entity_state_tracker_new_state` event fires with `{entry_id, entity_id, state}` (event-only — no persistent notification) |
 | EC7 | `unavailable` / `unknown` counted as ordinary breakdown rows |
 | EC8 | `min_state_duration=5` → sub-5 s "flicker" visits filtered (count stays 0) |
 | EC9 | Breakdown attrs are `_unrecorded` — present in live `/api/states`, excluded from recorder history |
@@ -110,6 +110,7 @@ entity-registry discovery, the `entity_state_tracker_new_state` event capture
 | EC13 | `window_coverage` / `has_gap` fields present + internally consistent (`has_gap ⟺ data_start known AND coverage<1`) |
 | EC14 | Dominant hysteresis: a sub-margin near-tie does not flip the dominant state |
 | EC15 | Card JS served (200) and registered as a Lovelace resource |
+| EC16 | `reset_ledger` with an `entity_id` target clears only the matching tracker's ledger (others untouched); an unmatched target raises `reset_no_match` |
 
 ## Notes on semantics that shape the tests
 
