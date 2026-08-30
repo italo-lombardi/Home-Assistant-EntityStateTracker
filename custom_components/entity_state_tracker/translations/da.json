@@ -6,7 +6,7 @@
         "description": "Vælg en entitet for at spore, hvor længe den befinder sig i sine tilstande over flere tidsrum.",
         "data": {
           "entity": "Entitet, der skal spores",
-          "name": "Name (optional)"
+          "name": "Navn (valgfrit)"
         },
         "data_description": {
           "entity": "Entiteten, hvis tilstandsvarigheder måles. Én entitet pr. sporer — peg på en gruppehjælper for at samle flere.",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "Aktuelt i tilstand"
       },
       "compliant": {
         "name": "Overholdende"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Nulstil hovedbog",
+      "description": "Rydder den gemte daglig-bøtte-historik for en sporer. Lange tidsrum genopbygges fra recorder-data, hvor de stadig er tilgængelige. Dette kan ikke fortrydes.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Bekræft",
+          "description": "Skal være aktiveret for at gennemføre nulstillingen. Beskytter mod utilsigtet tab af historik."
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Sæt confirm til true for at nulstille hovedbogen. Dette rydder gemt historik og kan ikke fortrydes."
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."

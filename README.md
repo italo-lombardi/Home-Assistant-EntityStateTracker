@@ -140,16 +140,16 @@ Per **enabled frame**, one **duration sensor**:
 |--------|-------|
 | State | Seconds spent in the tracked states during the frame (`device_class: duration`, unit seconds, suggested display in hours, 1 dp) |
 | `state_class` | `measurement` |
-| Key attributes | `source_entity`, `percent`, `compliance_percent` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`count`, `avg_duration`, `previous_state`) |
+| Key attributes | `source_entity`, `frame`, `percent`, `compliance_percent` and `target_threshold` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`count`, `avg_duration`, `previous_state`) |
 
 The frame's **percent** and **compliance percent** (when a target is set) ride along as attributes on the duration sensor — read them in templates or with a template trigger. For pass/fail automation, a `compliant` binary sensor is created when a threshold is set:
 
 | Entity | Type | Notes |
 |--------|------|-------|
 | `binary_sensor..._compliant` | Binary Sensor | `on` while today's compliance ≥ the target threshold (only when a threshold is set; uses the `today` frame, or the first enabled frame if `today` is off). |
-| `binary_sensor..._currently_in_state` | Binary Sensor | `on` while the entity is currently in one of the tracked states. |
+| `binary_sensor..._currently_in_state` | Binary Sensor | `on` while the entity is currently in one of the tracked states. Exposes `source_entity`, `tracked_states`, and `current_state` (the live matched state). |
 
-The `compliant` binary sensor also exposes `compliance_percent`, `target`, `target_threshold`, and `frame` as attributes, so you can see *why* it is on or off at a glance.
+The `compliant` binary sensor also exposes `source_entity`, `compliance_percent`, `tracked_states`, `target_states`, `target_threshold`, `frame`, `data_start`, `window_coverage`, and `has_gap` as attributes, so you can see *why* it is on or off at a glance.
 
 > **Frame note:** the `compliant` sensor scores the `today` frame — the only window whose compliance is "now". `today` is enabled by default, but if you disable it the sensor falls back to the **first enabled frame** in canonical order (`today` → `yesterday` → `24h` → `7d` → `30d` → `month` → `year`). With `today` off, "compliant" can therefore mean e.g. year-compliance rather than the live day. The active window is always shown in the sensor's `frame` attribute — keep `today` enabled if you want live/day compliance.
 
@@ -161,7 +161,7 @@ The `compliant` binary sensor also exposes `compliance_percent`, `target`, `targ
 
 | Entity | State | Attributes |
 |--------|-------|------------|
-| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `breakdown_seconds` `{state: int}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
+| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `frame`, `breakdown_seconds` `{state: int}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
 
 - **Every state literal gets its own row** — `unavailable`, `unknown`, and `none` are counted as ordinary state names against a single wall-clock denominator, so the rows sum to ~100% of the covered window.
 - **A new state seen at runtime becomes a new key**, accumulating from first-seen. No entity is created, no restart is needed. One INFO log line is written and an `entity_state_tracker_new_state` event always fires — automations can react to it with no extra configuration.

@@ -6,7 +6,7 @@
         "description": "여러 기간에 걸쳐 엔티티가 각 상태에 얼마나 오래 머무는지 추적할 엔티티를 선택하세요.",
         "data": {
           "entity": "추적할 엔티티",
-          "name": "Name (optional)"
+          "name": "이름(선택 사항)"
         },
         "data_description": {
           "entity": "상태 지속 시간을 측정할 엔티티입니다. 추적기당 하나의 엔티티 — 여러 개를 집계하려면 그룹 도우미를 지정하세요.",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "현재 상태에 있음"
       },
       "compliant": {
         "name": "준수"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "원장 재설정",
+      "description": "추적기의 유지된 일일 버킷 기록을 지웁니다. 긴 기간은 아직 사용 가능한 경우 레코더 데이터에서 다시 구축됩니다. 이 작업은 취소할 수 없습니다.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "확인",
+          "description": "재설정을 수행하려면 활성화해야 합니다. 실수로 기록을 잃는 것을 방지합니다."
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "원장을 재설정하려면 confirm을 true로 설정하세요. 이는 유지된 기록을 지우며 취소할 수 없습니다."
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."

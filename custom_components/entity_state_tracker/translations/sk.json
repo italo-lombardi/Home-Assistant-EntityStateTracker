@@ -6,7 +6,7 @@
         "description": "Vyberte entitu na sledovanie, ako dlho sa nachádza vo svojich stavoch počas viacerých časových období.",
         "data": {
           "entity": "Entita na sledovanie",
-          "name": "Name (optional)"
+          "name": "Názov (voliteľné)"
         },
         "data_description": {
           "entity": "Entita, ktorej doby trvania stavov sa budú merať. Jedna entita na sledovanie — nasmerujte na skupinového pomocníka na agregáciu viacerých.",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "Aktuálne v stave"
       },
       "compliant": {
         "name": "V zhode"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Resetovať evidenciu",
+      "description": "Vymaže uloženú históriu denných priehradok pre sledovanie. Dlhé časové obdobia sa znovu zostavia z údajov rekordéra, kde sú stále dostupné. Túto akciu nemožno vrátiť späť.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Potvrdiť",
+          "description": "Musí byť povolené na vykonanie resetu. Chráni pred náhodnou stratou histórie."
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Nastavte confirm na true na reset evidencie. Tým sa vymaže uložená história a akciu nemožno vrátiť späť."
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."

@@ -6,7 +6,7 @@
         "description": "选择一个实体，以跟踪它在多个时间范围内处于各状态的时长。",
         "data": {
           "entity": "要跟踪的实体",
-          "name": "Name (optional)"
+          "name": "名称（可选）"
         },
         "data_description": {
           "entity": "将测量其状态时长的实体。每个跟踪器一个实体——指向分组助手以聚合多个实体。",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "当前处于状态"
       },
       "compliant": {
         "name": "合规"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "重置账本",
+      "description": "清除跟踪器持久化的每日分桶历史。长时间范围会在记录器数据仍可用处从中重建。此操作无法撤销。",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "确认",
+          "description": "必须启用才能执行重置。防止意外丢失历史。"
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "将 confirm 设置为 true 以重置账本。此操作会清除持久化历史，且无法撤销。"
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."

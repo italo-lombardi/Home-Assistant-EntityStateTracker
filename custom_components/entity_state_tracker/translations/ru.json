@@ -6,7 +6,7 @@
         "description": "Выберите объект, чтобы отслеживать, сколько времени он проводит в своих состояниях за несколько временных интервалов.",
         "data": {
           "entity": "Отслеживаемый объект",
-          "name": "Name (optional)"
+          "name": "Имя (необязательно)"
         },
         "data_description": {
           "entity": "Объект, длительности состояний которого будут измеряться. Один объект на трекер — укажите групповой помощник, чтобы объединить несколько.",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "Сейчас в состоянии"
       },
       "compliant": {
         "name": "Соответствует"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Сбросить журнал",
+      "description": "Очищает сохранённую историю дневных сегментов трекера. Длинные интервалы перестраиваются из данных рекордера там, где они ещё доступны. Это действие нельзя отменить.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Подтвердить",
+          "description": "Должно быть включено для выполнения сброса. Защищает от случайной потери истории."
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Установите confirm в true, чтобы сбросить журнал. Это очищает сохранённую историю и не может быть отменено."
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."

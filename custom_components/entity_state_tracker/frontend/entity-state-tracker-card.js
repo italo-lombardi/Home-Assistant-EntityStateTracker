@@ -34,13 +34,6 @@ const LitElement = Object.getPrototypeOf(
   customElements.get("home-assistant-main") || customElements.get("hui-view")
 );
 const html = LitElement.prototype.html;
-// SVG-namespaced template tag. Lit exposes `svg` on the prototype alongside
-// `html` (lit-html 1.x → lit 3.x, all builds HA ships). It is REQUIRED for the
-// pie/donut: `<path>`/`<circle>` interpolated into an `<svg>` from the `html`
-// tag are created in the HTML namespace and don't render as geometry (the
-// classic "legend shows, arcs don't" bug). Falling back to `html` would only
-// reproduce that bug, so we assert `svg` is present.
-const svg = LitElement.prototype.svg;
 const nothing = LitElement.prototype.nothing ?? "";
 const css =
   LitElement.prototype.css ||
@@ -909,22 +902,26 @@ class EntityStateTrackerCard extends LitElement {
     const inner = 24;
     let angle = -Math.PI / 2;
     const single = slices.length === 1;
+    // Compute each slice as a plain {d, color, evenodd} descriptor. The <path>
+    // elements are emitted INLINE inside the single `html` <svg> template below,
+    // so the browser parses them in the SVG namespace lexically — no separate
+    // `svg` template tag needed (HA's LitElement prototype does not expose one).
     const paths = slices.map((s) => {
       const frac = s.secs / total;
       // A full-circle slice (only slice, or frac≈1) has coincident arc
       // endpoints → a zero-length, INVISIBLE path. Draw a donut RING (outer
       // circle + inner hole punched via even-odd fill) instead.
       if (single || frac >= 0.9999) {
-        return this._ring(cx, cy, r, inner, s.color);
+        return { d: this._ring(cx, cy, r, inner), color: s.color, evenodd: true };
       }
       const a0 = angle;
       const a1 = angle + frac * 2 * Math.PI;
       angle = a1;
-      // SVG-namespaced: an `html`-tagged <path> inside <svg> renders nothing.
-      return svg`<path
-        d="${this._arc(cx, cy, r, inner, a0, a1)}"
-        fill="${s.color}"
-      ></path>`;
+      return {
+        d: this._arc(cx, cy, r, inner, a0, a1),
+        color: s.color,
+        evenodd: false,
+      };
     });
 
     const incomplete = this._incomplete(a);
@@ -935,9 +932,13 @@ class EntityStateTrackerCard extends LitElement {
           : nothing}
       </div>
       <div class="pie-wrap">
-        ${svg`<svg class="pie-svg" width="100" height="100" viewBox="0 0 100 100">
-          ${paths}
-        </svg>`}
+        <svg class="pie-svg" width="100" height="100" viewBox="0 0 100 100">
+          ${paths.map((p) =>
+            p.evenodd
+              ? html`<path d="${p.d}" fill="${p.color}" fill-rule="evenodd"></path>`
+              : html`<path d="${p.d}" fill="${p.color}"></path>`
+          )}
+        </svg>
         <div class="legend">
           ${slices.map(
             (s) => html`<div class="legend-item">
@@ -956,14 +957,15 @@ class EntityStateTrackerCard extends LitElement {
   // Full donut RING for a single 100% slice — outer + inner circle as one
   // even-odd path so the inner hole is punched out (an arc path with coincident
   // endpoints would be zero-length and invisible). Two arcs per circle since SVG
-  // arcs can't span a full 360°.
-  _ring(cx, cy, r, ri, color) {
-    const d =
+  // arcs can't span a full 360°. Returns the `d` string; the caller emits the
+  // <path> inline inside the <svg> template (SVG namespace).
+  _ring(cx, cy, r, ri) {
+    return (
       `M ${cx - r} ${cy} A ${r} ${r} 0 1 1 ${cx + r} ${cy} ` +
       `A ${r} ${r} 0 1 1 ${cx - r} ${cy} Z ` +
       `M ${cx - ri} ${cy} A ${ri} ${ri} 0 1 0 ${cx + ri} ${cy} ` +
-      `A ${ri} ${ri} 0 1 0 ${cx - ri} ${cy} Z`;
-    return svg`<path d="${d}" fill="${color}" fill-rule="evenodd"></path>`;
+      `A ${ri} ${ri} 0 1 0 ${cx - ri} ${cy} Z`
+    );
   }
 
   // SVG donut-segment path between two angles (radians), outer radius r, inner ri.

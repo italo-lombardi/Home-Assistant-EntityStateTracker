@@ -6,7 +6,7 @@
         "description": "Изберете обект, за да проследявате колко време прекарва в състоянията си през няколко времеви интервала.",
         "data": {
           "entity": "Обект за проследяване",
-          "name": "Name (optional)"
+          "name": "Име (незадължително)"
         },
         "data_description": {
           "entity": "Обектът, чиито продължителности на състоянията ще се измерват. Един обект на тракер — насочете към групов помощник, за да агрегирате няколко.",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "В момента в състояние"
       },
       "compliant": {
         "name": "Съответства"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Нулиране на дневника",
+      "description": "Изчиства запазената история на дневните сегменти за тракер. Дългите времеви интервали се възстановяват от данни на записващото устройство, където все още са налични. Това не може да бъде отменено.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Потвърждаване",
+          "description": "Трябва да е активирано, за да се извърши нулирането. Предпазва от случайна загуба на история."
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Задайте confirm на true, за да нулирате дневника. Това изчиства запазената история и не може да бъде отменено."
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."

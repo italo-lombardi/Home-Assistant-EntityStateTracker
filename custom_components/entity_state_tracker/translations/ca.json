@@ -6,7 +6,7 @@
         "description": "Trieu una entitat per fer un seguiment de quant de temps passa en els seus estats en diversos períodes de temps.",
         "data": {
           "entity": "Entitat a seguir",
-          "name": "Name (optional)"
+          "name": "Nom (opcional)"
         },
         "data_description": {
           "entity": "L'entitat les durades d'estat de la qual es mesuraran. Una entitat per seguidor — apunteu a un ajudant de grup per agregar-ne diverses.",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "Actualment en estat"
       },
       "compliant": {
         "name": "Conforme"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Restableix el registre",
+      "description": "Esborra l'historial persistent de compartiments diaris d'un seguidor. Els períodes llargs es reconstrueixen a partir de les dades del gravador on encara estiguin disponibles. Això no es pot desfer.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Confirma",
+          "description": "S'ha d'activar per dur a terme el restabliment. Protegeix contra la pèrdua accidental de l'historial."
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Establiu confirm a true per restablir el registre. Això esborra l'historial persistent i no es pot desfer."
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."

@@ -6,7 +6,7 @@
         "description": "Виберіть сутність, щоб відстежувати, скільки часу вона проводить у своїх станах протягом кількох часових проміжків.",
         "data": {
           "entity": "Сутність для відстеження",
-          "name": "Name (optional)"
+          "name": "Назва (необов'язково)"
         },
         "data_description": {
           "entity": "Сутність, тривалість станів якої вимірюватиметься. Одна сутність на трекер — вкажіть груповий помічник, щоб об'єднати кілька.",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "Наразі в стані"
       },
       "compliant": {
         "name": "Відповідає"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Скинути журнал",
+      "description": "Очищає збережену історію щоденних сегментів трекера. Довгі часові проміжки перебудовуються з даних рекордера там, де вони ще доступні. Цю дію не можна скасувати.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Підтвердити",
+          "description": "Має бути ввімкнено для виконання скидання. Захищає від випадкової втрати історії."
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Установіть confirm у значення true, щоб скинути журнал. Це очищає збережену історію, і дію не можна скасувати."
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."

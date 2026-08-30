@@ -6,7 +6,7 @@
         "description": "選擇一個實體，以追蹤它在多個時間範圍內處於各狀態的時長。",
         "data": {
           "entity": "要追蹤的實體",
-          "name": "Name (optional)"
+          "name": "名稱（選填）"
         },
         "data_description": {
           "entity": "將測量其狀態時長的實體。每個追蹤器一個實體——指向群組助手以彙總多個實體。",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "目前處於狀態"
       },
       "compliant": {
         "name": "合規"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "重設帳本",
+      "description": "清除追蹤器持久化的每日分桶歷史。長時間範圍會在記錄器資料仍可用處從中重建。此操作無法復原。",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "確認",
+          "description": "必須啟用才能執行重設。防止意外遺失歷史。"
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "將 confirm 設定為 true 以重設帳本。此操作會清除持久化歷史，且無法復原。"
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."

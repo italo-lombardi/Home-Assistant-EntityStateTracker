@@ -6,7 +6,7 @@
         "description": "Bir varlığın, birden çok zaman aralığı boyunca durumlarında ne kadar süre kaldığını izlemek için bir varlık seçin.",
         "data": {
           "entity": "İzlenecek varlık",
-          "name": "Name (optional)"
+          "name": "Ad (isteğe bağlı)"
         },
         "data_description": {
           "entity": "Durum sürelerinin ölçüleceği varlık. İzleyici başına bir varlık — birkaçını toplamak için bir grup yardımcısına yönlendirin.",
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In a Tracked State"
+        "name": "Şu anda durumda"
       },
       "compliant": {
         "name": "Uyumlu"
@@ -140,12 +140,12 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "name": "Defteri sıfırla",
+      "description": "Bir izleyicinin kalıcı günlük paket geçmişini temizler. Uzun zaman aralıkları, hâlâ mevcut olduğunda kaydedici verilerinden yeniden oluşturulur. Bu geri alınamaz.",
       "fields": {
         "confirm": {
-          "name": "Confirm",
-          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+          "name": "Onayla",
+          "description": "Sıfırlamayı gerçekleştirmek için etkinleştirilmelidir. Kazara geçmiş kaybına karşı korur."
         },
         "entity_id": {
           "name": "Tracked entity",
@@ -162,7 +162,7 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+      "message": "Defteri sıfırlamak için confirm değerini true yapın. Bu, kalıcı geçmişi temizler ve geri alınamaz."
     },
     "reset_no_match": {
       "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
