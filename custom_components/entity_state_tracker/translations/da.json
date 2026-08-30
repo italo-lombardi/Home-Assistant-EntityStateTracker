@@ -162,7 +162,10 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Sæt confirm til true for at nulstille hovedbogen. Dette rydder gemt historik og kan ikke fortrydes."
+      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

@@ -162,7 +162,10 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "将 confirm 设置为 true 以重置账本。此操作会清除持久化历史，且无法撤销。"
+      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

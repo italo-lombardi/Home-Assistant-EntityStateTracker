@@ -162,7 +162,10 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Задайте confirm на true, за да нулирате дневника. Това изчиства запазената история и не може да бъде отменено."
+      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

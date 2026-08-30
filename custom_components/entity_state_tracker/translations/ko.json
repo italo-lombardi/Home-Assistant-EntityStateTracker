@@ -162,7 +162,10 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "원장을 재설정하려면 confirm을 true로 설정하세요. 이는 유지된 기록을 지우며 취소할 수 없습니다."
+      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

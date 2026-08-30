@@ -178,13 +178,17 @@ async def test_reset_ledger_target_no_match_raises(
     hass.data.setdefault(DOMAIN, {})[specific_config_entry.entry_id] = coord
 
     await async_setup_services(hass)
-    with pytest.raises(ServiceValidationError):
+    with pytest.raises(ServiceValidationError) as err:
         await hass.services.async_call(
             DOMAIN,
             SERVICE_RESET_LEDGER,
             {ATTR_CONFIRM: True, ATTR_ENTITY_ID: "sensor.does_not_exist"},
             blocking=True,
         )
+    # The error must carry the translation key (so a real message renders, not
+    # the raw key) and name the offending entity in the placeholders.
+    assert err.value.translation_key == "reset_no_match"
+    assert err.value.translation_placeholders == {"entity_id": "sensor.does_not_exist"}
 
     coord.async_reset_ledger.assert_not_awaited()
 
