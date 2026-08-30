@@ -32,14 +32,25 @@ def test_tracker_ledger_roundtrip() -> None:
         mode="specific_states",
         states=["heat", "auto"],
         target=["heat"],
-        mode_changed_on="2026-08-01",
         daily={"2026-08-29": {"heat": {"secs": 12.5, "count": 3}}},
         last_state="heat",
         last_changed_ts="2026-08-29T10:00:00+00:00",
         last_updated_day="2026-08-29",
+        built_min_state_duration=5.0,
     )
     restored = TrackerLedger.from_dict(ledger.to_dict())
     assert restored == ledger
+
+
+def test_tracker_ledger_from_dict_built_min_state_duration_bad_value() -> None:
+    """A non-numeric built_min_state_duration coerces to None (H1 defensive)."""
+    ledger = TrackerLedger.from_dict({"built_min_state_duration": "not-a-number"})
+    assert ledger.built_min_state_duration is None
+
+
+def test_tracker_ledger_from_dict_built_min_state_duration_absent() -> None:
+    """A legacy ledger without the field yields None (not wiped on upgrade)."""
+    assert TrackerLedger.from_dict({}).built_min_state_duration is None
 
 
 def test_tracker_ledger_from_dict_defaults() -> None:
@@ -49,9 +60,21 @@ def test_tracker_ledger_from_dict_defaults() -> None:
     assert ledger.mode == ""
     assert ledger.states is None
     assert ledger.target is None
-    assert ledger.mode_changed_on is None
     assert ledger.daily == {}
     assert ledger.last_state is None
+
+
+def test_tracker_ledger_from_dict_ignores_legacy_key() -> None:
+    """A legacy doc carrying the removed mode_changed_on key loads without error."""
+    ledger = TrackerLedger.from_dict(
+        {
+            "entity_id": "climate.x",
+            "mode": "specific_states",
+            "mode_changed_on": "2026-08-01",
+        }
+    )
+    assert ledger.entity_id == "climate.x"
+    assert not hasattr(ledger, "mode_changed_on")
 
 
 def test_tracker_ledger_from_dict_states_target_coerced() -> None:

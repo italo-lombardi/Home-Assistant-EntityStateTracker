@@ -146,6 +146,10 @@
         "confirm": {
           "name": "Confirma",
           "description": "S'ha d'activar per dur a terme el restabliment. Protegeix contra la pèrdua accidental de l'historial."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }
@@ -159,6 +163,9 @@
   "exceptions": {
     "reset_not_confirmed": {
       "message": "Establiu confirm a true per restablir el registre. Això esborra l'historial persistent i no es pot desfer."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

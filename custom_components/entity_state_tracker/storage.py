@@ -29,13 +29,36 @@ from .models import StoredData, TrackerLedger
 _LOGGER = logging.getLogger(__name__)
 
 
+class _MigratingStore(Store[dict[str, Any]]):
+    """``Store`` subclass with a migration hook keyed on ``STORAGE_VERSION``.
+
+    v1 is the only shipped version, so migration is a no-op: the stored document
+    is returned unchanged. The override exists so a future v2 has a single place
+    to transform old documents (e.g. rename/reshape a ledger field) instead of
+    HA's default ``_async_migrate_func`` raising ``NotImplementedError`` the
+    first time ``STORAGE_VERSION`` is bumped. Keep the branch structure — add an
+    ``elif old_major_version < N`` block per future bump.
+    """
+
+    async def _async_migrate_func(
+        self,
+        old_major_version: int,
+        old_minor_version: int,
+        old_data: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Migrate a stored document to ``STORAGE_VERSION`` (no-op for v1)."""
+        # v1: nothing to migrate; return the document as-is. A v2 bump adds an
+        # `if old_major_version < 2: ... ` transform above this return.
+        return old_data
+
+
 class EntityStateTrackerStore:
     """Cached, single-flight persistence for one config entry's ledger."""
 
     def __init__(self, hass: HomeAssistant, entry_id: str) -> None:
         self._hass = hass
         self._entry_id = entry_id
-        self._store: Store = Store(
+        self._store: Store = _MigratingStore(
             hass,
             STORAGE_VERSION,
             STORAGE_KEY_FMT.format(entry_id=entry_id),
@@ -187,6 +210,7 @@ class EntityStateTrackerStore:
         last_state: str | None = None,
         last_changed_ts: str | None = None,
         last_updated_day: str | None = None,
+        built_min_state_duration: float | None = None,
     ) -> None:
         """Partially update the ledger's live-transition metadata."""
         data = await self.load()
@@ -199,6 +223,8 @@ class EntityStateTrackerStore:
             ledger.last_changed_ts = last_changed_ts
         if last_updated_day is not None:
             ledger.last_updated_day = last_updated_day
+        if built_min_state_duration is not None:
+            ledger.built_min_state_duration = built_min_state_duration
         await self.save(data)
 
     async def prune_days(self, entry_id: str, before_iso: str) -> None:

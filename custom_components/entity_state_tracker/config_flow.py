@@ -35,6 +35,14 @@ from .const import (
 
 _LOGGER = logging.getLogger(__name__)
 
+# Cap on the RECORDER-derived distinct seen states offered as prefilled options.
+# A numeric entity (e.g. an input_number cycling through hundreds of distinct
+# float values) would otherwise flood the SelectSelector. The cap applies ONLY
+# to the recorder-derived set — the current live state and the always-offered
+# ``unavailable``/``unknown`` are added on top. custom_value=True still lets the
+# user type any state omitted by the cap.
+_SEEN_PREFILL_CAP = 50
+
 # Transient config-flow keys (stripped before async_create_entry).
 _KEY_ENTITY = f"_{CONF_ENTITY}"
 _KEY_MODE = f"_{CONF_MODE}"
@@ -124,12 +132,25 @@ async def _async_seen_states(hass: HomeAssistant, entity_id: str) -> list[str]:
     """Best-effort list of states seen for an entity (current + recorder), lowercased.
 
     Recorder query runs on the recorder executor and degrades to just the current
-    state if the recorder is unavailable.
+    state if the recorder is unavailable. The returned list is:
+
+    ``[current live state, <=_SEEN_PREFILL_CAP most-recent recorder states,
+    unavailable, unknown]``
+
+    — deduped, in that order. The recorder-derived distinct states are capped at
+    ``_SEEN_PREFILL_CAP`` (most-recent kept) so a numeric entity with hundreds of
+    distinct values can't flood the selector; the current live state is pulled
+    out BEFORE the cap and re-prepended after, so it ALWAYS survives even when the
+    recorder set exceeds the cap. ``unavailable`` and ``unknown`` are ALWAYS
+    offered last (unavailable before unknown), on top of the cap, because
+    entities routinely pass through them (startup, source outage) and tracking
+    them is a common ask but they are filtered from the live/recorder scan.
+    ``custom_value=True`` on the selector lets the user type any omitted state.
     """
-    seen: list[str] = []
+    live: str | None = None
     state = hass.states.get(entity_id)
     if state is not None and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-        seen.append(state.state.lower())
+        live = state.state.lower()
 
     from datetime import timedelta
 
@@ -145,17 +166,38 @@ async def _async_seen_states(hass: HomeAssistant, entity_id: str) -> list[str]:
         )
         return [s.state.lower() for s in changes.get(entity_id, [])]
 
+    recorder: list[str] = []
     try:
         instance = get_instance(hass)  # raises if recorder not set up
-        seen.extend(await instance.async_add_executor_job(_distinct))
+        recorder = await instance.async_add_executor_job(_distinct)
     except Exception as err:  # noqa: BLE001 - recorder absent/failed: prefill is best-effort
         _LOGGER.debug("State prefill for %s skipped: %s", entity_id, err)
 
-    # Always offer "unknown" as a prefilled option: entities routinely pass
-    # through it (startup, source outage) and tracking it is a common ask, but it
-    # is filtered from the live/recorder scan above, so seed it explicitly.
-    seen.append(STATE_UNKNOWN)
-    return list(dict.fromkeys(seen))
+    # Cap the RECORDER-derived distinct set only — never the live state. Recorder
+    # history arrives oldest-first, so a straight dedup keeps chronological order;
+    # the cap trims from the FRONT (oldest) to keep the most-recent
+    # ``_SEEN_PREFILL_CAP`` distinct states. Drop unavailable/unknown (and the
+    # live state, re-prepended below) here: unavailable/unknown are ALWAYS
+    # re-appended at the tail in a fixed order, so a recorder scan that surfaced
+    # them must not pin them mid-list. Excluding the live state before the cap
+    # guarantees the CURRENT state survives even for an entity with >cap distinct
+    # recorder states (else the front-trim would drop the index-0 live state and
+    # violate this function's ``[current live state, ...]`` contract).
+    distinct = [
+        s
+        for s in dict.fromkeys(recorder)
+        if s not in (STATE_UNAVAILABLE, STATE_UNKNOWN) and s != live
+    ]
+    if len(distinct) > _SEEN_PREFILL_CAP:
+        distinct = distinct[-_SEEN_PREFILL_CAP:]
+
+    # Re-prepend the live state (on TOP of the cap) so it is always offered first,
+    # then always offer "unavailable" then "unknown" (in that order) as the LAST
+    # two options: entities routinely pass through both and they are filtered from
+    # the current-state check above, so seed them explicitly. Neither the distinct
+    # set nor the live state includes them, so no dedup pass is needed.
+    head = [live] if live is not None else []
+    return [*head, *distinct, STATE_UNAVAILABLE, STATE_UNKNOWN]
 
 
 class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):

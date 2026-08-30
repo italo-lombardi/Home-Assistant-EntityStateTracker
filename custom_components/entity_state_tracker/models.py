@@ -72,11 +72,17 @@ class TrackerLedger:
     mode: str
     states: list[str] | None = None
     target: list[str] | None = None
-    mode_changed_on: str | None = None
     daily: dict[str, dict[str, dict[str, Any]]] = field(default_factory=dict)
     last_state: str | None = None
     last_changed_ts: str | None = None
     last_updated_day: str | None = None
+    # The min_state_duration (glitch threshold) the closed-day daily buckets were
+    # LAST built with. Persisted so an options edit that changes the threshold can
+    # detect stale buckets across a restart and re-backfill them with the new
+    # value (H1) — closed-day buckets written under the old threshold would
+    # otherwise mix silently with new-threshold folds. ``None`` on a fresh/legacy
+    # ledger; the coordinator seeds it on first build.
+    built_min_state_duration: float | None = None
 
     @classmethod
     def from_dict(cls, d: dict[str, Any]) -> TrackerLedger:
@@ -100,6 +106,11 @@ class TrackerLedger:
                 daily[str(day)] = day_bucket
         states_raw = d.get("states")
         target_raw = d.get("target")
+        built = d.get("built_min_state_duration")
+        try:
+            built_min_state_duration = float(built) if built is not None else None
+        except (TypeError, ValueError):
+            built_min_state_duration = None
         return cls(
             entity_id=str(d.get("entity_id", "")),
             mode=str(d.get("mode", "")),
@@ -109,11 +120,11 @@ class TrackerLedger:
             target=[str(s) for s in target_raw]
             if isinstance(target_raw, list)
             else None,
-            mode_changed_on=d.get("mode_changed_on"),
             daily=daily,
             last_state=d.get("last_state"),
             last_changed_ts=d.get("last_changed_ts"),
             last_updated_day=d.get("last_updated_day"),
+            built_min_state_duration=built_min_state_duration,
         )
 
     def to_dict(self) -> dict[str, Any]:
@@ -122,7 +133,6 @@ class TrackerLedger:
             "mode": self.mode,
             "states": list(self.states) if self.states is not None else None,
             "target": list(self.target) if self.target is not None else None,
-            "mode_changed_on": self.mode_changed_on,
             "daily": {
                 day: {state: dict(row) for state, row in states.items()}
                 for day, states in self.daily.items()
@@ -130,6 +140,7 @@ class TrackerLedger:
             "last_state": self.last_state,
             "last_changed_ts": self.last_changed_ts,
             "last_updated_day": self.last_updated_day,
+            "built_min_state_duration": self.built_min_state_duration,
         }
 
 

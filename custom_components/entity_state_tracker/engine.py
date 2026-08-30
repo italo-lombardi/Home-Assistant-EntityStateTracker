@@ -37,9 +37,10 @@ _LOGGER = logging.getLogger(__name__)
 # LEDGER_MAX_DAYS cap applies (§6.2).
 _PRUNE_MARGIN_DAYS = 2
 
-# Frame labels for which the Σbreakdown > window invariant has already warned,
-# so the diagnostic logs once per label per process, not once per tick (v8).
-_WARNED_OVERFLOW: set[str] = set()
+# Tolerance (seconds) below which a breakdown that exceeds the window is treated
+# as sub-second rounding noise, not a real seam over-count. The coordinator's
+# once-per-(entry, frame) overflow warning uses the same floor (L4).
+OVERFLOW_TOLERANCE_SECS = 1.0
 
 # A frame is treated as fully covered (no real "unaccounted" slice) when its
 # uncovered remainder is at or below this floor — the same 1.0s tolerance the
@@ -288,15 +289,23 @@ async def query_recorder(
 
     Uses ``state_changes_during_period(include_start_time_state=True,
     no_attributes=True)`` on the recorder executor. Returns the entity's state
-    list (possibly empty), or ``None`` when the recorder is unavailable
-    (``get_instance`` is ``None`` — recorder disabled, §15) so the caller can
-    fall back to live-only accumulation.
+    list (possibly empty), or ``None`` when the recorder is unavailable so the
+    caller can fall back to live-only accumulation (§15).
+
+    Recorder-absent detection (verified against HA core): ``get_instance`` reads
+    ``hass.data[DATA_INSTANCE]`` through an ``lru_cache`` and *raises* ``KeyError``
+    when the recorder is not set up — it never returns ``None``. So the absence
+    signal is the ``KeyError``, caught here and mapped to ``None`` (mirroring
+    :meth:`EntityStateTrackerCoordinator._recorder_retention_start`); there is no
+    ``instance is None`` case to guard.
     """
     # Imported lazily: recorder is an ``after_dependencies`` and may be absent.
     from homeassistant.components.recorder import get_instance, history
 
-    instance = get_instance(hass)
-    if instance is None:
+    try:
+        instance = get_instance(hass)
+    except KeyError:
+        # Recorder not set up: get_instance raises rather than returning None.
         return None
 
     def _query() -> StatesList:
@@ -433,20 +442,12 @@ def compute_frame(
     # avg_duration so per-state counts/color/dominant stay pure (it is not a
     # real state and has no count/avg).
     breakdown_total = sum(breakdown_seconds.values())
-    # Invariant guard (v8): the breakdown can never exceed the window. A >1s
-    # overflow means a bucket seam over-counted (the rolling-frame partial-day
-    # bug this fix closes). Log ONCE per frame label for diagnostics — never
-    # raise (a coordinator refresh must not throw) — and still clamp below so a
-    # negative unaccounted can never surface.
-    if breakdown_total > window_seconds + 1.0 and frame_key not in _WARNED_OVERFLOW:
-        _WARNED_OVERFLOW.add(frame_key)
-        _LOGGER.warning(
-            "Entity State Tracker: %s breakdown %.1fs exceeds window %.1fs "
-            "(clamped); this indicates a bucket-seam over-count",
-            frame_key,
-            breakdown_total,
-            window_seconds,
-        )
+    # Invariant (v8): the breakdown can never exceed the window. A >1s overflow
+    # means a bucket seam over-counted (the rolling-frame partial-day bug this
+    # fix closes). We clamp so a negative unaccounted can never surface; the
+    # once-per-(entry, frame) diagnostic warning lives in the coordinator (L4),
+    # which owns entry_id and can warn per tracker instead of once per label
+    # process-wide.
     unaccounted_seconds = max(0.0, window_seconds - breakdown_total)
 
     breakdown_pct = {

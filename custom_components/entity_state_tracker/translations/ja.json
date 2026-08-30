@@ -146,6 +146,10 @@
         "confirm": {
           "name": "確認",
           "description": "リセットを実行するには有効にする必要があります。誤って履歴を失うのを防ぎます。"
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }
@@ -159,6 +163,9 @@
   "exceptions": {
     "reset_not_confirmed": {
       "message": "台帳をリセットするには confirm を true に設定してください。これは保存された履歴を消去し、元に戻せません。"
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

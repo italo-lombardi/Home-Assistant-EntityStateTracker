@@ -146,6 +146,10 @@
         "confirm": {
           "name": "Apstiprināt",
           "description": "Jābūt iespējotam, lai veiktu atiestatīšanu. Aizsargā pret nejaušu vēstures zudumu."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }
@@ -159,6 +163,9 @@
   "exceptions": {
     "reset_not_confirmed": {
       "message": "Iestatiet confirm uz true, lai atiestatītu reģistru. Tas notīra saglabāto vēsturi un to nevar atsaukt."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

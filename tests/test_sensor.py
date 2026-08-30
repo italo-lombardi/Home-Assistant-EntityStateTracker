@@ -61,6 +61,7 @@ def _fake_coordinator(
     tracked_states: list[str] | None,
     target_states: list[str] | None,
     data: TrackerData | None,
+    target_threshold: float | None = None,
     title: str = "Living Room — heat/auto",
     entry_id: str = "est_entry",
 ) -> SimpleNamespace:
@@ -71,6 +72,7 @@ def _fake_coordinator(
         enabled_frames=enabled_frames,
         tracked_states=tracked_states,
         target_states=target_states,
+        target_threshold=target_threshold,
         data=data,
         entry=entry,
         entity_id="climate.living_room",
@@ -237,6 +239,7 @@ def _duration_coord(
         enabled_frames=["today"],
         tracked_states=list(tracked) if tracked is not None else None,
         target_states=list(target) if target else None,
+        target_threshold=80.0 if target else None,
         data=frames_data,
     )
 
@@ -288,6 +291,37 @@ def test_duration_entity_descriptors() -> None:
     assert sensor.suggested_display_precision == 1
     assert sensor.state_class == SensorStateClass.MEASUREMENT
     assert sensor.unique_id == "est_entry_today_duration"
+    # entity_id is PINNED to the card-discoverable slug (§card parity): metric
+    # LABEL slug ("duration") + frame LABEL slug ("today"), NOT the metric/frame
+    # keys — so the card's DOMAIN_PREFIX discovery always finds a custom-named
+    # tracker.
+    assert sensor.entity_id == "sensor.entity_state_tracker_est_entry_duration_today"
+
+
+def test_frame_sensor_entity_id_pinned_frame_label_slug() -> None:
+    """A multi-token frame label slugifies into the pinned entity_id."""
+    frames = ["24h"]
+    data = TrackerData(frames={f: _frame_result() for f in frames})
+    coord = _fake_coordinator(
+        mode=MODE_SPECIFIC,
+        enabled_frames=frames,
+        tracked_states=["heat"],
+        target_states=None,
+        data=data,
+        entry_id="e_multi",
+    )
+    sensor = DurationSensor(coord, "24h")
+    assert (
+        sensor.entity_id == "sensor.entity_state_tracker_e_multi_duration_last_24_hours"
+    )
+
+
+def test_breakdown_sensor_entity_id_uses_state_breakdown_metric_slug() -> None:
+    """Breakdown sensor pins the "state_breakdown" metric slug (not "breakdown")."""
+    coord = _breakdown_coord()
+    coord.entry.entry_id = "e_bd"
+    sensor = BreakdownSensor(coord, "today")
+    assert sensor.entity_id == "sensor.entity_state_tracker_e_bd_state_breakdown_today"
 
 
 def test_duration_attributes_without_target() -> None:
@@ -296,7 +330,17 @@ def test_duration_attributes_without_target() -> None:
     sensor = DurationSensor(coord, "today")
     attrs = sensor.extra_state_attributes
     assert attrs["percent"] == 66.7
+    # duration_seconds is the RAW tracked seconds (== native_value), independent
+    # of HA's native→suggested (seconds→hours) unit conversion on the state, so
+    # the card has an unambiguous seconds figure. heat 1800 + auto 600 = 2400.
+    assert attrs["duration_seconds"] == 2400
+    assert attrs["duration_seconds"] == sensor.native_value
+    assert isinstance(attrs["duration_seconds"], int)
     assert attrs["tracked_states"] == ["heat", "auto"]
+    # source_entity names the tracked entity so the card can show it (Part A).
+    assert attrs["source_entity"] == "climate.living_room"
+    # frame is the common-core window key (RECORDED — config-stable).
+    assert attrs["frame"] == "today"
     assert attrs["window_coverage"] == 0.9
     assert attrs["has_gap"] is True
     assert attrs["data_start"] == "2026-08-29T00:00:00+00:00"
@@ -305,6 +349,8 @@ def test_duration_attributes_without_target() -> None:
     assert attrs["window_start"] == "2026-08-29T00:00:00-07:00"
     assert attrs["window_start"] != attrs["data_start"]
     assert "compliance_percent" not in attrs
+    # target_threshold rides along only with a target set — absent here.
+    assert "target_threshold" not in attrs
     # Transition metrics scoped to tracked states.
     assert set(attrs["counts"]) == {"heat", "auto"}
     assert attrs["counts"]["heat"] == 3
@@ -320,6 +366,8 @@ def test_duration_attributes_with_target_adds_compliance() -> None:
     attrs = sensor.extra_state_attributes
     assert attrs["compliance_percent"] == 50.0
     assert attrs["target_states"] == ["heat"]
+    # target_threshold rides along beside compliance_percent when a target is set.
+    assert attrs["target_threshold"] == 80.0
 
 
 def test_duration_attributes_all_states_transition_keys_when_tracked_none() -> None:
@@ -361,6 +409,7 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
         "previous_state",
         "percent",
         "compliance_percent",
+        "duration_seconds",
         "window_start",
         "data_start",
         "window_coverage",
@@ -369,6 +418,8 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
     # Config attributes stay recorded — they don't churn.
     assert "tracked_states" not in unrecorded
     assert "target_states" not in unrecorded
+    # source_entity is config-stable → RECORDED (not stripped from recorder).
+    assert "source_entity" not in unrecorded
     # last_seen was dropped entirely — no longer an attribute at all.
     assert "last_seen" not in unrecorded
 
@@ -429,6 +480,10 @@ def test_breakdown_attributes_sorted_by_seconds_desc() -> None:
     coord = _breakdown_coord()
     sensor = BreakdownSensor(coord, "today")
     attrs = sensor.extra_state_attributes
+    # source_entity names the tracked entity so the card can show it (Part A).
+    assert attrs["source_entity"] == "climate.living_room"
+    # frame is the common-core window key (RECORDED — config-stable).
+    assert attrs["frame"] == "today"
     # heat 1800 > off 1200 > auto 600.
     assert list(attrs["breakdown_seconds"]) == ["heat", "off", "auto"]
     assert attrs["breakdown_seconds"]["heat"] == 1800

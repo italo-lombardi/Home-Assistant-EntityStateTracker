@@ -74,7 +74,9 @@ This integration uses a config flow accessible from **Settings > Devices & Servi
 
 ### Step 1: Choose the entity
 
-Select the single entity to track. Any entity works — a climate, a light, a lock, a person, a sensor.
+Select the single entity to track. Any entity works — a climate, a light, a lock, a person, a sensor. You can also give the tracker an optional friendly name here.
+
+![Step 1: Choose the entity](assets/00_choose_entity.png)
 
 ### Step 2: Choose the mode
 
@@ -85,19 +87,25 @@ A menu forks into one of two legs:
 | **Specific states** | You pick the states to track. Produces duration + percentage sensors per frame, and — optionally — a compliance score against a target set. |
 | **All states** | No state pick. Auto-discovers every state the entity visits and produces one per-state breakdown sensor per frame. |
 
+![Step 2: Choose the mode](assets/01_choose_mode.png)
+
 ### Step 2a: Specific-states leg
 
 | Field | Description |
 |-------|-------------|
-| States to track | Multi-select, prefilled with the states already seen for this entity (current state + distinct recorder states), case-normalised. Free entry allowed for states not yet seen. |
+| States to track | Multi-select, prefilled with the states already seen for this entity (current state + distinct recorder states, plus `unavailable` and `unknown`), case-normalised. Free entry allowed for states not yet seen. |
 | Enable compliance | When on, adds a compliance step so the percentage becomes a *score* against a desired-state set. |
+
+![Step 2a: Specific-states leg](assets/02_specific_states.png)
 
 ### Step 2a-i: Compliance (only when enabled)
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Target states | — | The desired-state **set** — compliance counts time in *any* of these (`heat` **or** `auto`). |
+| Target states | — | The desired-state **set** — compliance counts time in *any* of these (`heat` **or** `auto`). Independent of the tracked states: you can score compliance on a state you don't otherwise track. |
 | Target threshold (%) | *(optional)* | 0–100. When set, a `compliant` binary sensor turns on while today's compliance is at or above this threshold. |
+
+![Step 2a-i: Compliance](assets/03_compliance.png)
 
 ### Step 2b: All-states leg
 
@@ -110,9 +118,13 @@ No state pick and no compliance — every state is discovered automatically.
 | Frames | `today`, `yesterday`, `24h`, `7d` on | Toggle each frame on or off. `30d`, `month`, and `year` are off by default because they exceed recorder retention and fill in over time via the ledger. |
 | Minimum state duration (seconds) | `0` (disabled) | Glitch filter. Contiguous visits shorter than this merge into the preceding block, so momentary flaps don't count as real visits or inflate transition counts. |
 
+![Shared tail: frames and glitch filter](assets/04_frames.png)
+
 ### Options Flow
 
-All settings can be edited after creation via **Settings > Devices & Services > Entity State Tracker > Configure**. Editing is **within-mode only** — changing the mode means creating a new tracker (a different mode produces a different output shape that would break existing consumers). Frame and target changes reload the entry automatically.
+All settings can be edited after creation via **Settings > Devices & Services > Entity State Tracker > Configure**. Editing is **within-mode only** — changing the mode means creating a new tracker (a different mode produces a different output shape that would break existing consumers). Frame and target changes reload the entry automatically. Changing the glitch filter re-backfills the ledger so history reflects the new threshold.
+
+![Options Flow](assets/05_options.png)
 
 ---
 
@@ -128,14 +140,20 @@ Per **enabled frame**, one **duration sensor**:
 |--------|-------|
 | State | Seconds spent in the tracked states during the frame (`device_class: duration`, unit seconds, suggested display in hours, 1 dp) |
 | `state_class` | `measurement` |
-| Key attributes | `percent`, `compliance_percent` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`count`, `avg_duration`, `previous_state`) |
+| Key attributes | `source_entity`, `frame`, `percent`, `compliance_percent` and `target_threshold` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`count`, `avg_duration`, `previous_state`) |
 
 The frame's **percent** and **compliance percent** (when a target is set) ride along as attributes on the duration sensor — read them in templates or with a template trigger. For pass/fail automation, a `compliant` binary sensor is created when a threshold is set:
 
 | Entity | Type | Notes |
 |--------|------|-------|
 | `binary_sensor..._compliant` | Binary Sensor | `on` while today's compliance ≥ the target threshold (only when a threshold is set; uses the `today` frame, or the first enabled frame if `today` is off). |
-| `binary_sensor..._currently_in_state` | Binary Sensor | `on` while the entity is currently in one of the tracked states. |
+| `binary_sensor..._currently_in_state` | Binary Sensor | `on` while the entity is currently in one of the tracked states. Exposes `source_entity`, `tracked_states`, and `current_state` (the live matched state). |
+
+The `compliant` binary sensor also exposes `source_entity`, `compliance_percent`, `tracked_states`, `target_states`, `target_threshold`, `frame`, `data_start`, `window_coverage`, and `has_gap` as attributes, so you can see *why* it is on or off at a glance.
+
+> **Frame note:** the `compliant` sensor scores the `today` frame — the only window whose compliance is "now". `today` is enabled by default, but if you disable it the sensor falls back to the **first enabled frame** in canonical order (`today` → `yesterday` → `24h` → `7d` → `30d` → `month` → `year`). With `today` off, "compliant" can therefore mean e.g. year-compliance rather than the live day. The active window is always shown in the sensor's `frame` attribute — keep `today` enabled if you want live/day compliance.
+
+![Specific-states sensors](assets/06_specific_sensors.png)
 
 ### All-states mode
 
@@ -143,11 +161,13 @@ The frame's **percent** and **compliance percent** (when a target is set) ride a
 
 | Entity | State | Attributes |
 |--------|-------|------------|
-| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `breakdown_seconds` `{state: int}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
+| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `frame`, `breakdown_seconds` `{state: int}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
 
 - **Every state literal gets its own row** — `unavailable`, `unknown`, and `none` are counted as ordinary state names against a single wall-clock denominator, so the rows sum to ~100% of the covered window.
 - **A new state seen at runtime becomes a new key**, accumulating from first-seen. No entity is created, no restart is needed. One INFO log line is written and an `entity_state_tracker_new_state` event always fires — automations can react to it with no extra configuration.
 - The breakdown attributes are marked unrecorded (they change roughly every minute), so they never bloat the recorder — the ledger is the history store, and the card reads it live.
+
+![All-states breakdown sensor + attributes](assets/07_allstates_sensor.png)
 
 ### Frames
 
@@ -177,6 +197,10 @@ The integration ships a custom Lovelace card, auto-registered as a Lovelace reso
 - **Pie / donut** — one frame's breakdown as slices (all-states) or in-state-vs-rest (specific mode). Each state gets a deterministic colour (hashed from the state name), so slices keep their colour as new states appear.
 - **Table** — states as rows, frames as columns (duration + %), for a dense multi-frame dashboard view. Best fit for all-states with many frames.
 
+![Card: bars](assets/08_card_bars.png)
+![Card: pie / donut](assets/09_card_pie.png)
+![Card: table](assets/10_card_table.png)
+
 Incomplete frames (where data is younger than the window) render hatched and labelled "since &lt;date&gt;". On YAML-mode dashboards, where Lovelace resources are read-only, the card degrades gracefully and logs manual-add instructions.
 
 Point `entity:` at **any one of the tracker's own sensors** (not the source entity you are tracking). The card discovers that sensor's siblings — every frame and metric of the same tracker — from its shared entity-id stem, so a single sensor id is enough. Pick, for example, its `state_breakdown` (all-states mode) or `duration` (specific mode) sensor for `today`.
@@ -201,7 +225,14 @@ data:
   confirm: true
 ```
 
-`confirm: true` is required — resetting the ledger discards accumulated long-window history that cannot be rebuilt beyond the recorder's retention. The reset applies to every tracker (each config entry owns its own store and is reset together).
+`confirm: true` is required — resetting the ledger discards accumulated long-window history that cannot be rebuilt beyond the recorder's retention. With no `entity_id`, the reset applies to **every** tracker (each config entry owns its own store). Pass an optional `entity_id` (the *tracked* entity, not the tracker's own sensor) to reset only the tracker(s) watching that entity — a multi-tracker setup can wipe one tracker's history without touching the rest:
+
+```yaml
+service: entity_state_tracker.reset_ledger
+data:
+  confirm: true
+  entity_id: climate.living_room
+```
 
 ---
 
@@ -267,6 +298,7 @@ Other Home Assistant integrations by the same author:
 | [Fuel Compare](https://github.com/italo-lombardi/Home-Assistant-FuelCompare) | Tracks live fuel prices from 36 providers across 30 countries |
 | [WashWise](https://github.com/italo-lombardi/Home-Assistant-WashWise) | Decide whether to wash your car, bike, or solar panels — or skip garden irrigation — based on the weather forecast |
 | [DashSnap](https://github.com/italo-lombardi/DashSnap) | Record or screenshot any web page via headless Chromium — HA dashboards, Grafana, public pages |
+| [DashSnap Integration](https://github.com/italo-lombardi/DashSnap-Integration) | Trigger DashSnap recordings and screenshots from HA automations and scripts — exposes `dashsnap.record_ha` and `dashsnap.record` services |
 
 ---
 

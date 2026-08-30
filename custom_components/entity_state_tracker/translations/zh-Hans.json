@@ -146,6 +146,10 @@
         "confirm": {
           "name": "确认",
           "description": "必须启用才能执行重置。防止意外丢失历史。"
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }
@@ -159,6 +163,9 @@
   "exceptions": {
     "reset_not_confirmed": {
       "message": "将 confirm 设置为 true 以重置账本。此操作会清除持久化历史，且无法撤销。"
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

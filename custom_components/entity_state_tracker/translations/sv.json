@@ -146,6 +146,10 @@
         "confirm": {
           "name": "Bekräfta",
           "description": "Måste vara aktiverat för att utföra återställningen. Skyddar mot oavsiktlig historikförlust."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }
@@ -159,6 +163,9 @@
   "exceptions": {
     "reset_not_confirmed": {
       "message": "Sätt confirm till true för att återställa liggaren. Detta rensar den bevarade historiken och kan inte ångras."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

@@ -146,6 +146,10 @@
         "confirm": {
           "name": "Επιβεβαίωση",
           "description": "Πρέπει να είναι ενεργοποιημένο για την εκτέλεση της επαναφοράς. Προστατεύει από τυχαία απώλεια ιστορικού."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }
@@ -159,6 +163,9 @@
   "exceptions": {
     "reset_not_confirmed": {
       "message": "Ορίστε το confirm σε true για επαναφορά του καθολικού. Αυτό διαγράφει το αποθηκευμένο ιστορικό και δεν μπορεί να αναιρεθεί."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

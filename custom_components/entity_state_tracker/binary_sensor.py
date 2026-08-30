@@ -14,6 +14,8 @@ coordinator tick that recomputes an unchanged value writes no recorder row.
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
@@ -26,7 +28,7 @@ from .const import (
     TRANSLATION_KEY_CURRENTLY_IN_STATE,
 )
 from .coordinator import EntityStateTrackerCoordinator
-from .helpers import tracker_device_name, unique_id
+from .helpers import binary_entity_id, tracker_device_name, unique_id
 from .write_dedup import DedupCoordinatorBinarySensor
 
 # The compliant sensor keys today's frame — the only window whose compliance is
@@ -68,7 +70,7 @@ def _device_info(coordinator: EntityStateTrackerCoordinator) -> DeviceInfo:
     label = coordinator.entry.title or coordinator.entity_id
     return DeviceInfo(
         identifiers={(DOMAIN, coordinator.entry.entry_id)},
-        name=tracker_device_name(label, coordinator.mode),
+        name=tracker_device_name(label),
         manufacturer="Entity State Tracker",
         entry_type=DeviceEntryType.SERVICE,
     )
@@ -80,11 +82,23 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
     _attr_has_entity_name = True
     _attr_translation_key = TRANSLATION_KEY_CURRENTLY_IN_STATE
 
+    # This sensor is frame-agnostic — it reads the live last_state, not a window
+    # — so it carries no frame/coverage attributes (they'd be meaningless here).
+    # current_state names which state is live; it churns every transition, so
+    # strip it from the recorder. source_entity/tracked_states are config-stable
+    # and stay recorded.
+    _unrecorded_attributes = frozenset({"current_state"})
+
     def __init__(self, coordinator: EntityStateTrackerCoordinator) -> None:
         """Initialize the currently-in-state binary sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = unique_id(
             coordinator.entry.entry_id, "", TRANSLATION_KEY_CURRENTLY_IN_STATE
+        )
+        # Pin entity_id so it shares the tracker's card-discoverable stem (see
+        # sensor.py _FrameSensor.__init__ for the rationale + v0.1.0 tradeoff).
+        self.entity_id = binary_entity_id(
+            coordinator.entry.entry_id, TRANSLATION_KEY_CURRENTLY_IN_STATE
         )
         self._attr_device_info = _device_info(coordinator)
 
@@ -95,18 +109,54 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
         tracked = self.coordinator.tracked_states or ()
         return data is not None and data.last_state in tracked
 
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the source entity, tracked states, and the live current state."""
+        data = self.coordinator.data
+        return {
+            "source_entity": self.coordinator.entity_id,
+            "tracked_states": self.coordinator.tracked_states,
+            "current_state": data.last_state if data is not None else None,
+        }
+
 
 class CompliantBinarySensor(DedupCoordinatorBinarySensor):
-    """ON when today's compliance percentage meets the configured threshold."""
+    """ON when today's compliance percentage meets the configured threshold.
+
+    Frame note: this sensor scores the ``today`` frame — the only window whose
+    compliance is "now" rather than a historical span. ``today`` is default-on,
+    but a user MAY disable it; when it is off, the sensor falls back to the FIRST
+    enabled frame (``enabled_frames[0]``, canonical order today→…→year). So with
+    ``today`` disabled, "compliant" can silently mean e.g. year-compliance —
+    whichever enabled frame comes first in canonical order. The active frame is
+    always surfaced in the ``frame`` extra-state attribute so the user can see
+    which window is being scored. Keep ``today`` enabled if you want the sensor
+    to track live/day compliance.
+    """
 
     _attr_has_entity_name = True
     _attr_translation_key = TRANSLATION_KEY_COMPLIANT
+
+    # compliance_percent churns on essentially every transition on today's frame,
+    # so strip it from the recorder (mirrors DurationSensor/BreakdownSensor, §5.3)
+    # — it stays queryable as a live attribute; our ledger is the history store.
+    # The coverage trio (data_start/window_coverage/has_gap) is likewise volatile
+    # and stripped. source_entity/tracked_states/target_states/target_threshold/
+    # frame are config-stable and stay recorded.
+    _unrecorded_attributes = frozenset(
+        {"compliance_percent", "data_start", "window_coverage", "has_gap"}
+    )
 
     def __init__(self, coordinator: EntityStateTrackerCoordinator) -> None:
         """Initialize the compliant binary sensor."""
         super().__init__(coordinator)
         self._attr_unique_id = unique_id(
             coordinator.entry.entry_id, "", TRANSLATION_KEY_COMPLIANT
+        )
+        # Pin entity_id so it shares the tracker's card-discoverable stem (see
+        # sensor.py _FrameSensor.__init__ for the rationale + v0.1.0 tradeoff).
+        self.entity_id = binary_entity_id(
+            coordinator.entry.entry_id, TRANSLATION_KEY_COMPLIANT
         )
         self._attr_device_info = _device_info(coordinator)
         # Prefer today's frame; fall back to whichever frame is first enabled so
@@ -121,7 +171,12 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
 
     @property
     def is_on(self) -> bool | None:
-        """Return True when compliance meets the threshold, None when unknown."""
+        """Return True when compliance meets the threshold, None when unknown.
+
+        Scores ``self._frame_key`` — ``today`` when enabled, else the first
+        enabled frame (see the class docstring): with ``today`` off this may be a
+        long window, so the score is that frame's compliance, not the live day.
+        """
         threshold = self.coordinator.target_threshold
         data = self.coordinator.data
         if threshold is None or data is None:
@@ -130,3 +185,28 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
         if frame is None or frame.compliance_percent is None:
             return None
         return frame.compliance_percent >= threshold
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return why the sensor is (non-)compliant: the score, bar, and frame.
+
+        ``compliance_percent`` is ``None`` before first data or when its frame is
+        absent — the target/threshold/frame config surface regardless so the user
+        always sees what bar is being applied to which window. The common-core
+        source_entity/data_start/window_coverage/has_gap ride along too.
+        """
+        data = self.coordinator.data
+        frame = data.frames.get(self._frame_key) if data is not None else None
+        return {
+            "source_entity": self.coordinator.entity_id,
+            "compliance_percent": frame.compliance_percent
+            if frame is not None
+            else None,
+            "tracked_states": self.coordinator.tracked_states,
+            "target_states": self.coordinator.target_states,
+            "target_threshold": self.coordinator.target_threshold,
+            "frame": self._frame_key,
+            "data_start": frame.data_start if frame is not None else None,
+            "window_coverage": frame.window_coverage if frame is not None else None,
+            "has_gap": frame.has_gap if frame is not None else None,
+        }

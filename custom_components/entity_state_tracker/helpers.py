@@ -7,9 +7,16 @@ a single source of truth.
 
 from __future__ import annotations
 
-from hashlib import md5
+from homeassistant.util import slugify
 
-from .const import FRAMES
+from .const import (
+    DOMAIN,
+    FRAMES,
+    TRANSLATION_KEY_BREAKDOWN,
+    TRANSLATION_KEY_COMPLIANT,
+    TRANSLATION_KEY_CURRENTLY_IN_STATE,
+    TRANSLATION_KEY_DURATION,
+)
 
 # Human labels per frame. Plain nouns for calendar frames; the rolling frames
 # name their span ("Last 24 hours"/"Last 7 days") without a "(rolling)" tag.
@@ -25,11 +32,11 @@ _FRAME_LABELS: dict[str, str] = {
 }
 
 
-def tracker_device_name(entity_label: str, mode: str) -> str:
+def tracker_device_name(entity_label: str) -> str:
     """Return the tracker's device name: ``Entity State Tracker — <label>`` (§5).
 
-    ``mode`` is accepted so callers pass what they have; the device name is
-    mode-independent by design (one device per config entry regardless of mode).
+    The device name is mode-independent by design — one device per config entry
+    regardless of mode — so it takes only the entity label.
     """
     return f"Entity State Tracker — {entity_label}"
 
@@ -41,43 +48,6 @@ def normalize_state(state: str) -> str:
     recorded ``heat`` (§4 prefilled states are case-normalized).
     """
     return state.strip().lower()
-
-
-def state_color(state: str) -> str:
-    """Return a deterministic ``#rrggbb`` color for a state string (§5.3).
-
-    Hash the state name to a stable hue, so a state always gets the same color
-    across runs and adding a new state never recolors the existing ones. Fixed
-    saturation/lightness keep slices legible; only the hue varies.
-    """
-    digest = md5(state.encode(), usedforsecurity=False).digest()
-    hue = int.from_bytes(digest[:2], "big") / 65535.0
-    return _hsl_to_hex(hue, 0.55, 0.55)
-
-
-def _hsl_to_hex(h: float, s: float, lightness: float) -> str:
-    """Convert HSL (each 0..1) to a ``#rrggbb`` string."""
-    if s == 0:
-        r = g = b = lightness
-    else:
-        q = lightness * (1 + s) if lightness < 0.5 else lightness + s - lightness * s
-        p = 2 * lightness - q
-        r = _hue_to_rgb(p, q, h + 1 / 3)
-        g = _hue_to_rgb(p, q, h)
-        b = _hue_to_rgb(p, q, h - 1 / 3)
-    return f"#{round(r * 255):02x}{round(g * 255):02x}{round(b * 255):02x}"
-
-
-def _hue_to_rgb(p: float, q: float, t: float) -> float:
-    """One channel of an HSL→RGB conversion (standard piecewise form)."""
-    t %= 1.0
-    if t < 1 / 6:
-        return p + (q - p) * 6 * t
-    if t < 1 / 2:
-        return q
-    if t < 2 / 3:
-        return p + (q - p) * (2 / 3 - t) * 6
-    return p
 
 
 def frame_label(frame_key: str) -> str:
@@ -96,18 +66,78 @@ def unique_id(entry_id: str, frame: str, metric: str) -> str:
     return f"{entry_id}_{frame}_{metric}"
 
 
-if __name__ == "__main__":  # pragma: no cover
-    # Self-check: state_color is deterministic and every canonical frame labels.
-    assert state_color("on") == state_color("on")
-    assert state_color("on") != state_color("off")
-    assert all(c in "0123456789abcdef" for c in state_color("heat")[1:])
-    assert normalize_state("  Heat ") == "heat"
-    assert tracker_device_name("Front Door", "all_states") == (
-        "Entity State Tracker — Front Door"
+# Metric token → the slug the CARD discovers on. The card (frontend
+# entity-state-tracker-card.js) keys its DOMAIN_PREFIX discovery on the slugified
+# English ENTITY NAME ("Duration"→"duration", "State Breakdown"→"state_breakdown",
+# …), NOT on the backend metric KEY (TRANSLATION_KEY_BREAKDOWN is "breakdown").
+# We pin entity_id to reproduce those exact tokens so the card's stemOf /
+# _matchFrame / prettifyStem discover + label every tracker whatever custom name
+# the user gave the device (with has_entity_name=True HA would otherwise slugify
+# the device name into the object_id, dropping the "entity_state_tracker_" prefix
+# the card matches on — mirrors Entity Availability's explicit self.entity_id).
+_METRIC_ENTITY_SLUG: dict[str, str] = {
+    TRANSLATION_KEY_DURATION: "duration",
+    TRANSLATION_KEY_BREAKDOWN: "state_breakdown",
+    TRANSLATION_KEY_CURRENTLY_IN_STATE: "currently_in_state",
+    TRANSLATION_KEY_COMPLIANT: "compliant",
+}
+
+
+def _frame_label_slug(frame: str) -> str:
+    """Slug of a frame's English label — the card matches on this, not the key.
+
+    e.g. ``7d`` → ``last_7_days`` (slug of "Last 7 days"). Must equal the card's
+    ``_slugify(FRAME_LABELS[frame])``; HA ``slugify`` and the card's slugify agree
+    (lowercase, non-alphanumerics → "_", collapse, trim).
+    """
+    return slugify(frame_label(frame))
+
+
+def frame_entity_id(entry_id: str, frame: str, metric: str) -> str:
+    """Pinned entity_id for a per-frame sensor the card can discover.
+
+    ``sensor.entity_state_tracker_<entry_slug>_<metric_slug>_<frame_label_slug>``
+    — the EXACT shape the card expects (DOMAIN_PREFIX + metric label slug + frame
+    label slug). ``entry_id`` is slugified so multiple trackers get distinct stems
+    (mirrors ``unique_id``, which already namespaces by entry_id). See
+    ``_METRIC_ENTITY_SLUG``.
+    """
+    return (
+        f"sensor.{DOMAIN}_{slugify(entry_id)}_"
+        f"{_METRIC_ENTITY_SLUG[metric]}_{_frame_label_slug(frame)}"
     )
+
+
+def binary_entity_id(entry_id: str, metric: str) -> str:
+    """Pinned entity_id for a (frameless) binary sensor.
+
+    ``binary_sensor.entity_state_tracker_<entry_slug>_<metric_slug>`` — same
+    namespacing as ``frame_entity_id`` minus the frame token (the binary sensors
+    are not per-frame). Kept prefixed so it shares the tracker's device stem.
+    """
+    return f"binary_sensor.{DOMAIN}_{slugify(entry_id)}_{_METRIC_ENTITY_SLUG[metric]}"
+
+
+if __name__ == "__main__":  # pragma: no cover
+    # Self-check: normalization, device name, and every canonical frame labels.
+    assert normalize_state("  Heat ") == "heat"
+    assert tracker_device_name("Front Door") == ("Entity State Tracker — Front Door")
     assert frame_label("24h") == "Last 24 hours"
     assert frame_label("today") == "Today"
     assert frame_label("mystery") == "mystery"
     assert unique_id("abc", "today", "duration") == "abc_today_duration"
     assert set(_FRAME_LABELS) == set(FRAMES)
+    # Pinned entity_ids reproduce EXACTLY the card's expected slug shape.
+    assert (
+        frame_entity_id("01ABC", "7d", TRANSLATION_KEY_DURATION)
+        == "sensor.entity_state_tracker_01abc_duration_last_7_days"
+    )
+    assert (
+        frame_entity_id("01ABC", "month", TRANSLATION_KEY_BREAKDOWN)
+        == "sensor.entity_state_tracker_01abc_state_breakdown_this_month"
+    )
+    assert (
+        binary_entity_id("01ABC", TRANSLATION_KEY_COMPLIANT)
+        == "binary_sensor.entity_state_tracker_01abc_compliant"
+    )
     print("helpers self-check OK")

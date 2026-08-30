@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Quels états comptent comme conformes ?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "La conformité est calculée comme le pourcentage de chaque période pendant laquelle l'entité s'est trouvée dans l'un des états choisis ici. Ces états sont indépendants des états suivis — vous pouvez évaluer la conformité sur un état que vous ne suivez pas par ailleurs (par exemple, suivre la durée pendant laquelle un diffuseur est 'on', mais marquer 'off' comme état conforme/souhaité). Prérempli avec vos états suivis par commodité ; modifiable librement. Vous pouvez aussi saisir un état non répertorié.",
         "data": {
           "target": "État(s) conforme(s)",
           "target_threshold": "Seuil de conformité (%, facultatif)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Les états considérés comme conformes/souhaités. Le temps passé dans l'un d'eux est comptabilisé. Indépendant des états suivis — choisissez n'importe quel état que l'entité peut prendre.",
           "target_threshold": "Si défini, un capteur binaire « Conforme » s'active lorsque le pourcentage de conformité atteint ou dépasse cette valeur. Laissez vide pour ignorer le seuil."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Les 30 derniers jours locaux entiers.",
           "month": "Depuis le 1er de ce mois.",
           "year": "Depuis le 1er janvier.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "L'ensemble des états considérés comme conformes. Se trouver dans l'un d'eux compte. Indépendant des états suivis — choisissez n'importe quel état que l'entité peut prendre. Utilisé uniquement lorsque l'évaluation de conformité est activée.",
           "target_threshold": "Si défini, un capteur binaire « Conforme » s'active lorsque le pourcentage de conformité atteint ou dépasse cette valeur. Laissez vide pour ignorer le seuil.",
           "min_state_duration": "Si l'entité suivie passe dans un état puis en ressort plus vite que ce nombre de secondes, ce bref instant est ignoré — son temps est ajouté à l'état précédent et il ne compte pas comme un changement distinct. Utilisez-le pour filtrer les capteurs qui scintillent ou rebondissent. Réglez sur 0 pour compter chaque changement, aussi bref soit-il."
         }
@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "Actuellement dans l'état"
+        "name": "Dans un état suivi"
       },
       "compliant": {
         "name": "Conforme"
@@ -140,12 +140,16 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Réinitialiser le registre",
-      "description": "Efface l'historique des compartiments journaliers persistant d'un suivi. Les longues périodes se reconstruisent à partir des données du recorder lorsqu'elles sont encore disponibles. Ceci est irréversible.",
+      "name": "Réinitialiser l'historique",
+      "description": "Efface l'historique quotidien persistant d'Entity State Tracker. Les longues périodes sont reconstruites à partir des données du recorder lorsqu'elles sont encore disponibles. Cette action est irréversible.",
       "fields": {
         "confirm": {
           "name": "Confirmer",
           "description": "Doit être activé pour effectuer la réinitialisation. Protège contre une perte accidentelle de l'historique."
+        },
+        "entity_id": {
+          "name": "Entité suivie",
+          "description": "Limite la réinitialisation aux trackers surveillant cette entité suivie. Laissez vide pour réinitialiser tous les Entity State Tracker. Il s'agit de l'entité qu'un tracker surveille, pas du capteur du tracker lui-même."
         }
       }
     }
@@ -158,7 +162,10 @@
   },
   "exceptions": {
     "reset_not_confirmed": {
-      "message": "Réglez confirm sur true pour réinitialiser le registre. Ceci efface l'historique persistant et est irréversible."
+      "message": "Définissez « confirm » sur true pour réinitialiser l'historique. Cela efface l'historique persistant et est irréversible."
+    },
+    "reset_no_match": {
+      "message": "Aucun Entity State Tracker ne suit {entity_id}. Vérifiez l'ID de l'entité, ou laissez vide pour réinitialiser tous les trackers."
     }
   }
 }

@@ -38,7 +38,7 @@ from .const import (
     TRANSLATION_KEY_DURATION,
 )
 from .coordinator import EntityStateTrackerCoordinator
-from .helpers import frame_label, tracker_device_name, unique_id
+from .helpers import frame_entity_id, frame_label, tracker_device_name, unique_id
 from .models import FrameResult
 from .write_dedup import DedupCoordinatorSensor
 
@@ -69,7 +69,7 @@ def _device_info(coordinator: EntityStateTrackerCoordinator) -> DeviceInfo:
     label = coordinator.entry.title or coordinator.entity_id
     return DeviceInfo(
         identifiers={(DOMAIN, coordinator.entry.entry_id)},
-        name=tracker_device_name(label, coordinator.mode),
+        name=tracker_device_name(label),
         manufacturer="Entity State Tracker",
         entry_type=DeviceEntryType.SERVICE,
     )
@@ -92,6 +92,17 @@ class _FrameSensor(DedupCoordinatorSensor):
         super().__init__(coordinator)
         self._frame = frame
         self._attr_unique_id = unique_id(
+            coordinator.entry.entry_id, frame, self._metric
+        )
+        # Pin entity_id so the card's DOMAIN_PREFIX discovery always finds us.
+        # With has_entity_name=True, HA would otherwise slugify the (custom)
+        # device name into the object_id and drop the "entity_state_tracker_"
+        # prefix the card matches on — a custom-named tracker would vanish from
+        # the card. Mirrors Entity Availability, which pins self.entity_id too.
+        # TRADEOFF: this changes existing installs' entity_ids (history survives
+        # via unique_id in the registry; hardcoded dashboard/template refs to the
+        # OLD slugified ids break). Accepted at v0.1.0 (see CHANGELOG).
+        self.entity_id = frame_entity_id(
             coordinator.entry.entry_id, frame, self._metric
         )
         self._attr_translation_key = self._translation_key
@@ -158,8 +169,9 @@ class DurationSensor(_FrameSensor):
     # essentially every transition on the today frame, so recording them writes
     # a state_attributes row per changed tick and defeats hash-dedup. percent /
     # compliance_percent stay queryable here as attributes (via templates), just
-    # not recorded. tracked_states/target_states are config and stay recorded.
-    # The ledger holds the history; live UI/templates still read attrs.
+    # not recorded. tracked_states/target_states/source_entity are config and
+    # stay recorded. The ledger holds the history; live UI/templates still read
+    # attrs.
     _unrecorded_attributes = frozenset(
         {
             "counts",
@@ -167,6 +179,7 @@ class DurationSensor(_FrameSensor):
             "previous_state",
             "percent",
             "compliance_percent",
+            "duration_seconds",
             "window_start",
             "data_start",
             "window_coverage",
@@ -184,12 +197,20 @@ class DurationSensor(_FrameSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return percent, compliance, window bounds, and transition metrics."""
+        """Return source entity, frame, percent, compliance, bounds, transitions."""
         result = self._result
         if result is None:
             return None
         attrs: dict[str, Any] = {
+            "source_entity": self.coordinator.entity_id,
+            "frame": self._frame,
             "percent": result.percent,
+            # Raw tracked seconds, independent of HA's native→suggested unit
+            # conversion on the STATE (which serves hours). The card reads this
+            # for an unambiguous seconds figure; identical to native_value.
+            "duration_seconds": _tracked_seconds(
+                result, self.coordinator.tracked_states
+            ),
             "tracked_states": self.coordinator.tracked_states,
             "target_states": self.coordinator.target_states,
             "window_start": result.window_start,
@@ -199,6 +220,7 @@ class DurationSensor(_FrameSensor):
         }
         if self.coordinator.target_states:
             attrs["compliance_percent"] = result.compliance_percent
+            attrs["target_threshold"] = self.coordinator.target_threshold
         attrs.update(
             _transition_metrics(
                 result, self.coordinator, self.coordinator.tracked_states
@@ -245,7 +267,7 @@ class BreakdownSensor(_FrameSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return the full per-state breakdown, states sorted by seconds desc."""
+        """Return source entity, frame + full per-state breakdown, sorted desc."""
         result = self._result
         if result is None:
             return None
@@ -261,6 +283,8 @@ class BreakdownSensor(_FrameSensor):
         breakdown_pct = {s: result.breakdown_pct.get(s) for s in order}
         breakdown_pct["unaccounted"] = result.breakdown_pct.get("unaccounted")
         return {
+            "source_entity": self.coordinator.entity_id,
+            "frame": self._frame,
             "breakdown_seconds": {s: int(result.breakdown_seconds[s]) for s in order},
             "breakdown_pct": breakdown_pct,
             "counts": {s: result.counts.get(s, 0) for s in order},

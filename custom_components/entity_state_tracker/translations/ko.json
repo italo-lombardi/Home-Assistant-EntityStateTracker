@@ -146,6 +146,10 @@
         "confirm": {
           "name": "확인",
           "description": "재설정을 수행하려면 활성화해야 합니다. 실수로 기록을 잃는 것을 방지합니다."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }
@@ -159,6 +163,9 @@
   "exceptions": {
     "reset_not_confirmed": {
       "message": "원장을 재설정하려면 confirm을 true로 설정하세요. 이는 유지된 기록을 지우며 취소할 수 없습니다."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

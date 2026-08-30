@@ -58,6 +58,7 @@ from .const import (
     SCAN_INTERVAL,
 )
 from .engine import (
+    OVERFLOW_TOLERANCE_SECS,
     accumulate_blocks,
     carry_forward_states,
     compute_frame,
@@ -66,7 +67,7 @@ from .engine import (
     resolve_frame_bounds,
     split_visit_across_days,
 )
-from .models import TrackerData, TrackerLedger
+from .models import FrameResult, TrackerData, TrackerLedger
 from .storage import EntityStateTrackerStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -154,6 +155,12 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         # so the "keep_days unavailable" diagnostic fires once per coordinator,
         # not once per tick when the recorder is off (rolling-frame seam).
         self._retention_warned = False
+        # Frame labels whose Σbreakdown > window invariant has already warned FOR
+        # THIS tracker, so the diagnostic logs once per (entry, frame) rather than
+        # once per frame label process-wide — a real overflow in one tracker is no
+        # longer suppressed by an unrelated tracker that warned the same label
+        # first (L4). Per-coordinator, so each instance warns independently.
+        self._warned_overflow: set[str] = set()
         # (state, start_day_iso) of the most recent SURVIVING live fold — the
         # "preceding block" a sub-``min_state_duration`` glitch merges into, so
         # the live fold matches ``accumulate_blocks``' glitch rule (§6.5). None
@@ -189,6 +196,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         # BEFORE any prune, so states already recorded never re-announce (§5.2).
         self._seen = self._ledger_seen_states(self._ledger)
 
+        self._reconcile_min_state_duration(self._ledger)
         await self._async_backfill()
         await super().async_config_entry_first_refresh()
 
@@ -441,6 +449,52 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
 
     # --- Backfill ---------------------------------------------------------
 
+    @callback
+    def _reconcile_min_state_duration(self, ledger: TrackerLedger) -> None:
+        """Re-backfill closed days when the glitch threshold changed (H1).
+
+        Closed-day daily buckets are baked with the ``min_state_duration`` in
+        force when they were folded/backfilled. An OptionsFlow edit that changes
+        ``min_state_duration`` reloads the entry, but the change would otherwise
+        apply ONLY to future folds and the open-day recompute — leaving the
+        closed days (which every 7d/30d/month/year frame sums) built with the OLD
+        threshold, silently mixing old- and new-threshold buckets.
+
+        Fix: persist the threshold each ledger was built with
+        (``built_min_state_duration``) and, on setup/reload, compare it to the
+        configured value. When they differ, the closed-day buckets are stale, so
+        clear ``ledger.daily`` and reset ``last_updated_day`` to ``None`` — the
+        subsequent :meth:`_async_backfill` then rebuilds every closed day within
+        recorder retention using the NEW threshold. Days older than recorder
+        retention cannot be rebuilt (the ledger stores whole-day sums, not the
+        intra-day timeline) — that granularity limit is documented and accepted;
+        those far-back frames simply refill over time as new days close.
+
+        A fresh or legacy (pre-field) ledger carries ``built is None``: we seed it
+        to the current value WITHOUT wiping, so the field-introducing upgrade
+        never discards a user's existing history — only a genuine subsequent
+        change triggers a rebuild.
+        """
+        built = ledger.built_min_state_duration
+        if built is not None and built != self.min_state_duration:
+            _LOGGER.info(
+                "Entity State Tracker: %s min_state_duration changed %s→%s; "
+                "clearing closed-day buckets to re-backfill from the recorder "
+                "with the new glitch threshold (days older than recorder "
+                "retention rebuild from whole-day sums as they age in)",
+                self.entity_id,
+                built,
+                self.min_state_duration,
+            )
+            ledger.daily.clear()
+            ledger.last_updated_day = None
+            # The open-visit anchor was measured under the old threshold's fold
+            # semantics; drop the last_fold predecessor so the first post-reset
+            # fold starts clean (no stale glitch-merge target).
+            self._last_fold = None
+        ledger.built_min_state_duration = self.min_state_duration
+        self._dirty = True
+
     async def _async_backfill(self) -> None:
         """Recompute closed days since ``last_updated_day`` from the recorder (§8).
 
@@ -578,6 +632,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
                 prior_dominant=prior_dominant,
                 ledger_upper_local_day=ledger_upper_local_day,
             )
+            self._warn_overflow(frame_key, result)
             frames[frame_key] = result
 
         # Prune stale buckets IN-MEMORY and let the single flush persist (one
@@ -728,6 +783,33 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         cutoff = max(open_ts, start_utc)
         trimmed = [s for s in states if s.last_changed < cutoff]
         return [*trimmed, State(self.entity_id, open_state, last_changed=open_ts)]
+
+    @callback
+    def _warn_overflow(self, frame_key: str, result: FrameResult) -> None:
+        """Warn once per (entry, frame) when Σbreakdown exceeds the window (L4).
+
+        The engine clamps the overflow so ``unaccounted_seconds`` never goes
+        negative, but a >``OVERFLOW_TOLERANCE_SECS`` overshoot is a diagnostic
+        signal (a bucket seam over-counted). We log it here — the coordinator
+        owns ``entry_id`` — so each tracker warns independently; a real overflow
+        in tracker B is no longer suppressed because tracker A warned the same
+        frame label first. Diagnostic only: logged once per frame label per
+        coordinator, never raised.
+        """
+        if frame_key in self._warned_overflow:
+            return
+        breakdown_total = sum(result.breakdown_seconds.values())
+        if breakdown_total <= result.window_seconds + OVERFLOW_TOLERANCE_SECS:
+            return
+        self._warned_overflow.add(frame_key)
+        _LOGGER.warning(
+            "Entity State Tracker: %s %s breakdown %.1fs exceeds window %.1fs "
+            "(clamped); this indicates a bucket-seam over-count",
+            self.entity_id,
+            frame_key,
+            breakdown_total,
+            result.window_seconds,
+        )
 
     @staticmethod
     def _prune_ledger(ledger: TrackerLedger, before_iso: str) -> None:

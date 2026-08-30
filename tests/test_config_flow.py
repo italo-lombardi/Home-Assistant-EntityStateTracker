@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.entity_state_tracker.config_flow import (
+    _SEEN_PREFILL_CAP,
     EntityStateTrackerConfigFlow,
     EntityStateTrackerOptionsFlow,
     _async_seen_states,
@@ -68,13 +69,13 @@ async def test_seen_states_current_plus_recorder(hass: HomeAssistant) -> None:
         mock_get_instance.return_value.async_add_executor_job = _run_sync
         seen = await _async_seen_states(hass, ENTITY)
 
-    # Current "Heat" first, then recorder states; deduped + lowercased.
-    # "unknown" is always appended as a prefilled option.
-    assert seen == ["heat", "auto", "off", "unknown"]
+    # Current "Heat" first, then recorder states; deduped + lowercased. The list
+    # ALWAYS ends with "unavailable" then "unknown" (in that order).
+    assert seen == ["heat", "auto", "off", "unavailable", "unknown"]
 
 
 async def test_seen_states_skips_unavailable_current(hass: HomeAssistant) -> None:
-    """An unavailable current state is not prefilled."""
+    """An unavailable current state is not prefilled (but still offered at tail)."""
     hass.states.async_set(ENTITY, STATE_UNAVAILABLE)
 
     with (
@@ -87,11 +88,11 @@ async def test_seen_states_skips_unavailable_current(hass: HomeAssistant) -> Non
         mock_get_instance.return_value.async_add_executor_job = _run_sync
         seen = await _async_seen_states(hass, ENTITY)
 
-    assert seen == ["on", "unknown"]
+    assert seen == ["on", "unavailable", "unknown"]
 
 
 async def test_seen_states_recorder_off_degrades(hass: HomeAssistant) -> None:
-    """Recorder absent → only the current state is returned (no crash)."""
+    """Recorder absent → current state + the always-offered tail (no crash)."""
     hass.states.async_set(ENTITY, "cool")
 
     with patch(
@@ -100,18 +101,141 @@ async def test_seen_states_recorder_off_degrades(hass: HomeAssistant) -> None:
     ):
         seen = await _async_seen_states(hass, ENTITY)
 
-    assert seen == ["cool", "unknown"]
+    assert seen == ["cool", "unavailable", "unknown"]
 
 
 async def test_seen_states_no_current_state(hass: HomeAssistant) -> None:
-    """No current state and recorder off → only the always-offered "unknown"."""
+    """No current state and recorder off → only the always-offered tail."""
     with patch(
         "homeassistant.components.recorder.get_instance",
         side_effect=KeyError("recorder"),
     ):
         seen = await _async_seen_states(hass, "sensor.missing")
 
-    assert seen == ["unknown"]
+    assert seen == ["unavailable", "unknown"]
+
+
+async def test_seen_states_dedups_unavailable_unknown_from_recorder(
+    hass: HomeAssistant,
+) -> None:
+    """When the recorder already surfaced unavailable/unknown, the tail dedups.
+
+    They are still forced to the END in [..., unavailable, unknown] order, not
+    left wherever they first appeared in the recorder scan.
+    """
+    hass.states.async_set(ENTITY, "on")
+
+    def _fake_changes(*_a: Any, **_k: Any) -> dict[str, list[_State]]:
+        return {ENTITY: [_State("unknown"), _State("off"), _State("unavailable")]}
+
+    with (
+        patch("homeassistant.components.recorder.get_instance") as mock_get_instance,
+        patch(
+            "homeassistant.components.recorder.history.state_changes_during_period",
+            side_effect=_fake_changes,
+        ),
+    ):
+        mock_get_instance.return_value.async_add_executor_job = _run_sync
+        seen = await _async_seen_states(hass, ENTITY)
+
+    # No duplicates; unavailable/unknown forced to the tail in the fixed order.
+    assert seen == ["on", "off", "unavailable", "unknown"]
+
+
+async def test_seen_states_caps_recorder_derived_at_50(hass: HomeAssistant) -> None:
+    """A numeric entity with >50 distinct recorder states is capped at the cap.
+
+    The cap applies to the RECORDER-derived set only; the most-recent
+    _SEEN_PREFILL_CAP distinct states are kept (recorder history arrives
+    oldest-first, so the cap trims the oldest), and unavailable/unknown are added
+    on TOP of the cap. So the returned list is cap + 2 long.
+    """
+    # No current live state, so the whole prefill is recorder-derived.
+    distinct = [f"{float(i)}" for i in range(120)]  # 120 distinct numeric states
+
+    def _fake_changes(*_a: Any, **_k: Any) -> dict[str, list[_State]]:
+        return {"sensor.numeric": [_State(s) for s in distinct]}
+
+    with (
+        patch("homeassistant.components.recorder.get_instance") as mock_get_instance,
+        patch(
+            "homeassistant.components.recorder.history.state_changes_during_period",
+            side_effect=_fake_changes,
+        ),
+    ):
+        mock_get_instance.return_value.async_add_executor_job = _run_sync
+        seen = await _async_seen_states(hass, "sensor.numeric")
+
+    # cap recorder states + unavailable + unknown.
+    assert len(seen) == _SEEN_PREFILL_CAP + 2
+    # Most-recent kept: the last _SEEN_PREFILL_CAP distinct values, in order.
+    assert seen[:_SEEN_PREFILL_CAP] == distinct[-_SEEN_PREFILL_CAP:]
+    assert seen[-2:] == ["unavailable", "unknown"]
+
+
+async def test_seen_states_cap_keeps_live_state(hass: HomeAssistant) -> None:
+    """A live state survives the cap even with >cap distinct recorder states.
+
+    The live state is pulled out BEFORE the cap and re-prepended after, so the
+    ``[current live state, ...]`` contract holds even when the recorder-derived
+    set alone exceeds ``_SEEN_PREFILL_CAP`` (the front-trim must never drop the
+    index-0 live state). The live value here is NOT among the recorder states, so
+    the cap keeps a full ``_SEEN_PREFILL_CAP`` recorder states on top of it →
+    cap + live + unavailable + unknown.
+    """
+    hass.states.async_set("sensor.numeric", "live_now")
+    distinct = [f"{float(i)}" for i in range(120)]  # 120 distinct numeric states
+
+    def _fake_changes(*_a: Any, **_k: Any) -> dict[str, list[_State]]:
+        return {"sensor.numeric": [_State(s) for s in distinct]}
+
+    with (
+        patch("homeassistant.components.recorder.get_instance") as mock_get_instance,
+        patch(
+            "homeassistant.components.recorder.history.state_changes_during_period",
+            side_effect=_fake_changes,
+        ),
+    ):
+        mock_get_instance.return_value.async_add_executor_job = _run_sync
+        seen = await _async_seen_states(hass, "sensor.numeric")
+
+    # Live state is first and PRESENT despite >cap recorder states.
+    assert seen[0] == "live_now"
+    assert "live_now" in seen
+    # live + cap recorder states + unavailable + unknown.
+    assert len(seen) == _SEEN_PREFILL_CAP + 3
+    assert seen[1 : _SEEN_PREFILL_CAP + 1] == distinct[-_SEEN_PREFILL_CAP:]
+    assert seen[-2:] == ["unavailable", "unknown"]
+
+
+async def test_seen_states_cap_dedups_live_from_recorder(hass: HomeAssistant) -> None:
+    """When the live state is also in the recorder set, it appears once (first).
+
+    Excluding the live value from the recorder-derived ``distinct`` before the
+    cap means the cap keeps ``_SEEN_PREFILL_CAP`` OTHER states, and the live
+    state is not duplicated when re-prepended.
+    """
+    # Live "5.0" is also one of the recorder states → must not double-count.
+    hass.states.async_set("sensor.numeric", "5.0")
+    distinct = [f"{float(i)}" for i in range(120)]
+
+    def _fake_changes(*_a: Any, **_k: Any) -> dict[str, list[_State]]:
+        return {"sensor.numeric": [_State(s) for s in distinct]}
+
+    with (
+        patch("homeassistant.components.recorder.get_instance") as mock_get_instance,
+        patch(
+            "homeassistant.components.recorder.history.state_changes_during_period",
+            side_effect=_fake_changes,
+        ),
+    ):
+        mock_get_instance.return_value.async_add_executor_job = _run_sync
+        seen = await _async_seen_states(hass, "sensor.numeric")
+
+    assert seen[0] == "5.0"
+    assert seen.count("5.0") == 1
+    # live + cap recorder states + unavailable + unknown.
+    assert len(seen) == _SEEN_PREFILL_CAP + 3
 
 
 # ---------------------------------------------------------------------------

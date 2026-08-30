@@ -146,6 +146,10 @@
         "confirm": {
           "name": "Megerősítés",
           "description": "Engedélyezni kell a visszaállítás végrehajtásához. Véd a véletlen előzményvesztés ellen."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }
@@ -159,6 +163,9 @@
   "exceptions": {
     "reset_not_confirmed": {
       "message": "Állítsa a confirm értéket true-ra a főkönyv visszaállításához. Ez törli a megőrzött előzményeket, és nem vonható vissza."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }
