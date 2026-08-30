@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Entität verfolgen",
+        "description": "Wähle eine Entität, um zu verfolgen, wie lange sie sich über mehrere Zeiträume in ihren Zuständen befindet.",
+        "data": {
+          "entity": "Zu verfolgende Entität",
+          "name": "Name (optional)"
+        },
+        "data_description": {
+          "entity": "Die Entität, deren Zustandsdauern gemessen werden. Eine Entität pro Tracker — verweise auf einen Gruppen-Helfer, um mehrere zusammenzufassen.",
+          "name": "Ein sprechender Name für diesen Tracker. Leer lassen, um ihn nach der Entität und dem Modus zu benennen (z. B. „Entity State Tracker - Living Room - Specific States“). Dies legt den Geräte-/Konfigurationsnamen fest; die Sensor-Entitäts-IDs folgen weiterhin der Standardbenennung. Sie können mehrere Tracker für dieselbe Entität erstellen."
+        }
+      },
+      "mode": {
+        "title": "Verfolgungsmodus",
+        "description": "Wähle bestimmte Zustände zum Messen oder erkenne automatisch jeden Zustand, den die Entität meldet.",
+        "menu_options": {
+          "specific_states": "Bestimmte Zustände — miss die von dir gewählten Zustände",
+          "all_states": "Alle Zustände — automatische Aufschlüsselung pro Zustand"
+        }
+      },
+      "specific": {
+        "title": "Zu verfolgende Zustände",
+        "description": "Wähle die zu messenden Zustände. Du kannst einen eigenen, nicht aufgeführten Zustand eingeben.",
+        "data": {
+          "states": "Zu verfolgende Zustände",
+          "enable_compliance": "Konformitätsbewertung aktivieren"
+        },
+        "data_description": {
+          "states": "Die Entitätszustände, deren Dauer und Prozentsatz gemessen werden (z. B. on, heat, home). Vorausgefüllt mit kürzlich beobachteten Zuständen.",
+          "enable_compliance": "Aktivieren, um zu bewerten, wie viel jedes Zeitfensters die Entität in einem gewünschten Zielzustand verbracht hat, mit einem optionalen Bestanden/Nicht-bestanden-Schwellenwert."
+        }
+      },
+      "compliance": {
+        "title": "Welche Zustände gelten als konform?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Konforme(r) Zustand/Zustände",
+          "target_threshold": "Konformitätsschwelle (%, optional)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Wenn gesetzt, schaltet sich ein Binärsensor „Konform“ ein, wenn der Konformitätsprozentsatz diesen Wert erreicht oder überschreitet. Leer lassen, um den Schwellenwert zu überspringen."
+        }
+      },
+      "frames": {
+        "title": "Zeiträume",
+        "description": "Wähle, welche Zeiträume verfolgt werden. Zeiträume, die länger sind als die Recorder-Aufbewahrung, füllen sich mit der Zeit.",
+        "data": {
+          "today": "Heute",
+          "yesterday": "Gestern",
+          "24h": "Letzte 24 Stunden",
+          "7d": "Letzte 7 Tage",
+          "30d": "Letzte 30 Tage",
+          "month": "Dieser Monat",
+          "year": "Dieses Jahr",
+          "min_state_duration": "Mindestzustandsdauer (Sekunden)"
+        },
+        "data_description": {
+          "today": "Seit lokaler Mitternacht.",
+          "yesterday": "Der vorherige ganze Tag.",
+          "24h": "Rollierendes 24-Stunden-Fenster bis jetzt.",
+          "7d": "Rollierendes 7-Tage-Fenster bis jetzt.",
+          "30d": "Die letzten 30 ganzen lokalen Tage.",
+          "month": "Seit dem 1. dieses Monats.",
+          "year": "Seit dem 1. Januar.",
+          "min_state_duration": "Wenn die verfolgte Entität schneller als diese Anzahl von Sekunden in einen Zustand und wieder heraus wechselt, wird dieser kurze Moment ignoriert — seine Zeit wird stattdessen zum vorherigen Zustand addiert und zählt nicht als separate Änderung. Verwende dies, um flackernde oder prellende Sensoren zu filtern. Auf 0 setzen, um jede Änderung zu zählen, egal wie kurz."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Wähle mindestens einen zu verfolgenden Zustand.",
+      "no_target_selected": "Wähle mindestens einen Zielzustand oder deaktiviere die Konformitätsbewertung.",
+      "no_frames_selected": "Wähle mindestens einen zu verfolgenden Zeitraum."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tracker bearbeiten",
+        "description": "Passe die verfolgten Zeiträume und Einstellungen für diesen Tracker an. Die verfolgte Entität und der Modus können nicht geändert werden — erstelle einen neuen Tracker, um diese zu ändern.",
+        "data": {
+          "today": "Heute",
+          "yesterday": "Gestern",
+          "24h": "Letzte 24 Stunden",
+          "7d": "Letzte 7 Tage",
+          "30d": "Letzte 30 Tage",
+          "month": "Dieser Monat",
+          "year": "Dieses Jahr",
+          "target": "Zielzustand/-zustände",
+          "target_threshold": "Konformitätsschwelle (%, optional)",
+          "min_state_duration": "Mindestzustandsdauer (Sekunden)"
+        },
+        "data_description": {
+          "today": "Seit lokaler Mitternacht.",
+          "yesterday": "Der vorherige ganze Tag.",
+          "24h": "Rollierendes 24-Stunden-Fenster bis jetzt.",
+          "7d": "Rollierendes 7-Tage-Fenster bis jetzt.",
+          "30d": "Die letzten 30 ganzen lokalen Tage.",
+          "month": "Seit dem 1. dieses Monats.",
+          "year": "Seit dem 1. Januar.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Wenn gesetzt, schaltet sich ein Binärsensor „Konform“ ein, wenn der Konformitätsprozentsatz diesen Wert erreicht oder überschreitet. Leer lassen, um den Schwellenwert zu überspringen.",
+          "min_state_duration": "Wenn die verfolgte Entität schneller als diese Anzahl von Sekunden in einen Zustand und wieder heraus wechselt, wird dieser kurze Moment ignoriert — seine Zeit wird stattdessen zum vorherigen Zustand addiert und zählt nicht als separate Änderung. Verwende dies, um flackernde oder prellende Sensoren zu filtern. Auf 0 setzen, um jede Änderung zu zählen, egal wie kurz."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Wähle mindestens einen Zielzustand oder deaktiviere die Konformitätsbewertung.",
+      "no_frames_selected": "Wähle mindestens einen zu verfolgenden Zeitraum."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Dauer ({frame})"
+      },
+      "breakdown": {
+        "name": "Zustandsaufschlüsselung ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Aktuell im Zustand"
+      },
+      "compliant": {
+        "name": "Konform"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Bestimmte Zustände",
+        "all_states": "Alle Zustände"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Journal zurücksetzen",
+      "description": "Lösche den gespeicherten Tages-Bucket-Verlauf eines Trackers. Lange Zeiträume werden aus Recorder-Daten wiederhergestellt, sofern noch verfügbar. Dies kann nicht rückgängig gemacht werden.",
+      "fields": {
+        "confirm": {
+          "name": "Bestätigen",
+          "description": "Muss aktiviert sein, um das Zurücksetzen durchzuführen. Schützt vor versehentlichem Verlust des Verlaufs."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Recorder ist nicht verfügbar",
+      "description": "Entity State Tracker verlässt sich auf den Recorder, um Zustandsdauern zu berechnen. Der Recorder ist nicht verfügbar, daher fällt die Verfolgung ab jetzt auf reine Live-Akkumulation zurück und kann keinen vergangenen Verlauf nachfüllen. Aktiviere die Recorder-Integration, um den vollständigen Zeitraumverlauf wiederherzustellen."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Setze „confirm“ auf true, um das Journal zurückzusetzen. Dies löscht den gespeicherten Verlauf und kann nicht rückgängig gemacht werden."
+    }
+  }
+}

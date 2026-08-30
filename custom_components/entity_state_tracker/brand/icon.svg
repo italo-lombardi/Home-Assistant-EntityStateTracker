@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!-- Background: dark rounded-square, full-bleed -->
+  <rect width="512" height="512" rx="96" fill="#1c1c1c"/>
+  <!-- Segmented donut ring: 4 state-colored arcs with dark gaps between them.
+       r=144, stroke-width=68, circumference = 2*pi*144 = 904.78.
+       Arc lengths approximate the breakdown-pie output; small dark gaps read as separators. -->
+  <g fill="none" stroke-width="68" transform="rotate(-90 256 256)">
+    <circle cx="256" cy="256" r="144" stroke="#03a9f4" stroke-dasharray="398 506.78"/>
+    <circle cx="256" cy="256" r="144" stroke="#ffa726" stroke-dasharray="225 679.78" stroke-dashoffset="-398"/>
+    <circle cx="256" cy="256" r="144" stroke="#66bb6a" stroke-dasharray="157 747.78" stroke-dashoffset="-623"/>
+    <circle cx="256" cy="256" r="144" stroke="#546e7a" stroke-dasharray="120 784.78" stroke-dashoffset="-780"/>
+  </g>
+  <!-- Dark gap ring so hands stay crisp against the donut's inner edge -->
+  <circle cx="256" cy="256" r="80" fill="#1c1c1c"/>
+  <!-- Clock hands centered in the hollow, ~10:10 classic pose -->
+  <g stroke="#eceff1" stroke-linecap="round">
+    <line x1="256" y1="256" x2="256" y2="184" stroke-width="16"/>
+    <line x1="256" y1="256" x2="304" y2="284" stroke-width="14"/>
+  </g>
+  <circle cx="256" cy="256" r="18" fill="#eceff1"/>
+</svg>

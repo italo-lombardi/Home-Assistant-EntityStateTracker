@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Segueix una entitat",
+        "description": "Trieu una entitat per fer un seguiment de quant de temps passa en els seus estats en diversos períodes de temps.",
+        "data": {
+          "entity": "Entitat a seguir",
+          "name": "Nom (opcional)"
+        },
+        "data_description": {
+          "entity": "L'entitat les durades d'estat de la qual es mesuraran. Una entitat per seguidor — apunteu a un ajudant de grup per agregar-ne diverses.",
+          "name": "Un nom descriptiu per a aquest rastrejador. Deixeu-ho en blanc per anomenar-lo segons l'entitat i el mode (p. ex. «Entity State Tracker - Living Room - Specific States»). Això estableix el nom del dispositiu/configuració; els ID de les entitats sensor segueixen igualment la nomenclatura estàndard. Podeu crear diversos rastrejadors per a la mateixa entitat."
+        }
+      },
+      "mode": {
+        "title": "Mode de seguiment",
+        "description": "Trieu estats específics a mesurar, o descobriu automàticament cada estat que informa l'entitat.",
+        "menu_options": {
+          "specific_states": "Estats específics — mesureu els estats que trieu",
+          "all_states": "Tots els estats — desglossament automàtic per estat"
+        }
+      },
+      "specific": {
+        "title": "Estats a seguir",
+        "description": "Seleccioneu els estats a mesurar. Podeu escriure un estat personalitzat que no aparegui a la llista.",
+        "data": {
+          "states": "Estats a seguir",
+          "enable_compliance": "Activa la puntuació de compliment"
+        },
+        "data_description": {
+          "states": "Els estats de l'entitat la durada i el percentatge dels quals es mesuren (p. ex. on, heat, home). Preomplert amb els estats vistos recentment.",
+          "enable_compliance": "Activeu-ho per puntuar quina part de cada finestra l'entitat va passar en un estat objectiu desitjat, amb un llindar opcional d'aprovat/suspès."
+        }
+      },
+      "compliance": {
+        "title": "Quins estats compten com a conformes?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Estat(s) conforme(s)",
+          "target_threshold": "Llindar de compliment (%, opcional)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Si s'estableix, un sensor binari «Conforme» s'activa quan el percentatge de compliment assoleix o supera aquest valor. Deixeu-ho buit per ometre el llindar."
+        }
+      },
+      "frames": {
+        "title": "Períodes de temps",
+        "description": "Trieu quins períodes de temps seguir. Els períodes més llargs que la retenció del gravador s'omplen amb el temps.",
+        "data": {
+          "today": "Avui",
+          "yesterday": "Ahir",
+          "24h": "Últimes 24 hores",
+          "7d": "Últims 7 dies",
+          "30d": "Últims 30 dies",
+          "month": "Aquest mes",
+          "year": "Enguany",
+          "min_state_duration": "Durada mínima d'estat (segons)"
+        },
+        "data_description": {
+          "today": "Des de la mitjanit local.",
+          "yesterday": "El dia sencer anterior.",
+          "24h": "Finestra mòbil de 24 hores fins ara.",
+          "7d": "Finestra mòbil de 7 dies fins ara.",
+          "30d": "Els últims 30 dies locals sencers.",
+          "month": "Des de l'1 d'aquest mes.",
+          "year": "Des de l'1 de gener.",
+          "min_state_duration": "Si l'entitat seguida canvia a un estat i en surt més ràpid que aquest nombre de segons, aquest breu moment s'ignora — el seu temps s'afegeix a l'estat anterior i no compta com a canvi separat. Utilitzeu-ho per filtrar sensors que parpellegen o reboten. Poseu 0 per comptar cada canvi, per breu que sigui."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Seleccioneu almenys un estat a seguir.",
+      "no_target_selected": "Seleccioneu almenys un estat objectiu, o desactiveu la puntuació de compliment.",
+      "no_frames_selected": "Seleccioneu almenys un període de temps a seguir."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edita el seguidor",
+        "description": "Ajusteu els períodes seguits i la configuració d'aquest seguidor. L'entitat seguida i el mode no es poden canviar — creeu un seguidor nou per canviar-los.",
+        "data": {
+          "today": "Avui",
+          "yesterday": "Ahir",
+          "24h": "Últimes 24 hores",
+          "7d": "Últims 7 dies",
+          "30d": "Últims 30 dies",
+          "month": "Aquest mes",
+          "year": "Enguany",
+          "target": "Estat(s) objectiu",
+          "target_threshold": "Llindar de compliment (%, opcional)",
+          "min_state_duration": "Durada mínima d'estat (segons)"
+        },
+        "data_description": {
+          "today": "Des de la mitjanit local.",
+          "yesterday": "El dia sencer anterior.",
+          "24h": "Finestra mòbil de 24 hores fins ara.",
+          "7d": "Finestra mòbil de 7 dies fins ara.",
+          "30d": "Els últims 30 dies locals sencers.",
+          "month": "Des de l'1 d'aquest mes.",
+          "year": "Des de l'1 de gener.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Si s'estableix, un sensor binari «Conforme» s'activa quan el percentatge de compliment assoleix o supera aquest valor. Deixeu-ho buit per ometre el llindar.",
+          "min_state_duration": "Si l'entitat seguida canvia a un estat i en surt més ràpid que aquest nombre de segons, aquest breu moment s'ignora — el seu temps s'afegeix a l'estat anterior i no compta com a canvi separat. Utilitzeu-ho per filtrar sensors que parpellegen o reboten. Poseu 0 per comptar cada canvi, per breu que sigui."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Seleccioneu almenys un estat objectiu, o desactiveu la puntuació de compliment.",
+      "no_frames_selected": "Seleccioneu almenys un període de temps a seguir."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Durada ({frame})"
+      },
+      "breakdown": {
+        "name": "Desglossament d'estats ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Actualment en estat"
+      },
+      "compliant": {
+        "name": "Conforme"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Estats específics",
+        "all_states": "Tots els estats"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Restableix el registre",
+      "description": "Esborra l'historial persistent de compartiments diaris d'un seguidor. Els períodes llargs es reconstrueixen a partir de les dades del gravador on encara estiguin disponibles. Això no es pot desfer.",
+      "fields": {
+        "confirm": {
+          "name": "Confirma",
+          "description": "S'ha d'activar per dur a terme el restabliment. Protegeix contra la pèrdua accidental de l'historial."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "El gravador no està disponible",
+      "description": "Entity State Tracker es basa en el gravador per calcular les durades d'estat. El gravador no està disponible, així que el seguiment recorre d'ara endavant només a l'acumulació en directe i no pot reomplir l'historial passat. Activeu la integració del gravador per restaurar l'historial complet de períodes de temps."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Establiu confirm a true per restablir el registre. Això esborra l'historial persistent i no es pot desfer."
+    }
+  }
+}

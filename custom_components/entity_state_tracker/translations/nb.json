@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Spor en enhet",
+        "description": "Velg en enhet for å spore hvor lenge den er i tilstandene sine over flere tidsrom.",
+        "data": {
+          "entity": "Enhet som skal spores",
+          "name": "Navn (valgfritt)"
+        },
+        "data_description": {
+          "entity": "Enheten hvis tilstandsvarigheter måles. Én enhet per sporer — pek på en gruppehjelper for å slå sammen flere.",
+          "name": "Et vennlig navn for denne sporeren. La stå tomt for å navngi den etter entiteten og modusen (f.eks. «Entity State Tracker - Living Room - Specific States»). Dette angir enhets-/konfigurasjonsnavnet; sensorentitetenes ID-er følger fortsatt standardnavngivingen. Du kan opprette flere sporere for samme entitet."
+        }
+      },
+      "mode": {
+        "title": "Sporingsmodus",
+        "description": "Velg bestemte tilstander å måle, eller oppdag automatisk hver tilstand enheten rapporterer.",
+        "menu_options": {
+          "specific_states": "Bestemte tilstander — mål tilstandene du velger",
+          "all_states": "Alle tilstander — automatisk fordeling per tilstand"
+        }
+      },
+      "specific": {
+        "title": "Tilstander å spore",
+        "description": "Velg tilstandene som skal måles. Du kan skrive inn en egendefinert tilstand som ikke er oppført.",
+        "data": {
+          "states": "Tilstander å spore",
+          "enable_compliance": "Aktiver samsvarsscore"
+        },
+        "data_description": {
+          "states": "Enhetstilstandene hvis varighet og prosent måles (f.eks. on, heat, home). Forhåndsutfylt med nylig sette tilstander.",
+          "enable_compliance": "Slå på for å score hvor mye av hvert vindu enheten tilbrakte i en ønsket måltilstand, med en valgfri bestått/ikke-bestått-terskel."
+        }
+      },
+      "compliance": {
+        "title": "Hvilke tilstander teller som samsvarende?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Samsvarende tilstand(er)",
+          "target_threshold": "Samsvarsterskel (%, valgfritt)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Hvis satt, slås en binærsensor «Samsvarende» på når samsvarsprosenten når eller overstiger denne verdien. La stå tom for å hoppe over terskelen."
+        }
+      },
+      "frames": {
+        "title": "Tidsrom",
+        "description": "Velg hvilke tidsrom som skal spores. Tidsrom lengre enn recorder-lagringen fylles inn over tid.",
+        "data": {
+          "today": "I dag",
+          "yesterday": "I går",
+          "24h": "Siste 24 timer",
+          "7d": "Siste 7 dager",
+          "30d": "Siste 30 dager",
+          "month": "Denne måneden",
+          "year": "I år",
+          "min_state_duration": "Minste tilstandsvarighet (sekunder)"
+        },
+        "data_description": {
+          "today": "Siden lokal midnatt.",
+          "yesterday": "Den forrige hele dagen.",
+          "24h": "Rullerende 24-timersvindu som slutter nå.",
+          "7d": "Rullerende 7-dagersvindu som slutter nå.",
+          "30d": "De siste 30 hele lokale dagene.",
+          "month": "Siden den 1. i denne måneden.",
+          "year": "Siden 1. januar.",
+          "min_state_duration": "Hvis den sporede enheten går inn i en tilstand og ut igjen raskere enn dette antallet sekunder, ignoreres dette korte øyeblikket — tiden legges i stedet til den forrige tilstanden, og det teller ikke som en separat endring. Bruk det til å filtrere flimrende eller sprettende sensorer. Sett til 0 for å telle hver endring, uansett hvor kort."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Velg minst én tilstand å spore.",
+      "no_target_selected": "Velg minst én måltilstand, eller slå av samsvarsscore.",
+      "no_frames_selected": "Velg minst ett tidsrom å spore."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Rediger sporer",
+        "description": "Juster de sporede tidsrommene og innstillingene for denne sporeren. Den sporede enheten og modusen kan ikke endres — opprett en ny sporer for å endre dem.",
+        "data": {
+          "today": "I dag",
+          "yesterday": "I går",
+          "24h": "Siste 24 timer",
+          "7d": "Siste 7 dager",
+          "30d": "Siste 30 dager",
+          "month": "Denne måneden",
+          "year": "I år",
+          "target": "Måltilstand(er)",
+          "target_threshold": "Samsvarsterskel (%, valgfritt)",
+          "min_state_duration": "Minste tilstandsvarighet (sekunder)"
+        },
+        "data_description": {
+          "today": "Siden lokal midnatt.",
+          "yesterday": "Den forrige hele dagen.",
+          "24h": "Rullerende 24-timersvindu som slutter nå.",
+          "7d": "Rullerende 7-dagersvindu som slutter nå.",
+          "30d": "De siste 30 hele lokale dagene.",
+          "month": "Siden den 1. i denne måneden.",
+          "year": "Siden 1. januar.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Hvis satt, slås en binærsensor «Samsvarende» på når samsvarsprosenten når eller overstiger denne verdien. La stå tom for å hoppe over terskelen.",
+          "min_state_duration": "Hvis den sporede enheten går inn i en tilstand og ut igjen raskere enn dette antallet sekunder, ignoreres dette korte øyeblikket — tiden legges i stedet til den forrige tilstanden, og det teller ikke som en separat endring. Bruk det til å filtrere flimrende eller sprettende sensorer. Sett til 0 for å telle hver endring, uansett hvor kort."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Velg minst én måltilstand, eller slå av samsvarsscore.",
+      "no_frames_selected": "Velg minst ett tidsrom å spore."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Varighet ({frame})"
+      },
+      "breakdown": {
+        "name": "Tilstandsfordeling ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "For øyeblikket i tilstand"
+      },
+      "compliant": {
+        "name": "Samsvarende"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Bestemte tilstander",
+        "all_states": "Alle tilstander"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Nullstill hovedbok",
+      "description": "Tømmer den lagrede daglig-bøtte-historikken for en sporer. Lange tidsrom bygges opp igjen fra recorder-data der de fortsatt er tilgjengelige. Dette kan ikke angres.",
+      "fields": {
+        "confirm": {
+          "name": "Bekreft",
+          "description": "Må være aktivert for å gjennomføre nullstillingen. Beskytter mot utilsiktet tap av historikk."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Recorder er utilgjengelig",
+      "description": "Entity State Tracker er avhengig av recorder for å beregne tilstandsvarigheter. Recorder er ikke tilgjengelig, så sporingen faller fra nå av tilbake på ren sanntidsakkumulering og kan ikke fylle inn tidligere historikk. Aktiver recorder-integrasjonen for å gjenopprette full tidsromshistorikk."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Sett confirm til true for å nullstille hovedboken. Dette tømmer lagret historikk og kan ikke angres."
+    }
+  }
+}

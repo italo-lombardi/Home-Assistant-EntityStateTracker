@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sekot entītijai",
+        "description": "Izvēlieties entītiju, lai sekotu, cik ilgi tā pavada savos stāvokļos vairākos laika posmos.",
+        "data": {
+          "entity": "Sekojamā entītija",
+          "name": "Nosaukums (neobligāts)"
+        },
+        "data_description": {
+          "entity": "Entītija, kuras stāvokļu ilgumi tiks mērīti. Viena entītija uz sekotāju — norādiet uz grupas palīgu, lai apkopotu vairākas.",
+          "name": "Draudzīgs nosaukums šim izsekotājam. Atstājiet tukšu, lai to nosauktu pēc entītijas un režīma (piem., “Entity State Tracker - Living Room - Specific States”). Tas iestata ierīces/konfigurācijas nosaukumu; sensoru entītiju ID joprojām atbilst standarta nosaukumu piešķiršanai. Vienai entītijai varat izveidot vairākus izsekotājus."
+        }
+      },
+      "mode": {
+        "title": "Sekošanas režīms",
+        "description": "Izvēlieties konkrētus mērāmos stāvokļus vai automātiski atklājiet katru stāvokli, ko entītija ziņo.",
+        "menu_options": {
+          "specific_states": "Konkrēti stāvokļi — mēriet izvēlētos stāvokļus",
+          "all_states": "Visi stāvokļi — automātisks sadalījums pa stāvokļiem"
+        }
+      },
+      "specific": {
+        "title": "Sekojamie stāvokļi",
+        "description": "Atlasiet mērāmos stāvokļus. Varat ievadīt pielāgotu stāvokli, kas nav sarakstā.",
+        "data": {
+          "states": "Sekojamie stāvokļi",
+          "enable_compliance": "Iespējot atbilstības vērtēšanu"
+        },
+        "data_description": {
+          "states": "Entītijas stāvokļi, kuru ilgums un procenti tiek mērīti (piem., on, heat, home). Iepriekš aizpildīts ar nesen redzētiem stāvokļiem.",
+          "enable_compliance": "Ieslēdziet, lai novērtētu, cik lielu daļu no katra loga entītija pavadīja vēlamā mērķa stāvoklī, ar neobligātu izturēts/neizturēts slieksni."
+        }
+      },
+      "compliance": {
+        "title": "Kuri stāvokļi tiek uzskatīti par atbilstošiem?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Atbilstošs(-i) stāvoklis(-ļi)",
+          "target_threshold": "Atbilstības slieksnis (%, neobligāts)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Ja iestatīts, binārais sensors „Atbilstošs” ieslēdzas, kad atbilstības procents sasniedz vai pārsniedz šo vērtību. Atstājiet tukšu, lai izlaistu slieksni."
+        }
+      },
+      "frames": {
+        "title": "Laika posmi",
+        "description": "Izvēlieties, kuriem laika posmiem sekot. Posmi, kas garāki par ierakstītāja saglabāšanu, aizpildās laika gaitā.",
+        "data": {
+          "today": "Šodien",
+          "yesterday": "Vakar",
+          "24h": "Pēdējās 24 stundas",
+          "7d": "Pēdējās 7 dienas",
+          "30d": "Pēdējās 30 dienas",
+          "month": "Šajā mēnesī",
+          "year": "Šogad",
+          "min_state_duration": "Minimālais stāvokļa ilgums (sekundes)"
+        },
+        "data_description": {
+          "today": "Kopš vietējās pusnakts.",
+          "yesterday": "Iepriekšējā pilnā diena.",
+          "24h": "Ritošs 24 stundu logs, kas beidzas tagad.",
+          "7d": "Ritošs 7 dienu logs, kas beidzas tagad.",
+          "30d": "Pēdējās 30 pilnās vietējās dienas.",
+          "month": "Kopš šī mēneša 1. datuma.",
+          "year": "Kopš 1. janvāra.",
+          "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā izietuz ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Atlasiet vismaz vienu sekojamo stāvokli.",
+      "no_target_selected": "Atlasiet vismaz vienu mērķa stāvokli vai izslēdziet atbilstības vērtēšanu.",
+      "no_frames_selected": "Atlasiet vismaz vienu sekojamo laika posmu."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Rediģēt sekotāju",
+        "description": "Pielāgojiet sekotos posmus un iestatījumus šim sekotājam. Sekoto entītiju un režīmu nevar mainīt — izveidojiet jaunu sekotāju, lai tos mainītu.",
+        "data": {
+          "today": "Šodien",
+          "yesterday": "Vakar",
+          "24h": "Pēdējās 24 stundas",
+          "7d": "Pēdējās 7 dienas",
+          "30d": "Pēdējās 30 dienas",
+          "month": "Šajā mēnesī",
+          "year": "Šogad",
+          "target": "Mērķa stāvoklis (-ļi)",
+          "target_threshold": "Atbilstības slieksnis (%, neobligāts)",
+          "min_state_duration": "Minimālais stāvokļa ilgums (sekundes)"
+        },
+        "data_description": {
+          "today": "Kopš vietējās pusnakts.",
+          "yesterday": "Iepriekšējā pilnā diena.",
+          "24h": "Ritošs 24 stundu logs, kas beidzas tagad.",
+          "7d": "Ritošs 7 dienu logs, kas beidzas tagad.",
+          "30d": "Pēdējās 30 pilnās vietējās dienas.",
+          "month": "Kopš šī mēneša 1. datuma.",
+          "year": "Kopš 1. janvāra.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Ja iestatīts, binārais sensors „Atbilstošs” ieslēdzas, kad atbilstības procents sasniedz vai pārsniedz šo vērtību. Atstājiet tukšu, lai izlaistu slieksni.",
+          "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā izietuz ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Atlasiet vismaz vienu mērķa stāvokli vai izslēdziet atbilstības vērtēšanu.",
+      "no_frames_selected": "Atlasiet vismaz vienu sekojamo laika posmu."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Ilgums ({frame})"
+      },
+      "breakdown": {
+        "name": "Stāvokļu sadalījums ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Pašlaik stāvoklī"
+      },
+      "compliant": {
+        "name": "Atbilstošs"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Konkrēti stāvokļi",
+        "all_states": "Visi stāvokļi"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Atiestatīt reģistru",
+      "description": "Notīra sekotāja saglabāto ikdienas segmentu vēsturi. Gari laika posmi tiek atjaunoti no ierakstītāja datiem, kur tie vēl pieejami. To nevar atsaukt.",
+      "fields": {
+        "confirm": {
+          "name": "Apstiprināt",
+          "description": "Jābūt iespējotam, lai veiktu atiestatīšanu. Aizsargā pret nejaušu vēstures zudumu."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Ierakstītājs nav pieejams",
+      "description": "Entity State Tracker paļaujas uz ierakstītāju, lai aprēķinātu stāvokļu ilgumus. Ierakstītājs nav pieejams, tāpēc sekošana no šī brīža atgriežas tikai pie tiešā uzkrājuma un nevar aizpildīt pagājušo vēsturi. Iespējojiet ierakstītāja integrāciju, lai atjaunotu pilnu laika posmu vēsturi."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Iestatiet confirm uz true, lai atiestatītu reģistru. Tas notīra saglabāto vēsturi un to nevar atsaukt."
+    }
+  }
+}

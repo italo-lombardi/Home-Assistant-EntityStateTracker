@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Spor en entitet",
+        "description": "Vælg en entitet for at spore, hvor længe den befinder sig i sine tilstande over flere tidsrum.",
+        "data": {
+          "entity": "Entitet, der skal spores",
+          "name": "Navn (valgfrit)"
+        },
+        "data_description": {
+          "entity": "Entiteten, hvis tilstandsvarigheder måles. Én entitet pr. sporer — peg på en gruppehjælper for at samle flere.",
+          "name": "Et venligt navn til denne sporer. Lad stå tomt for at opkalde den efter enheden og tilstanden (f.eks. \"Entity State Tracker - Living Room - Specific States\"). Dette angiver enhedens/konfigurationens navn; sensor-enhedernes ID'er følger fortsat standardnavngivningen. Du kan oprette flere sporere for den samme enhed."
+        }
+      },
+      "mode": {
+        "title": "Sporingstilstand",
+        "description": "Vælg bestemte tilstande at måle, eller find automatisk hver tilstand, entiteten rapporterer.",
+        "menu_options": {
+          "specific_states": "Bestemte tilstande — mål de tilstande, du vælger",
+          "all_states": "Alle tilstande — automatisk opdeling pr. tilstand"
+        }
+      },
+      "specific": {
+        "title": "Tilstande at spore",
+        "description": "Vælg de tilstande, der skal måles. Du kan indtaste en brugerdefineret tilstand, der ikke er på listen.",
+        "data": {
+          "states": "Tilstande at spore",
+          "enable_compliance": "Aktivér overholdelsesscore"
+        },
+        "data_description": {
+          "states": "Entitetstilstandene, hvis varighed og procent måles (f.eks. on, heat, home). Forudfyldt med tilstande set for nylig.",
+          "enable_compliance": "Slå til for at score, hvor meget af hvert vindue entiteten tilbragte i en ønsket måltilstand, med en valgfri bestået/ikke-bestået-tærskel."
+        }
+      },
+      "compliance": {
+        "title": "Hvilke tilstande tæller som overholdende?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Overholdende tilstand(e)",
+          "target_threshold": "Overholdelsestærskel (%, valgfrit)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Hvis angivet, tændes en binær sensor «Overholdende», når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over."
+        }
+      },
+      "frames": {
+        "title": "Tidsrum",
+        "description": "Vælg, hvilke tidsrum der skal spores. Tidsrum, der er længere end recorderens opbevaring, fyldes op over tid.",
+        "data": {
+          "today": "I dag",
+          "yesterday": "I går",
+          "24h": "Sidste 24 timer",
+          "7d": "Sidste 7 dage",
+          "30d": "Sidste 30 dage",
+          "month": "Denne måned",
+          "year": "I år",
+          "min_state_duration": "Mindste tilstandsvarighed (sekunder)"
+        },
+        "data_description": {
+          "today": "Siden lokal midnat.",
+          "yesterday": "Den foregående hele dag.",
+          "24h": "Rullende 24-timers vindue, der slutter nu.",
+          "7d": "Rullende 7-dages vindue, der slutter nu.",
+          "30d": "De sidste 30 hele lokale dage.",
+          "month": "Siden den 1. i denne måned.",
+          "year": "Siden 1. januar.",
+          "min_state_duration": "Hvis den sporede enhed skifter til en tilstand og ud igen hurtigere end dette antal sekunder, ignoreres dette korte øjeblik — dets tid lægges i stedet til den forrige tilstand, og det tæller ikke som en separat ændring. Brug det til at filtrere flimrende eller hoppende sensorer. Sæt til 0 for at tælle hver ændring, uanset hvor kort."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Vælg mindst én tilstand at spore.",
+      "no_target_selected": "Vælg mindst én måltilstand, eller slå overholdelsesscore fra.",
+      "no_frames_selected": "Vælg mindst ét tidsrum at spore."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Rediger sporer",
+        "description": "Justér de sporede tidsrum og indstillinger for denne sporer. Den sporede entitet og tilstanden kan ikke ændres — opret en ny sporer for at ændre dem.",
+        "data": {
+          "today": "I dag",
+          "yesterday": "I går",
+          "24h": "Sidste 24 timer",
+          "7d": "Sidste 7 dage",
+          "30d": "Sidste 30 dage",
+          "month": "Denne måned",
+          "year": "I år",
+          "target": "Måltilstand(e)",
+          "target_threshold": "Overholdelsestærskel (%, valgfrit)",
+          "min_state_duration": "Mindste tilstandsvarighed (sekunder)"
+        },
+        "data_description": {
+          "today": "Siden lokal midnat.",
+          "yesterday": "Den foregående hele dag.",
+          "24h": "Rullende 24-timers vindue, der slutter nu.",
+          "7d": "Rullende 7-dages vindue, der slutter nu.",
+          "30d": "De sidste 30 hele lokale dage.",
+          "month": "Siden den 1. i denne måned.",
+          "year": "Siden 1. januar.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Hvis angivet, tændes en binær sensor «Overholdende», når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over.",
+          "min_state_duration": "Hvis den sporede enhed skifter til en tilstand og ud igen hurtigere end dette antal sekunder, ignoreres dette korte øjeblik — dets tid lægges i stedet til den forrige tilstand, og det tæller ikke som en separat ændring. Brug det til at filtrere flimrende eller hoppende sensorer. Sæt til 0 for at tælle hver ændring, uanset hvor kort."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Vælg mindst én måltilstand, eller slå overholdelsesscore fra.",
+      "no_frames_selected": "Vælg mindst ét tidsrum at spore."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Varighed ({frame})"
+      },
+      "breakdown": {
+        "name": "Tilstandsopdeling ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Aktuelt i tilstand"
+      },
+      "compliant": {
+        "name": "Overholdende"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Bestemte tilstande",
+        "all_states": "Alle tilstande"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Nulstil hovedbog",
+      "description": "Rydder den gemte daglig-bøtte-historik for en sporer. Lange tidsrum genopbygges fra recorder-data, hvor de stadig er tilgængelige. Dette kan ikke fortrydes.",
+      "fields": {
+        "confirm": {
+          "name": "Bekræft",
+          "description": "Skal være aktiveret for at gennemføre nulstillingen. Beskytter mod utilsigtet tab af historik."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Recorder er utilgængelig",
+      "description": "Entity State Tracker er afhængig af recorder for at beregne tilstandsvarigheder. Recorder er ikke tilgængelig, så sporingen falder fra nu af tilbage til ren live-akkumulering og kan ikke udfylde tidligere historik. Aktivér recorder-integrationen for at gendanne den fulde tidsrumshistorik."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Sæt confirm til true for at nulstille hovedbogen. Dette rydder gemt historik og kan ikke fortrydes."
+    }
+  }
+}

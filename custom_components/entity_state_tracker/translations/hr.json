@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Prati entitet",
+        "description": "Odaberi entitet za praćenje koliko dugo provodi u svojim stanjima kroz više vremenskih razdoblja.",
+        "data": {
+          "entity": "Entitet za praćenje",
+          "name": "Naziv (neobavezno)"
+        },
+        "data_description": {
+          "entity": "Entitet čija će se trajanja stanja mjeriti. Jedan entitet po pratitelju — usmjeri na grupni pomoćnik za objedinjavanje više njih.",
+          "name": "Prijateljski naziv za ovaj pratitelj. Ostavite prazno da se imenuje prema entitetu i načinu rada (npr. „Entity State Tracker - Living Room - Specific States“). Time se postavlja naziv uređaja/konfiguracije; ID-ovi entiteta senzora i dalje slijede standardno imenovanje. Možete stvoriti nekoliko pratitelja za isti entitet."
+        }
+      },
+      "mode": {
+        "title": "Način praćenja",
+        "description": "Odaberi određena stanja za mjerenje ili automatski otkrij svako stanje koje entitet prijavljuje.",
+        "menu_options": {
+          "specific_states": "Određena stanja — mjeri stanja koja odabereš",
+          "all_states": "Sva stanja — automatska raščlamba po stanju"
+        }
+      },
+      "specific": {
+        "title": "Stanja za praćenje",
+        "description": "Odaberi stanja za mjerenje. Možeš upisati prilagođeno stanje koje nije navedeno.",
+        "data": {
+          "states": "Stanja za praćenje",
+          "enable_compliance": "Omogući bodovanje usklađenosti"
+        },
+        "data_description": {
+          "states": "Stanja entiteta čije se trajanje i postotak mjere (npr. on, heat, home). Unaprijed popunjeno nedavno viđenim stanjima.",
+          "enable_compliance": "Uključi za bodovanje koliko je svakog prozora entitet proveo u željenom ciljnom stanju, uz neobavezni prag prolaza/pada."
+        }
+      },
+      "compliance": {
+        "title": "Koja se stanja računaju kao usklađena?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Usklađeno(a) stanje(a)",
+          "target_threshold": "Prag usklađenosti (%, neobavezno)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Ako je postavljeno, binarni senzor „Usklađeno” uključuje se kada postotak usklađenosti dosegne ili premaši ovu vrijednost. Ostavi prazno za preskakanje praga."
+        }
+      },
+      "frames": {
+        "title": "Vremenska razdoblja",
+        "description": "Odaberi koja vremenska razdoblja pratiti. Razdoblja dulja od zadržavanja recordera popunjavaju se s vremenom.",
+        "data": {
+          "today": "Danas",
+          "yesterday": "Jučer",
+          "24h": "Zadnja 24 sata",
+          "7d": "Zadnjih 7 dana",
+          "30d": "Zadnjih 30 dana",
+          "month": "Ovaj mjesec",
+          "year": "Ove godine",
+          "min_state_duration": "Najmanje trajanje stanja (sekunde)"
+        },
+        "data_description": {
+          "today": "Od lokalne ponoći.",
+          "yesterday": "Prethodni cijeli dan.",
+          "24h": "Klizni prozor od 24 sata koji završava sada.",
+          "7d": "Klizni prozor od 7 dana koji završava sada.",
+          "30d": "Zadnjih 30 cijelih lokalnih dana.",
+          "month": "Od 1. u ovom mjesecu.",
+          "year": "Od 1. siječnja.",
+          "min_state_duration": "Ako praćeni entitet prijeđe u stanje i izađe iz njega brže od ovoga broja sekundi, taj se kratki trenutak zanemaruje — njegovo se vrijeme umjesto toga dodaje prethodnom stanju i ne računa se kao zasebna promjena. Upotrijebite to za filtriranje treperavih ili poskakujućih senzora. Postavite na 0 da se broji svaka promjena, koliko god kratka bila."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Odaberi barem jedno stanje za praćenje.",
+      "no_target_selected": "Odaberi barem jedno ciljno stanje ili isključi bodovanje usklađenosti.",
+      "no_frames_selected": "Odaberi barem jedno vremensko razdoblje za praćenje."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Uredi pratitelja",
+        "description": "Prilagodi praćena razdoblja i postavke za ovog pratitelja. Praćeni entitet i način ne mogu se promijeniti — stvori novog pratitelja da ih promijeniš.",
+        "data": {
+          "today": "Danas",
+          "yesterday": "Jučer",
+          "24h": "Zadnja 24 sata",
+          "7d": "Zadnjih 7 dana",
+          "30d": "Zadnjih 30 dana",
+          "month": "Ovaj mjesec",
+          "year": "Ove godine",
+          "target": "Ciljno stanje (stanja)",
+          "target_threshold": "Prag usklađenosti (%, neobavezno)",
+          "min_state_duration": "Najmanje trajanje stanja (sekunde)"
+        },
+        "data_description": {
+          "today": "Od lokalne ponoći.",
+          "yesterday": "Prethodni cijeli dan.",
+          "24h": "Klizni prozor od 24 sata koji završava sada.",
+          "7d": "Klizni prozor od 7 dana koji završava sada.",
+          "30d": "Zadnjih 30 cijelih lokalnih dana.",
+          "month": "Od 1. u ovom mjesecu.",
+          "year": "Od 1. siječnja.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Ako je postavljeno, binarni senzor „Usklađeno” uključuje se kada postotak usklađenosti dosegne ili premaši ovu vrijednost. Ostavi prazno za preskakanje praga.",
+          "min_state_duration": "Ako praćeni entitet prijeđe u stanje i izađe iz njega brže od ovoga broja sekundi, taj se kratki trenutak zanemaruje — njegovo se vrijeme umjesto toga dodaje prethodnom stanju i ne računa se kao zasebna promjena. Upotrijebite to za filtriranje treperavih ili poskakujućih senzora. Postavite na 0 da se broji svaka promjena, koliko god kratka bila."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Odaberi barem jedno ciljno stanje ili isključi bodovanje usklađenosti.",
+      "no_frames_selected": "Odaberi barem jedno vremensko razdoblje za praćenje."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Trajanje ({frame})"
+      },
+      "breakdown": {
+        "name": "Raščlamba stanja ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Trenutačno u stanju"
+      },
+      "compliant": {
+        "name": "Usklađeno"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Određena stanja",
+        "all_states": "Sva stanja"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Ponovno postavi knjigu",
+      "description": "Briše pohranjenu povijest dnevnih segmenata pratitelja. Duga se vremenska razdoblja ponovno grade iz podataka recordera gdje su još dostupni. Ovo se ne može poništiti.",
+      "fields": {
+        "confirm": {
+          "name": "Potvrdi",
+          "description": "Mora biti omogućeno za provođenje ponovnog postavljanja. Štiti od slučajnog gubitka povijesti."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Recorder nije dostupan",
+      "description": "Entity State Tracker oslanja se na recorder za izračun trajanja stanja. Recorder nije dostupan pa se praćenje od sada vraća samo na akumulaciju uživo i ne može nadopuniti prošlu povijest. Omogući integraciju recordera za vraćanje potpune povijesti vremenskih razdoblja."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Postavi confirm na true za ponovno postavljanje knjige. Ovo briše pohranjenu povijest i ne može se poništiti."
+    }
+  }
+}

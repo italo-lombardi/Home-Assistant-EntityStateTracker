@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Rastrear uma entidade",
+        "description": "Escolha uma entidade para rastrear quanto tempo ela passa nos seus estados ao longo de vários períodos.",
+        "data": {
+          "entity": "Entidade a rastrear",
+          "name": "Nome (opcional)"
+        },
+        "data_description": {
+          "entity": "A entidade cujas durações de estado serão medidas. Uma entidade por rastreador — aponte para um ajudante de grupo para agregar várias.",
+          "name": "Um nome amigável para este acompanhador. Deixe em branco para nomeá-lo segundo a entidade e o modo (por ex., \"Entity State Tracker - Living Room - Specific States\"). Isto define o nome do dispositivo/configuração; os IDs das entidades de sensor continuam a seguir a nomenclatura padrão. Pode criar vários acompanhadores para a mesma entidade."
+        }
+      },
+      "mode": {
+        "title": "Modo de rastreamento",
+        "description": "Escolha estados específicos para medir, ou descubra automaticamente cada estado que a entidade reporta.",
+        "menu_options": {
+          "specific_states": "Estados específicos — meça os estados que escolher",
+          "all_states": "Todos os estados — detalhamento automático por estado"
+        }
+      },
+      "specific": {
+        "title": "Estados a rastrear",
+        "description": "Selecione os estados a medir. Pode digitar um estado personalizado não listado.",
+        "data": {
+          "states": "Estados a rastrear",
+          "enable_compliance": "Ativar pontuação de conformidade"
+        },
+        "data_description": {
+          "states": "Os estados da entidade cuja duração e percentagem são medidas (ex.: on, heat, home). Preenchido com os estados vistos recentemente.",
+          "enable_compliance": "Ative para pontuar quanto de cada janela a entidade passou num estado-alvo desejado, com um limite opcional de aprovado/reprovado."
+        }
+      },
+      "compliance": {
+        "title": "Que estados contam como conformes?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Estado(s) conforme(s)",
+          "target_threshold": "Limite de conformidade (%, opcional)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Se definido, um sensor binário «Conforme» liga quando a percentagem de conformidade atinge ou ultrapassa este valor. Deixe vazio para ignorar o limite."
+        }
+      },
+      "frames": {
+        "title": "Períodos",
+        "description": "Escolha quais períodos rastrear. Períodos mais longos do que a retenção do recorder preenchem-se ao longo do tempo.",
+        "data": {
+          "today": "Hoje",
+          "yesterday": "Ontem",
+          "24h": "Últimas 24 horas",
+          "7d": "Últimos 7 dias",
+          "30d": "Últimos 30 dias",
+          "month": "Este mês",
+          "year": "Este ano",
+          "min_state_duration": "Duração mínima de estado (segundos)"
+        },
+        "data_description": {
+          "today": "Desde a meia-noite local.",
+          "yesterday": "O dia inteiro anterior.",
+          "24h": "Janela móvel de 24 horas que termina agora.",
+          "7d": "Janela móvel de 7 dias que termina agora.",
+          "30d": "Os últimos 30 dias locais inteiros.",
+          "month": "Desde o dia 1 deste mês.",
+          "year": "Desde 1 de janeiro.",
+          "min_state_duration": "Se a entidade acompanhada mudar para um estado e sair dele mais rápido do que este número de segundos, esse breve momento é ignorado — o seu tempo é adicionado ao estado anterior e não conta como uma alteração separada. Utilize-o para filtrar sensores que oscilam ou saltam. Defina como 0 para contar cada alteração, por mais breve que seja."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Selecione pelo menos um estado a rastrear.",
+      "no_target_selected": "Selecione pelo menos um estado-alvo, ou desative a pontuação de conformidade.",
+      "no_frames_selected": "Selecione pelo menos um período a rastrear."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Editar rastreador",
+        "description": "Ajuste os períodos rastreados e as configurações deste rastreador. A entidade rastreada e o modo não podem ser alterados — crie um novo rastreador para os alterar.",
+        "data": {
+          "today": "Hoje",
+          "yesterday": "Ontem",
+          "24h": "Últimas 24 horas",
+          "7d": "Últimos 7 dias",
+          "30d": "Últimos 30 dias",
+          "month": "Este mês",
+          "year": "Este ano",
+          "target": "Estado(s)-alvo",
+          "target_threshold": "Limite de conformidade (%, opcional)",
+          "min_state_duration": "Duração mínima de estado (segundos)"
+        },
+        "data_description": {
+          "today": "Desde a meia-noite local.",
+          "yesterday": "O dia inteiro anterior.",
+          "24h": "Janela móvel de 24 horas que termina agora.",
+          "7d": "Janela móvel de 7 dias que termina agora.",
+          "30d": "Os últimos 30 dias locais inteiros.",
+          "month": "Desde o dia 1 deste mês.",
+          "year": "Desde 1 de janeiro.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Se definido, um sensor binário «Conforme» liga quando a percentagem de conformidade atinge ou ultrapassa este valor. Deixe vazio para ignorar o limite.",
+          "min_state_duration": "Se a entidade acompanhada mudar para um estado e sair dele mais rápido do que este número de segundos, esse breve momento é ignorado — o seu tempo é adicionado ao estado anterior e não conta como uma alteração separada. Utilize-o para filtrar sensores que oscilam ou saltam. Defina como 0 para contar cada alteração, por mais breve que seja."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Selecione pelo menos um estado-alvo, ou desative a pontuação de conformidade.",
+      "no_frames_selected": "Selecione pelo menos um período a rastrear."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Duração ({frame})"
+      },
+      "breakdown": {
+        "name": "Detalhamento de estados ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Atualmente no estado"
+      },
+      "compliant": {
+        "name": "Conforme"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Estados específicos",
+        "all_states": "Todos os estados"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Repor o registo",
+      "description": "Limpa o histórico persistente de compartimentos diários de um rastreador. Os períodos longos são reconstruídos a partir dos dados do recorder onde ainda disponíveis. Isto não pode ser desfeito.",
+      "fields": {
+        "confirm": {
+          "name": "Confirmar",
+          "description": "Deve estar ativado para realizar a reposição. Protege contra a perda acidental do histórico."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "O recorder está indisponível",
+      "description": "O Entity State Tracker depende do recorder para calcular as durações de estado. O recorder não está disponível, por isso o rastreamento passa a recorrer apenas à acumulação em tempo real e não consegue preencher o histórico passado. Ative a integração recorder para restaurar o histórico completo dos períodos."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Defina confirm como true para repor o registo. Isto limpa o histórico persistente e não pode ser desfeito."
+    }
+  }
+}

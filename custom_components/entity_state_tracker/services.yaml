@@ -1,0 +1,11 @@
+reset_ledger:
+  name: Reset ledger
+  description: Clear the persisted daily-bucket history for every Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.
+  fields:
+    confirm:
+      name: Confirm
+      description: Must be enabled to carry out the reset. Guards against accidental history loss.
+      required: true
+      default: false
+      selector:
+        boolean:

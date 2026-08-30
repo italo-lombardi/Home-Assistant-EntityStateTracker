@@ -1,0 +1,15 @@
+{
+    "domain": "entity_state_tracker",
+    "name": "Entity State Tracker",
+    "after_dependencies": ["recorder", "http", "lovelace"],
+    "codeowners": ["@italo-lombardi"],
+    "config_flow": true,
+    "dependencies": [],
+    "documentation": "https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker",
+    "integration_type": "service",
+    "iot_class": "calculated",
+    "issue_tracker": "https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/issues",
+    "quality_scale": "custom",
+    "requirements": [],
+    "version": "0.1.0"
+}

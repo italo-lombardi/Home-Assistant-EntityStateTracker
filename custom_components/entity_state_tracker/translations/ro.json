@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Urmărește o entitate",
+        "description": "Alege o entitate pentru a urmări cât timp petrece în stările sale de-a lungul mai multor intervale de timp.",
+        "data": {
+          "entity": "Entitate de urmărit",
+          "name": "Nume (opțional)"
+        },
+        "data_description": {
+          "entity": "Entitatea ale cărei durate de stare vor fi măsurate. O entitate per urmăritor — indică un ajutor de grup pentru a agrega mai multe.",
+          "name": "Un nume prietenos pentru acest urmăritor. Lasă gol pentru a-l denumi după entitate și mod (de ex. „Entity State Tracker - Living Room - Specific States”). Aceasta setează numele dispozitivului/configurației; ID-urile entităților senzor urmează în continuare denumirea standard. Poți crea mai multe urmăritoare pentru aceeași entitate."
+        }
+      },
+      "mode": {
+        "title": "Mod de urmărire",
+        "description": "Alege stări specifice de măsurat sau descoperă automat fiecare stare pe care o raportează entitatea.",
+        "menu_options": {
+          "specific_states": "Stări specifice — măsoară stările pe care le alegi",
+          "all_states": "Toate stările — defalcare automată pe stare"
+        }
+      },
+      "specific": {
+        "title": "Stări de urmărit",
+        "description": "Selectează stările de măsurat. Poți introduce o stare personalizată care nu este listată.",
+        "data": {
+          "states": "Stări de urmărit",
+          "enable_compliance": "Activează scorul de conformitate"
+        },
+        "data_description": {
+          "states": "Stările entității a căror durată și procent sunt măsurate (de ex. on, heat, home). Precompletat cu stările observate recent.",
+          "enable_compliance": "Activează pentru a puncta cât din fiecare fereastră a petrecut entitatea într-o stare-țintă dorită, cu un prag opțional de trecut/picat."
+        }
+      },
+      "compliance": {
+        "title": "Ce stări contează ca fiind conforme?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Stare (stări) conformă(e)",
+          "target_threshold": "Prag de conformitate (%, opțional)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Dacă este setat, un senzor binar „Conform” se activează atunci când procentul de conformitate atinge sau depășește această valoare. Lasă gol pentru a omite pragul."
+        }
+      },
+      "frames": {
+        "title": "Intervale de timp",
+        "description": "Alege ce intervale de timp să urmărești. Intervalele mai lungi decât retenția recorderului se completează în timp.",
+        "data": {
+          "today": "Astăzi",
+          "yesterday": "Ieri",
+          "24h": "Ultimele 24 de ore",
+          "7d": "Ultimele 7 zile",
+          "30d": "Ultimele 30 de zile",
+          "month": "Luna aceasta",
+          "year": "Anul acesta",
+          "min_state_duration": "Durată minimă de stare (secunde)"
+        },
+        "data_description": {
+          "today": "De la miezul nopții local.",
+          "yesterday": "Ziua întreagă precedentă.",
+          "24h": "Fereastră glisantă de 24 de ore care se termină acum.",
+          "7d": "Fereastră glisantă de 7 zile care se termină acum.",
+          "30d": "Ultimele 30 de zile locale întregi.",
+          "month": "De la data de 1 a acestei luni.",
+          "year": "De la 1 ianuarie.",
+          "min_state_duration": "Dacă entitatea urmărită intră într-o stare și iese din ea mai repede decât acest număr de secunde, acel moment scurt este ignorat — timpul său este adăugat în schimb la starea anterioară și nu contează ca o schimbare separată. Folosește-l pentru a filtra senzorii care pâlpâie sau ricoșează. Setează la 0 pentru a număra fiecare schimbare, oricât de scurtă."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Selectează cel puțin o stare de urmărit.",
+      "no_target_selected": "Selectează cel puțin o stare-țintă sau dezactivează scorul de conformitate.",
+      "no_frames_selected": "Selectează cel puțin un interval de timp de urmărit."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Editează urmăritorul",
+        "description": "Ajustează intervalele urmărite și setările pentru acest urmăritor. Entitatea urmărită și modul nu pot fi modificate — creează un urmăritor nou pentru a le schimba.",
+        "data": {
+          "today": "Astăzi",
+          "yesterday": "Ieri",
+          "24h": "Ultimele 24 de ore",
+          "7d": "Ultimele 7 zile",
+          "30d": "Ultimele 30 de zile",
+          "month": "Luna aceasta",
+          "year": "Anul acesta",
+          "target": "Stare (stări) țintă",
+          "target_threshold": "Prag de conformitate (%, opțional)",
+          "min_state_duration": "Durată minimă de stare (secunde)"
+        },
+        "data_description": {
+          "today": "De la miezul nopții local.",
+          "yesterday": "Ziua întreagă precedentă.",
+          "24h": "Fereastră glisantă de 24 de ore care se termină acum.",
+          "7d": "Fereastră glisantă de 7 zile care se termină acum.",
+          "30d": "Ultimele 30 de zile locale întregi.",
+          "month": "De la data de 1 a acestei luni.",
+          "year": "De la 1 ianuarie.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Dacă este setat, un senzor binar „Conform” se activează atunci când procentul de conformitate atinge sau depășește această valoare. Lasă gol pentru a omite pragul.",
+          "min_state_duration": "Dacă entitatea urmărită intră într-o stare și iese din ea mai repede decât acest număr de secunde, acel moment scurt este ignorat — timpul său este adăugat în schimb la starea anterioară și nu contează ca o schimbare separată. Folosește-l pentru a filtra senzorii care pâlpâie sau ricoșează. Setează la 0 pentru a număra fiecare schimbare, oricât de scurtă."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Selectează cel puțin o stare-țintă sau dezactivează scorul de conformitate.",
+      "no_frames_selected": "Selectează cel puțin un interval de timp de urmărit."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Durată ({frame})"
+      },
+      "breakdown": {
+        "name": "Defalcare stări ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "În prezent în stare"
+      },
+      "compliant": {
+        "name": "Conform"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Stări specifice",
+        "all_states": "Toate stările"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Resetează registrul",
+      "description": "Șterge istoricul persistent al segmentelor zilnice pentru un urmăritor. Intervalele lungi se reconstruiesc din datele recorderului acolo unde sunt încă disponibile. Această acțiune nu poate fi anulată.",
+      "fields": {
+        "confirm": {
+          "name": "Confirmă",
+          "description": "Trebuie activat pentru a efectua resetarea. Protejează împotriva pierderii accidentale a istoricului."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Recorderul este indisponibil",
+      "description": "Entity State Tracker se bazează pe recorder pentru a calcula duratele stărilor. Recorderul nu este disponibil, așa că urmărirea revine de acum înainte doar la acumularea în timp real și nu poate completa istoricul trecut. Activează integrarea recorder pentru a restabili istoricul complet al intervalelor de timp."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Setează confirm pe true pentru a reseta registrul. Aceasta șterge istoricul persistent și nu poate fi anulată."
+    }
+  }
+}

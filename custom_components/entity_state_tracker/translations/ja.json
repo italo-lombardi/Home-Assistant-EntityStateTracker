@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "エンティティを追跡",
+        "description": "複数の時間枠にわたって、エンティティが各状態にどれだけの時間留まるかを追跡するエンティティを選択します。",
+        "data": {
+          "entity": "追跡するエンティティ",
+          "name": "名前（任意）"
+        },
+        "data_description": {
+          "entity": "状態の継続時間を測定するエンティティ。トラッカーごとに1つのエンティティ — 複数を集約するにはグループヘルパーを指定します。",
+          "name": "このトラッカーのわかりやすい名前。空欄のままにすると、エンティティとモードにちなんで名付けられます（例:「Entity State Tracker - Living Room - Specific States」）。これはデバイス/構成名を設定します。センサーエンティティ ID は引き続き標準の命名に従います。同じエンティティに対して複数のトラッカーを作成できます。"
+        }
+      },
+      "mode": {
+        "title": "追跡モード",
+        "description": "測定する特定の状態を選ぶか、エンティティが報告するすべての状態を自動検出します。",
+        "menu_options": {
+          "specific_states": "特定の状態 — 選択した状態を測定します",
+          "all_states": "すべての状態 — 状態ごとの内訳を自動検出します"
+        }
+      },
+      "specific": {
+        "title": "追跡する状態",
+        "description": "測定する状態を選択します。一覧にないカスタム状態を入力できます。",
+        "data": {
+          "states": "追跡する状態",
+          "enable_compliance": "コンプライアンススコアを有効にする"
+        },
+        "data_description": {
+          "states": "継続時間とパーセンテージが測定されるエンティティの状態（例: on、heat、home）。最近見られた状態が事前入力されます。",
+          "enable_compliance": "各ウィンドウのうちエンティティが望ましい目標状態にどれだけ留まったかをスコア化するには有効にします。任意の合格/不合格しきい値付き。"
+        }
+      },
+      "compliance": {
+        "title": "どの状態をコンプライアンスとして数えますか？",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "コンプライアンス状態",
+          "target_threshold": "コンプライアンスしきい値（%、任意）"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "設定すると、コンプライアンス率がこの値以上になったときに「コンプライアンス」バイナリセンサーがオンになります。しきい値をスキップするには空欄のままにします。"
+        }
+      },
+      "frames": {
+        "title": "時間枠",
+        "description": "追跡する時間枠を選択します。レコーダーの保持期間より長い時間枠は、時間の経過とともに埋まります。",
+        "data": {
+          "today": "今日",
+          "yesterday": "昨日",
+          "24h": "過去24時間",
+          "7d": "過去7日間",
+          "30d": "過去30日間",
+          "month": "今月",
+          "year": "今年",
+          "min_state_duration": "最小状態継続時間（秒）"
+        },
+        "data_description": {
+          "today": "現地時間の深夜0時から。",
+          "yesterday": "前日の丸一日。",
+          "24h": "現在までの24時間のローリングウィンドウ。",
+          "7d": "現在までの7日間のローリングウィンドウ。",
+          "30d": "過去30日間の完全な現地日。",
+          "month": "今月1日から。",
+          "year": "1月1日から。",
+          "min_state_duration": "追跡中のエンティティがある状態に入ってから、この秒数より速く出た場合、その短い瞬間は無視され、その時間は代わりに前の状態に加算され、別個の変化としてはカウントされません。ちらつくセンサーや跳ねるセンサーをフィルタリングするために使用します。どんなに短くてもすべての変化をカウントするには 0 に設定します。"
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "追跡する状態を少なくとも1つ選択してください。",
+      "no_target_selected": "少なくとも1つの目標状態を選択するか、コンプライアンススコアをオフにしてください。",
+      "no_frames_selected": "追跡する時間枠を少なくとも1つ選択してください。"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "トラッカーを編集",
+        "description": "このトラッカーの追跡対象の時間枠と設定を調整します。追跡対象のエンティティとモードは変更できません — 変更するには新しいトラッカーを作成してください。",
+        "data": {
+          "today": "今日",
+          "yesterday": "昨日",
+          "24h": "過去24時間",
+          "7d": "過去7日間",
+          "30d": "過去30日間",
+          "month": "今月",
+          "year": "今年",
+          "target": "目標状態",
+          "target_threshold": "コンプライアンスしきい値（%、任意）",
+          "min_state_duration": "最小状態継続時間（秒）"
+        },
+        "data_description": {
+          "today": "現地時間の深夜0時から。",
+          "yesterday": "前日の丸一日。",
+          "24h": "現在までの24時間のローリングウィンドウ。",
+          "7d": "現在までの7日間のローリングウィンドウ。",
+          "30d": "過去30日間の完全な現地日。",
+          "month": "今月1日から。",
+          "year": "1月1日から。",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "設定すると、コンプライアンス率がこの値以上になったときに「コンプライアンス」バイナリセンサーがオンになります。しきい値をスキップするには空欄のままにします。",
+          "min_state_duration": "追跡中のエンティティがある状態に入ってから、この秒数より速く出た場合、その短い瞬間は無視され、その時間は代わりに前の状態に加算され、別個の変化としてはカウントされません。ちらつくセンサーや跳ねるセンサーをフィルタリングするために使用します。どんなに短くてもすべての変化をカウントするには 0 に設定します。"
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "少なくとも1つの目標状態を選択するか、コンプライアンススコアをオフにしてください。",
+      "no_frames_selected": "追跡する時間枠を少なくとも1つ選択してください。"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "継続時間（{frame}）"
+      },
+      "breakdown": {
+        "name": "状態の内訳（{frame}）"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "現在この状態"
+      },
+      "compliant": {
+        "name": "コンプライアンス"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "特定の状態",
+        "all_states": "すべての状態"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "台帳をリセット",
+      "description": "トラッカーの保存された日次バケット履歴を消去します。長い時間枠は、まだ利用可能な場合はレコーダーのデータから再構築されます。これは元に戻せません。",
+      "fields": {
+        "confirm": {
+          "name": "確認",
+          "description": "リセットを実行するには有効にする必要があります。誤って履歴を失うのを防ぎます。"
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "レコーダーが利用できません",
+      "description": "Entity State Tracker は状態の継続時間を計算するためにレコーダーに依存しています。レコーダーが利用できないため、追跡は今後ライブのみの累積に切り替わり、過去の履歴を埋め戻すことはできません。完全な時間枠の履歴を復元するには、レコーダー統合を有効にしてください。"
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "台帳をリセットするには confirm を true に設定してください。これは保存された履歴を消去し、元に戻せません。"
+    }
+  }
+}

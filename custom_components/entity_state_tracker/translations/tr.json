@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Bir varlığı izle",
+        "description": "Bir varlığın, birden çok zaman aralığı boyunca durumlarında ne kadar süre kaldığını izlemek için bir varlık seçin.",
+        "data": {
+          "entity": "İzlenecek varlık",
+          "name": "Ad (isteğe bağlı)"
+        },
+        "data_description": {
+          "entity": "Durum sürelerinin ölçüleceği varlık. İzleyici başına bir varlık — birkaçını toplamak için bir grup yardımcısına yönlendirin.",
+          "name": "Bu izleyici için kolay anlaşılır bir ad. Varlığa ve moda göre adlandırmak için boş bırakın (örn. \"Entity State Tracker - Living Room - Specific States\"). Bu, cihaz/yapılandırma adını belirler; sensör varlık kimlikleri yine de standart adlandırmayı izler. Aynı varlık için birden fazla izleyici oluşturabilirsiniz."
+        }
+      },
+      "mode": {
+        "title": "İzleme modu",
+        "description": "Ölçmek için belirli durumları seçin veya varlığın bildirdiği her durumu otomatik olarak keşfedin.",
+        "menu_options": {
+          "specific_states": "Belirli durumlar — seçtiğiniz durumları ölçün",
+          "all_states": "Tüm durumlar — duruma göre otomatik ayrıştırma"
+        }
+      },
+      "specific": {
+        "title": "İzlenecek durumlar",
+        "description": "Ölçülecek durumları seçin. Listelenmeyen özel bir durum yazabilirsiniz.",
+        "data": {
+          "states": "İzlenecek durumlar",
+          "enable_compliance": "Uyumluluk puanlamasını etkinleştir"
+        },
+        "data_description": {
+          "states": "Süresi ve yüzdesi ölçülen varlık durumları (örn. on, heat, home). Yakın zamanda görülen durumlarla önceden doldurulur.",
+          "enable_compliance": "Varlığın her pencerenin ne kadarını istenen bir hedef durumda geçirdiğini, isteğe bağlı bir geçti/kaldı eşiğiyle puanlamak için açın."
+        }
+      },
+      "compliance": {
+        "title": "Hangi durumlar uyumlu olarak sayılır?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Uyumlu durum(lar)",
+          "target_threshold": "Uyumluluk eşiği (%, isteğe bağlı)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya aştığında bir «Uyumlu» ikili sensör açılır. Eşiği atlamak için boş bırakın."
+        }
+      },
+      "frames": {
+        "title": "Zaman aralıkları",
+        "description": "Hangi zaman aralıklarının izleneceğini seçin. Kaydedicinin saklama süresinden daha uzun aralıklar zamanla dolar.",
+        "data": {
+          "today": "Bugün",
+          "yesterday": "Dün",
+          "24h": "Son 24 saat",
+          "7d": "Son 7 gün",
+          "30d": "Son 30 gün",
+          "month": "Bu ay",
+          "year": "Bu yıl",
+          "min_state_duration": "Minimum durum süresi (saniye)"
+        },
+        "data_description": {
+          "today": "Yerel gece yarısından itibaren.",
+          "yesterday": "Önceki tam gün.",
+          "24h": "Şu anda biten kayan 24 saatlik pencere.",
+          "7d": "Şu anda biten kayan 7 günlük pencere.",
+          "30d": "Son 30 tam yerel gün.",
+          "month": "Bu ayın 1'inden itibaren.",
+          "year": "1 Ocak'tan itibaren.",
+          "min_state_duration": "İzlenen varlık bir duruma girip bu saniye sayısından daha hızlı çıkarsa, o kısa an yok sayılır — süresi bunun yerine önceki duruma eklenir ve ayrı bir değişiklik olarak sayılmaz. Titreşen veya zıplayan sensörleri filtrelemek için kullanın. Ne kadar kısa olursa olsun her değişikliği saymak için 0 olarak ayarlayın."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "İzlenecek en az bir durum seçin.",
+      "no_target_selected": "En az bir hedef durum seçin veya uyumluluk puanlamasını kapatın.",
+      "no_frames_selected": "İzlenecek en az bir zaman aralığı seçin."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "İzleyiciyi düzenle",
+        "description": "Bu izleyici için izlenen aralıkları ve ayarları düzenleyin. İzlenen varlık ve mod değiştirilemez — bunları değiştirmek için yeni bir izleyici oluşturun.",
+        "data": {
+          "today": "Bugün",
+          "yesterday": "Dün",
+          "24h": "Son 24 saat",
+          "7d": "Son 7 gün",
+          "30d": "Son 30 gün",
+          "month": "Bu ay",
+          "year": "Bu yıl",
+          "target": "Hedef durum(lar)",
+          "target_threshold": "Uyumluluk eşiği (%, isteğe bağlı)",
+          "min_state_duration": "Minimum durum süresi (saniye)"
+        },
+        "data_description": {
+          "today": "Yerel gece yarısından itibaren.",
+          "yesterday": "Önceki tam gün.",
+          "24h": "Şu anda biten kayan 24 saatlik pencere.",
+          "7d": "Şu anda biten kayan 7 günlük pencere.",
+          "30d": "Son 30 tam yerel gün.",
+          "month": "Bu ayın 1'inden itibaren.",
+          "year": "1 Ocak'tan itibaren.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya aştığında bir «Uyumlu» ikili sensör açılır. Eşiği atlamak için boş bırakın.",
+          "min_state_duration": "İzlenen varlık bir duruma girip bu saniye sayısından daha hızlı çıkarsa, o kısa an yok sayılır — süresi bunun yerine önceki duruma eklenir ve ayrı bir değişiklik olarak sayılmaz. Titreşen veya zıplayan sensörleri filtrelemek için kullanın. Ne kadar kısa olursa olsun her değişikliği saymak için 0 olarak ayarlayın."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "En az bir hedef durum seçin veya uyumluluk puanlamasını kapatın.",
+      "no_frames_selected": "İzlenecek en az bir zaman aralığı seçin."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Süre ({frame})"
+      },
+      "breakdown": {
+        "name": "Durum dökümü ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Şu anda durumda"
+      },
+      "compliant": {
+        "name": "Uyumlu"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Belirli durumlar",
+        "all_states": "Tüm durumlar"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Defteri sıfırla",
+      "description": "Bir izleyicinin kalıcı günlük paket geçmişini temizler. Uzun zaman aralıkları, hâlâ mevcut olduğunda kaydedici verilerinden yeniden oluşturulur. Bu geri alınamaz.",
+      "fields": {
+        "confirm": {
+          "name": "Onayla",
+          "description": "Sıfırlamayı gerçekleştirmek için etkinleştirilmelidir. Kazara geçmiş kaybına karşı korur."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Kaydedici kullanılamıyor",
+      "description": "Entity State Tracker, durum sürelerini hesaplamak için kaydediciye dayanır. Kaydedici kullanılamıyor, bu nedenle izleme bundan böyle yalnızca canlı birikime geri döner ve geçmiş geçmişi dolduramaz. Tam zaman aralığı geçmişini geri yüklemek için kaydedici entegrasyonunu etkinleştirin."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Defteri sıfırlamak için confirm değerini true yapın. Bu, kalıcı geçmişi temizler ve geri alınamaz."
+    }
+  }
+}
