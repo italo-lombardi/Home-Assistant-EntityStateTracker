@@ -61,6 +61,7 @@ def _fake_coordinator(
     tracked_states: list[str] | None,
     target_states: list[str] | None,
     data: TrackerData | None,
+    target_threshold: float | None = None,
     title: str = "Living Room — heat/auto",
     entry_id: str = "est_entry",
 ) -> SimpleNamespace:
@@ -71,6 +72,7 @@ def _fake_coordinator(
         enabled_frames=enabled_frames,
         tracked_states=tracked_states,
         target_states=target_states,
+        target_threshold=target_threshold,
         data=data,
         entry=entry,
         entity_id="climate.living_room",
@@ -237,6 +239,7 @@ def _duration_coord(
         enabled_frames=["today"],
         tracked_states=list(tracked) if tracked is not None else None,
         target_states=list(target) if target else None,
+        target_threshold=80.0 if target else None,
         data=frames_data,
     )
 
@@ -330,6 +333,8 @@ def test_duration_attributes_without_target() -> None:
     assert attrs["tracked_states"] == ["heat", "auto"]
     # source_entity names the tracked entity so the card can show it (Part A).
     assert attrs["source_entity"] == "climate.living_room"
+    # frame is the common-core window key (RECORDED — config-stable).
+    assert attrs["frame"] == "today"
     assert attrs["window_coverage"] == 0.9
     assert attrs["has_gap"] is True
     assert attrs["data_start"] == "2026-08-29T00:00:00+00:00"
@@ -338,6 +343,8 @@ def test_duration_attributes_without_target() -> None:
     assert attrs["window_start"] == "2026-08-29T00:00:00-07:00"
     assert attrs["window_start"] != attrs["data_start"]
     assert "compliance_percent" not in attrs
+    # target_threshold rides along only with a target set — absent here.
+    assert "target_threshold" not in attrs
     # Transition metrics scoped to tracked states.
     assert set(attrs["counts"]) == {"heat", "auto"}
     assert attrs["counts"]["heat"] == 3
@@ -353,6 +360,8 @@ def test_duration_attributes_with_target_adds_compliance() -> None:
     attrs = sensor.extra_state_attributes
     assert attrs["compliance_percent"] == 50.0
     assert attrs["target_states"] == ["heat"]
+    # target_threshold rides along beside compliance_percent when a target is set.
+    assert attrs["target_threshold"] == 80.0
 
 
 def test_duration_attributes_all_states_transition_keys_when_tracked_none() -> None:
@@ -466,6 +475,8 @@ def test_breakdown_attributes_sorted_by_seconds_desc() -> None:
     attrs = sensor.extra_state_attributes
     # source_entity names the tracked entity so the card can show it (Part A).
     assert attrs["source_entity"] == "climate.living_room"
+    # frame is the common-core window key (RECORDED — config-stable).
+    assert attrs["frame"] == "today"
     # heat 1800 > off 1200 > auto 600.
     assert list(attrs["breakdown_seconds"]) == ["heat", "off", "auto"]
     assert attrs["breakdown_seconds"]["heat"] == 1800

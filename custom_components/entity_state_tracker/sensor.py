@@ -196,12 +196,13 @@ class DurationSensor(_FrameSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return source entity, percent, compliance, bounds, transition metrics."""
+        """Return source entity, frame, percent, compliance, bounds, transitions."""
         result = self._result
         if result is None:
             return None
         attrs: dict[str, Any] = {
             "source_entity": self.coordinator.entity_id,
+            "frame": self._frame,
             "percent": result.percent,
             "tracked_states": self.coordinator.tracked_states,
             "target_states": self.coordinator.target_states,
@@ -212,6 +213,7 @@ class DurationSensor(_FrameSensor):
         }
         if self.coordinator.target_states:
             attrs["compliance_percent"] = result.compliance_percent
+            attrs["target_threshold"] = self.coordinator.target_threshold
         attrs.update(
             _transition_metrics(
                 result, self.coordinator, self.coordinator.tracked_states
@@ -258,7 +260,7 @@ class BreakdownSensor(_FrameSensor):
 
     @property
     def extra_state_attributes(self) -> dict[str, Any] | None:
-        """Return source entity + full per-state breakdown, sorted by seconds desc."""
+        """Return source entity, frame + full per-state breakdown, sorted desc."""
         result = self._result
         if result is None:
             return None
@@ -275,6 +277,7 @@ class BreakdownSensor(_FrameSensor):
         breakdown_pct["unaccounted"] = result.breakdown_pct.get("unaccounted")
         return {
             "source_entity": self.coordinator.entity_id,
+            "frame": self._frame,
             "breakdown_seconds": {s: int(result.breakdown_seconds[s]) for s in order},
             "breakdown_pct": breakdown_pct,
             "counts": {s: result.counts.get(s, 0) for s in order},

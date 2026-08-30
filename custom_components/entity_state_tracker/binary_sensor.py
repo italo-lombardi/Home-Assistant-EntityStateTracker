@@ -82,6 +82,13 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
     _attr_has_entity_name = True
     _attr_translation_key = TRANSLATION_KEY_CURRENTLY_IN_STATE
 
+    # This sensor is frame-agnostic — it reads the live last_state, not a window
+    # — so it carries no frame/coverage attributes (they'd be meaningless here).
+    # current_state names which state is live; it churns every transition, so
+    # strip it from the recorder. source_entity/tracked_states are config-stable
+    # and stay recorded.
+    _unrecorded_attributes = frozenset({"current_state"})
+
     def __init__(self, coordinator: EntityStateTrackerCoordinator) -> None:
         """Initialize the currently-in-state binary sensor."""
         super().__init__(coordinator)
@@ -101,6 +108,16 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
         data = self.coordinator.data
         tracked = self.coordinator.tracked_states or ()
         return data is not None and data.last_state in tracked
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return the source entity, tracked states, and the live current state."""
+        data = self.coordinator.data
+        return {
+            "source_entity": self.coordinator.entity_id,
+            "tracked_states": self.coordinator.tracked_states,
+            "current_state": data.last_state if data is not None else None,
+        }
 
 
 class CompliantBinarySensor(DedupCoordinatorBinarySensor):
@@ -123,8 +140,12 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
     # compliance_percent churns on essentially every transition on today's frame,
     # so strip it from the recorder (mirrors DurationSensor/BreakdownSensor, §5.3)
     # — it stays queryable as a live attribute; our ledger is the history store.
-    # target / target_threshold / frame are config-stable and stay recorded.
-    _unrecorded_attributes = frozenset({"compliance_percent"})
+    # The coverage trio (data_start/window_coverage/has_gap) is likewise volatile
+    # and stripped. source_entity/tracked_states/target_states/target_threshold/
+    # frame are config-stable and stay recorded.
+    _unrecorded_attributes = frozenset(
+        {"compliance_percent", "data_start", "window_coverage", "has_gap"}
+    )
 
     def __init__(self, coordinator: EntityStateTrackerCoordinator) -> None:
         """Initialize the compliant binary sensor."""
@@ -171,15 +192,21 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
 
         ``compliance_percent`` is ``None`` before first data or when its frame is
         absent — the target/threshold/frame config surface regardless so the user
-        always sees what bar is being applied to which window.
+        always sees what bar is being applied to which window. The common-core
+        source_entity/data_start/window_coverage/has_gap ride along too.
         """
         data = self.coordinator.data
         frame = data.frames.get(self._frame_key) if data is not None else None
         return {
+            "source_entity": self.coordinator.entity_id,
             "compliance_percent": frame.compliance_percent
             if frame is not None
             else None,
-            "target": self.coordinator.target_states,
+            "tracked_states": self.coordinator.tracked_states,
+            "target_states": self.coordinator.target_states,
             "target_threshold": self.coordinator.target_threshold,
             "frame": self._frame_key,
+            "data_start": frame.data_start if frame is not None else None,
+            "window_coverage": frame.window_coverage if frame is not None else None,
+            "has_gap": frame.has_gap if frame is not None else None,
         }

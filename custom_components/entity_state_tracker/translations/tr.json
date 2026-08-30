@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "Şu anda durumda"
+        "name": "In a Tracked State"
       },
       "compliant": {
         "name": "Uyumlu"

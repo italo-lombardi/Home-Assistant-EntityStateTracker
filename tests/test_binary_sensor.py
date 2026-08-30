@@ -167,8 +167,44 @@ async def test_currently_in_state_off_when_tracked_none(
     assert sensor.is_on is False
 
 
-# --------------------------------------------------------------------------- #
-# CompliantBinarySensor
+async def test_currently_in_state_extra_attributes(
+    hass: HomeAssistant, specific_config_entry: MockConfigEntry
+) -> None:
+    """Attributes expose source entity, tracked states, and the live state."""
+    coordinator = _make_coordinator(hass, specific_config_entry)
+    coordinator.data = TrackerData(frames={}, last_state="heat")
+    sensor = CurrentlyInStateBinarySensor(coordinator)
+
+    assert sensor.extra_state_attributes == {
+        "source_entity": coordinator.entity_id,
+        "tracked_states": coordinator.tracked_states,
+        "current_state": "heat",
+    }
+
+
+async def test_currently_in_state_current_state_none_when_no_data(
+    hass: HomeAssistant, specific_config_entry: MockConfigEntry
+) -> None:
+    """current_state is None before the coordinator has any data."""
+    coordinator = _make_coordinator(hass, specific_config_entry)
+    coordinator.data = None
+    sensor = CurrentlyInStateBinarySensor(coordinator)
+
+    assert sensor.extra_state_attributes["current_state"] is None
+
+
+async def test_currently_in_state_unrecorded_attributes(
+    hass: HomeAssistant, specific_config_entry: MockConfigEntry
+) -> None:
+    """Only the volatile current_state is stripped; config stays recorded."""
+    coordinator = _make_coordinator(hass, specific_config_entry)
+    sensor = CurrentlyInStateBinarySensor(coordinator)
+
+    assert sensor._unrecorded_attributes == frozenset({"current_state"})
+    assert "source_entity" not in sensor._unrecorded_attributes
+    assert "tracked_states" not in sensor._unrecorded_attributes
+
+
 # --------------------------------------------------------------------------- #
 
 
@@ -307,15 +343,28 @@ async def test_compliant_extra_attributes(
     """Attributes expose the score, target set, threshold, and scored frame."""
     coordinator = _make_coordinator(hass, compliance_config_entry)
     coordinator.data = TrackerData(
-        frames={"today": FrameResult(window_seconds=1.0, compliance_percent=88.0)}
+        frames={
+            "today": FrameResult(
+                window_seconds=1.0,
+                compliance_percent=88.0,
+                data_start="2026-08-29T00:00:00+00:00",
+                window_coverage=0.9,
+                has_gap=True,
+            )
+        }
     )
     sensor = CompliantBinarySensor(coordinator)
 
     assert sensor.extra_state_attributes == {
+        "source_entity": coordinator.entity_id,
         "compliance_percent": 88.0,
-        "target": ["heat"],
+        "tracked_states": coordinator.tracked_states,
+        "target_states": ["heat"],
         "target_threshold": 80,
         "frame": "today",
+        "data_start": "2026-08-29T00:00:00+00:00",
+        "window_coverage": 0.9,
+        "has_gap": True,
     }
 
 
@@ -328,10 +377,15 @@ async def test_compliant_extra_attributes_none_when_no_data(
     sensor = CompliantBinarySensor(coordinator)
 
     assert sensor.extra_state_attributes == {
+        "source_entity": coordinator.entity_id,
         "compliance_percent": None,
-        "target": ["heat"],
+        "tracked_states": coordinator.tracked_states,
+        "target_states": ["heat"],
         "target_threshold": 80,
         "frame": "today",
+        "data_start": None,
+        "window_coverage": None,
+        "has_gap": None,
     }
 
 
@@ -350,9 +404,18 @@ async def test_compliant_extra_attributes_none_when_frame_absent(
 async def test_compliant_compliance_percent_unrecorded(
     hass: HomeAssistant, compliance_config_entry: MockConfigEntry
 ) -> None:
-    """The volatile compliance_percent is stripped from the recorder (§5.3)."""
+    """The volatile score + coverage trio are stripped; config stays recorded."""
     coordinator = _make_coordinator(hass, compliance_config_entry)
     sensor = CompliantBinarySensor(coordinator)
 
-    assert "compliance_percent" in sensor._unrecorded_attributes
-    assert "target" not in sensor._unrecorded_attributes
+    assert sensor._unrecorded_attributes == frozenset(
+        {"compliance_percent", "data_start", "window_coverage", "has_gap"}
+    )
+    # Config-stable attributes stay recorded.
+    assert "target_states" not in sensor._unrecorded_attributes
+    assert "source_entity" not in sensor._unrecorded_attributes
+    assert "tracked_states" not in sensor._unrecorded_attributes
+    assert "target_threshold" not in sensor._unrecorded_attributes
+    assert "frame" not in sensor._unrecorded_attributes
+    # The old `target` key is gone — renamed to `target_states`.
+    assert "target" not in sensor.extra_state_attributes

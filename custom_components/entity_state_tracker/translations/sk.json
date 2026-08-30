@@ -123,7 +123,7 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "Aktuálne v stave"
+        "name": "In a Tracked State"
       },
       "compliant": {
         "name": "V zhode"
