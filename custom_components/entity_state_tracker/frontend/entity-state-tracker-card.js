@@ -1008,7 +1008,7 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // Build the donut <svg> as a real SVG-namespaced DOM node. Every element is
-  // created with createElementNS(SVG_NS, …) so <path> lands in
+  // created with createElementNS(NS, …) so <path> lands in
   // http://www.w3.org/2000/svg and the browser renders it as geometry. Lit
   // renders a Node child value directly (no re-parsing, no namespace loss),
   // which sidesteps the missing `svg` template tag entirely. Rebuilt each
