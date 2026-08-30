@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Seuraa entiteettiä",
+        "description": "Valitse entiteetti seurataksesi, kuinka kauan se viettää tiloissaan useiden aikajaksojen aikana.",
+        "data": {
+          "entity": "Seurattava entiteetti",
+          "name": "Nimi (valinnainen)"
+        },
+        "data_description": {
+          "entity": "Entiteetti, jonka tilojen kestot mitataan. Yksi entiteetti seuraajaa kohti — osoita ryhmäavustajaan yhdistääksesi useita.",
+          "name": "Kuvaava nimi tälle seurannalle. Jätä tyhjäksi nimetäksesi sen entiteetin ja tilan mukaan (esim. ”Entity State Tracker - Living Room - Specific States”). Tämä asettaa laitteen/määrityksen nimen; anturientiteettien tunnukset noudattavat edelleen vakionimeämistä. Voit luoda useita seurantoja samalle entiteetille."
+        }
+      },
+      "mode": {
+        "title": "Seurantatila",
+        "description": "Valitse mitattavat tietyt tilat tai tunnista automaattisesti jokainen entiteetin raportoima tila.",
+        "menu_options": {
+          "specific_states": "Tietyt tilat — mittaa valitsemasi tilat",
+          "all_states": "Kaikki tilat — automaattinen erittely tiloittain"
+        }
+      },
+      "specific": {
+        "title": "Seurattavat tilat",
+        "description": "Valitse mitattavat tilat. Voit kirjoittaa mukautetun tilan, jota ei ole luettelossa.",
+        "data": {
+          "states": "Seurattavat tilat",
+          "enable_compliance": "Ota vaatimustenmukaisuuspisteytys käyttöön"
+        },
+        "data_description": {
+          "states": "Entiteetin tilat, joiden kesto ja prosenttiosuus mitataan (esim. on, heat, home). Esitäytetty äskettäin nähdyillä tiloilla.",
+          "enable_compliance": "Ota käyttöön pisteyttääksesi, kuinka suuren osan kustakin ikkunasta entiteetti vietti halutussa kohdetilassa, valinnaisella hyväksytty/hylätty-kynnyksellä."
+        }
+      },
+      "compliance": {
+        "title": "Mitkä tilat lasketaan vaatimusten mukaisiksi?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Vaatimusten mukainen tila (mukaiset tilat)",
+          "target_threshold": "Vaatimustenmukaisuuskynnys (%, valinnainen)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Jos asetettu, binäärianturi «Vaatimusten mukainen» kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen."
+        }
+      },
+      "frames": {
+        "title": "Aikajaksot",
+        "description": "Valitse, mitä aikajaksoja seurataan. Tallentimen säilytystä pidemmät jaksot täyttyvät ajan myötä.",
+        "data": {
+          "today": "Tänään",
+          "yesterday": "Eilen",
+          "24h": "Viimeiset 24 tuntia",
+          "7d": "Viimeiset 7 päivää",
+          "30d": "Viimeiset 30 päivää",
+          "month": "Tässä kuussa",
+          "year": "Tänä vuonna",
+          "min_state_duration": "Tilan vähimmäiskesto (sekuntia)"
+        },
+        "data_description": {
+          "today": "Paikallisesta keskiyöstä.",
+          "yesterday": "Edellinen koko päivä.",
+          "24h": "Liukuva 24 tunnin ikkuna, joka päättyy nyt.",
+          "7d": "Liukuva 7 päivän ikkuna, joka päättyy nyt.",
+          "30d": "Viimeiset 30 kokonaista paikallista päivää.",
+          "month": "Tämän kuun 1. päivästä.",
+          "year": "1. tammikuuta alkaen.",
+          "min_state_duration": "Jos seurattu entiteetti siirtyy tilaan ja pois siitä nopeammin kuin tämä sekuntimäärä, tämä lyhyt hetki ohitetaan — sen aika lisätään sen sijaan edelliseen tilaan, eikä sitä lasketa erilliseksi muutokseksi. Käytä tätä välkkyvien tai pomppivien antureiden suodattamiseen. Aseta arvoksi 0 laskeaksesi jokaisen muutoksen, olipa se kuinka lyhyt tahansa."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Valitse vähintään yksi seurattava tila.",
+      "no_target_selected": "Valitse vähintään yksi kohdetila tai poista vaatimustenmukaisuuspisteytys käytöstä.",
+      "no_frames_selected": "Valitse vähintään yksi seurattava aikajakso."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Muokkaa seuraajaa",
+        "description": "Säädä tämän seuraajan seurattuja jaksoja ja asetuksia. Seurattua entiteettiä ja tilaa ei voi muuttaa — luo uusi seuraaja muuttaaksesi niitä.",
+        "data": {
+          "today": "Tänään",
+          "yesterday": "Eilen",
+          "24h": "Viimeiset 24 tuntia",
+          "7d": "Viimeiset 7 päivää",
+          "30d": "Viimeiset 30 päivää",
+          "month": "Tässä kuussa",
+          "year": "Tänä vuonna",
+          "target": "Kohdetila(t)",
+          "target_threshold": "Vaatimustenmukaisuuskynnys (%, valinnainen)",
+          "min_state_duration": "Tilan vähimmäiskesto (sekuntia)"
+        },
+        "data_description": {
+          "today": "Paikallisesta keskiyöstä.",
+          "yesterday": "Edellinen koko päivä.",
+          "24h": "Liukuva 24 tunnin ikkuna, joka päättyy nyt.",
+          "7d": "Liukuva 7 päivän ikkuna, joka päättyy nyt.",
+          "30d": "Viimeiset 30 kokonaista paikallista päivää.",
+          "month": "Tämän kuun 1. päivästä.",
+          "year": "1. tammikuuta alkaen.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Jos asetettu, binäärianturi «Vaatimusten mukainen» kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen.",
+          "min_state_duration": "Jos seurattu entiteetti siirtyy tilaan ja pois siitä nopeammin kuin tämä sekuntimäärä, tämä lyhyt hetki ohitetaan — sen aika lisätään sen sijaan edelliseen tilaan, eikä sitä lasketa erilliseksi muutokseksi. Käytä tätä välkkyvien tai pomppivien antureiden suodattamiseen. Aseta arvoksi 0 laskeaksesi jokaisen muutoksen, olipa se kuinka lyhyt tahansa."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Valitse vähintään yksi kohdetila tai poista vaatimustenmukaisuuspisteytys käytöstä.",
+      "no_frames_selected": "Valitse vähintään yksi seurattava aikajakso."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Kesto ({frame})"
+      },
+      "breakdown": {
+        "name": "Tilojen erittely ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Tällä hetkellä tilassa"
+      },
+      "compliant": {
+        "name": "Vaatimusten mukainen"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Tietyt tilat",
+        "all_states": "Kaikki tilat"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Nollaa kirjanpito",
+      "description": "Tyhjentää seuraajan tallennetun päiväkohtaisen historian. Pitkät aikajaksot rakennetaan uudelleen tallentimen tiedoista, jos ne ovat vielä saatavilla. Tätä ei voi kumota.",
+      "fields": {
+        "confirm": {
+          "name": "Vahvista",
+          "description": "On oltava käytössä nollauksen suorittamiseksi. Suojaa vahingossa tapahtuvalta historian menetykseltä."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Tallennin ei ole käytettävissä",
+      "description": "Entity State Tracker luottaa tallentimeen tilojen kestojen laskennassa. Tallennin ei ole käytettävissä, joten seuranta siirtyy tästä lähtien pelkkään reaaliaikaiseen kertymiseen eikä voi täydentää mennyttä historiaa. Ota tallennin-integraatio käyttöön palauttaaksesi täyden aikajaksohistorian."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Aseta confirm arvoon true nollataksesi kirjanpidon. Tämä tyhjentää tallennetun historian eikä sitä voi kumota."
+    }
+  }
+}

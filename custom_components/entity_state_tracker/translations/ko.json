@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "엔티티 추적",
+        "description": "여러 기간에 걸쳐 엔티티가 각 상태에 얼마나 오래 머무는지 추적할 엔티티를 선택하세요.",
+        "data": {
+          "entity": "추적할 엔티티",
+          "name": "이름(선택 사항)"
+        },
+        "data_description": {
+          "entity": "상태 지속 시간을 측정할 엔티티입니다. 추적기당 하나의 엔티티 — 여러 개를 집계하려면 그룹 도우미를 지정하세요.",
+          "name": "이 트래커의 알기 쉬운 이름입니다. 비워 두면 엔터티와 모드를 따서 이름이 지정됩니다(예: \"Entity State Tracker - Living Room - Specific States\"). 이는 기기/구성 이름을 설정하며, 센서 엔터티 ID는 계속 표준 명명 규칙을 따릅니다. 동일한 엔터티에 대해 여러 개의 트래커를 만들 수 있습니다."
+        }
+      },
+      "mode": {
+        "title": "추적 모드",
+        "description": "측정할 특정 상태를 선택하거나 엔티티가 보고하는 모든 상태를 자동으로 검색하세요.",
+        "menu_options": {
+          "specific_states": "특정 상태 — 선택한 상태를 측정합니다",
+          "all_states": "모든 상태 — 상태별 분석을 자동 검색합니다"
+        }
+      },
+      "specific": {
+        "title": "추적할 상태",
+        "description": "측정할 상태를 선택하세요. 목록에 없는 사용자 지정 상태를 입력할 수 있습니다.",
+        "data": {
+          "states": "추적할 상태",
+          "enable_compliance": "준수 점수 활성화"
+        },
+        "data_description": {
+          "states": "지속 시간과 백분율이 측정되는 엔티티 상태입니다(예: on, heat, home). 최근에 본 상태로 미리 채워집니다.",
+          "enable_compliance": "각 기간 중 엔티티가 원하는 목표 상태에서 얼마나 보냈는지 점수를 매기려면 켜세요. 선택적 합격/불합격 임계값이 있습니다."
+        }
+      },
+      "compliance": {
+        "title": "어떤 상태를 준수로 계산하나요?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "준수 상태",
+          "target_threshold": "준수 임계값(%, 선택 사항)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "설정하면 준수 백분율이 이 값 이상이 될 때 '준수' 바이너리 센서가 켜집니다. 임계값을 건너뛰려면 비워 두세요."
+        }
+      },
+      "frames": {
+        "title": "기간",
+        "description": "추적할 기간을 선택하세요. 레코더 보존 기간보다 긴 기간은 시간이 지나면서 채워집니다.",
+        "data": {
+          "today": "오늘",
+          "yesterday": "어제",
+          "24h": "지난 24시간",
+          "7d": "지난 7일",
+          "30d": "지난 30일",
+          "month": "이번 달",
+          "year": "올해",
+          "min_state_duration": "최소 상태 지속 시간(초)"
+        },
+        "data_description": {
+          "today": "현지 자정부터.",
+          "yesterday": "이전 하루 전체.",
+          "24h": "지금 끝나는 24시간 롤링 윈도우.",
+          "7d": "지금 끝나는 7일 롤링 윈도우.",
+          "30d": "지난 30일의 완전한 현지 일수.",
+          "month": "이번 달 1일부터.",
+          "year": "1월 1일부터.",
+          "min_state_duration": "추적 중인 엔터티가 어떤 상태로 들어갔다가 이 초 수보다 빠르게 다시 나오면 그 짧은 순간은 무시되며 — 그 시간은 대신 이전 상태에 더해지고 별도의 변경으로 계산되지 않습니다. 깜박이거나 튀는 센서를 필터링하는 데 사용하세요. 아무리 짧더라도 모든 변경을 계산하려면 0으로 설정하세요."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "추적할 상태를 하나 이상 선택하세요.",
+      "no_target_selected": "목표 상태를 하나 이상 선택하거나 준수 점수를 끄세요.",
+      "no_frames_selected": "추적할 기간을 하나 이상 선택하세요."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "추적기 편집",
+        "description": "이 추적기의 추적 기간과 설정을 조정하세요. 추적 대상 엔티티와 모드는 변경할 수 없습니다 — 변경하려면 새 추적기를 만드세요.",
+        "data": {
+          "today": "오늘",
+          "yesterday": "어제",
+          "24h": "지난 24시간",
+          "7d": "지난 7일",
+          "30d": "지난 30일",
+          "month": "이번 달",
+          "year": "올해",
+          "target": "목표 상태",
+          "target_threshold": "준수 임계값(%, 선택 사항)",
+          "min_state_duration": "최소 상태 지속 시간(초)"
+        },
+        "data_description": {
+          "today": "현지 자정부터.",
+          "yesterday": "이전 하루 전체.",
+          "24h": "지금 끝나는 24시간 롤링 윈도우.",
+          "7d": "지금 끝나는 7일 롤링 윈도우.",
+          "30d": "지난 30일의 완전한 현지 일수.",
+          "month": "이번 달 1일부터.",
+          "year": "1월 1일부터.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "설정하면 준수 백분율이 이 값 이상이 될 때 '준수' 바이너리 센서가 켜집니다. 임계값을 건너뛰려면 비워 두세요.",
+          "min_state_duration": "추적 중인 엔터티가 어떤 상태로 들어갔다가 이 초 수보다 빠르게 다시 나오면 그 짧은 순간은 무시되며 — 그 시간은 대신 이전 상태에 더해지고 별도의 변경으로 계산되지 않습니다. 깜박이거나 튀는 센서를 필터링하는 데 사용하세요. 아무리 짧더라도 모든 변경을 계산하려면 0으로 설정하세요."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "목표 상태를 하나 이상 선택하거나 준수 점수를 끄세요.",
+      "no_frames_selected": "추적할 기간을 하나 이상 선택하세요."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "지속 시간({frame})"
+      },
+      "breakdown": {
+        "name": "상태 분석({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "현재 상태에 있음"
+      },
+      "compliant": {
+        "name": "준수"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "특정 상태",
+        "all_states": "모든 상태"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "원장 재설정",
+      "description": "추적기의 유지된 일일 버킷 기록을 지웁니다. 긴 기간은 아직 사용 가능한 경우 레코더 데이터에서 다시 구축됩니다. 이 작업은 취소할 수 없습니다.",
+      "fields": {
+        "confirm": {
+          "name": "확인",
+          "description": "재설정을 수행하려면 활성화해야 합니다. 실수로 기록을 잃는 것을 방지합니다."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "레코더를 사용할 수 없음",
+      "description": "Entity State Tracker는 상태 지속 시간을 계산하기 위해 레코더에 의존합니다. 레코더를 사용할 수 없으므로 추적은 이제부터 라이브 전용 누적으로 대체되며 과거 기록을 채울 수 없습니다. 전체 기간 기록을 복원하려면 레코더 통합을 활성화하세요."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "원장을 재설정하려면 confirm을 true로 설정하세요. 이는 유지된 기록을 지우며 취소할 수 없습니다."
+    }
+  }
+}

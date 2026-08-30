@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Entitás követése",
+        "description": "Válasszon egy entitást annak követéséhez, hogy mennyi időt tölt az állapotaiban több időszakon keresztül.",
+        "data": {
+          "entity": "Követendő entitás",
+          "name": "Név (opcionális)"
+        },
+        "data_description": {
+          "entity": "Az entitás, amelynek állapotidőtartamait mérni fogjuk. Egy entitás követőnként — mutasson egy csoportsegédre több összesítéséhez.",
+          "name": "Barátságos név ennek a követőnek. Hagyja üresen, hogy az entitás és a mód alapján kapjon nevet (pl. „Entity State Tracker - Living Room - Specific States”). Ez a készülék/konfiguráció nevét állítja be; a szenzorentitások azonosítói továbbra is a szabványos elnevezést követik. Ugyanahhoz az entitáshoz több követőt is létrehozhat."
+        }
+      },
+      "mode": {
+        "title": "Követési mód",
+        "description": "Válasszon konkrét állapotokat a méréshez, vagy automatikusan fedezze fel az entitás által jelentett összes állapotot.",
+        "menu_options": {
+          "specific_states": "Konkrét állapotok — mérje a kiválasztott állapotokat",
+          "all_states": "Összes állapot — automatikus lebontás állapotonként"
+        }
+      },
+      "specific": {
+        "title": "Követendő állapotok",
+        "description": "Válassza ki a mérendő állapotokat. Beírhat egy egyéni állapotot is, amely nem szerepel a listán.",
+        "data": {
+          "states": "Követendő állapotok",
+          "enable_compliance": "Megfelelőségi pontozás engedélyezése"
+        },
+        "data_description": {
+          "states": "Az entitás állapotai, amelyek időtartamát és százalékát mérjük (pl. on, heat, home). Előre kitöltve a közelmúltban látott állapotokkal.",
+          "enable_compliance": "Kapcsolja be, hogy pontozza, az egyes ablakok mekkora részét töltötte az entitás egy kívánt célállapotban, opcionális megfelelt/nem felelt meg küszöbbel."
+        }
+      },
+      "compliance": {
+        "title": "Mely állapotok számítanak megfelelőnek?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Megfelelő állapot(ok)",
+          "target_threshold": "Megfelelőségi küszöb (%, opcionális)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Ha be van állítva, egy „Megfelelő” bináris érzékelő bekapcsol, amikor a megfelelőségi százalék eléri vagy meghaladja ezt az értéket. Hagyja üresen a küszöb kihagyásához."
+        }
+      },
+      "frames": {
+        "title": "Időszakok",
+        "description": "Válassza ki, mely időszakokat kövesse. A rögzítő megőrzésénél hosszabb időszakok idővel töltődnek fel.",
+        "data": {
+          "today": "Ma",
+          "yesterday": "Tegnap",
+          "24h": "Utolsó 24 óra",
+          "7d": "Utolsó 7 nap",
+          "30d": "Utolsó 30 nap",
+          "month": "Ez a hónap",
+          "year": "Ez az év",
+          "min_state_duration": "Minimális állapotidőtartam (másodperc)"
+        },
+        "data_description": {
+          "today": "Helyi éjféltől.",
+          "yesterday": "Az előző teljes nap.",
+          "24h": "Most végződő, gördülő 24 órás ablak.",
+          "7d": "Most végződő, gördülő 7 napos ablak.",
+          "30d": "Az utolsó 30 teljes helyi nap.",
+          "month": "A hónap 1-jétől.",
+          "year": "Január 1-jétől.",
+          "min_state_duration": "Ha a követett entitás gyorsabban vált egy állapotba és ki belőle, mint ennyi másodperc, ez a rövid pillanat figyelmen kívül marad — ideje a korábbi állapothoz adódik hozzá, és nem számít külön változásnak. Használja villódzó vagy pattogó érzékelők szűrésére. Állítsa 0-ra, hogy minden változás számítson, bármilyen rövid is."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Válasszon legalább egy követendő állapotot.",
+      "no_target_selected": "Válasszon legalább egy célállapotot, vagy kapcsolja ki a megfelelőségi pontozást.",
+      "no_frames_selected": "Válasszon legalább egy követendő időszakot."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Követő szerkesztése",
+        "description": "Módosítsa a követett időszakokat és beállításokat ehhez a követőhöz. A követett entitás és a mód nem módosítható — hozzon létre új követőt ezek megváltoztatásához.",
+        "data": {
+          "today": "Ma",
+          "yesterday": "Tegnap",
+          "24h": "Utolsó 24 óra",
+          "7d": "Utolsó 7 nap",
+          "30d": "Utolsó 30 nap",
+          "month": "Ez a hónap",
+          "year": "Ez az év",
+          "target": "Célállapot(ok)",
+          "target_threshold": "Megfelelőségi küszöb (%, opcionális)",
+          "min_state_duration": "Minimális állapotidőtartam (másodperc)"
+        },
+        "data_description": {
+          "today": "Helyi éjféltől.",
+          "yesterday": "Az előző teljes nap.",
+          "24h": "Most végződő, gördülő 24 órás ablak.",
+          "7d": "Most végződő, gördülő 7 napos ablak.",
+          "30d": "Az utolsó 30 teljes helyi nap.",
+          "month": "A hónap 1-jétől.",
+          "year": "Január 1-jétől.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Ha be van állítva, egy „Megfelelő” bináris érzékelő bekapcsol, amikor a megfelelőségi százalék eléri vagy meghaladja ezt az értéket. Hagyja üresen a küszöb kihagyásához.",
+          "min_state_duration": "Ha a követett entitás gyorsabban vált egy állapotba és ki belőle, mint ennyi másodperc, ez a rövid pillanat figyelmen kívül marad — ideje a korábbi állapothoz adódik hozzá, és nem számít külön változásnak. Használja villódzó vagy pattogó érzékelők szűrésére. Állítsa 0-ra, hogy minden változás számítson, bármilyen rövid is."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Válasszon legalább egy célállapotot, vagy kapcsolja ki a megfelelőségi pontozást.",
+      "no_frames_selected": "Válasszon legalább egy követendő időszakot."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Időtartam ({frame})"
+      },
+      "breakdown": {
+        "name": "Állapotlebontás ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Jelenleg állapotban"
+      },
+      "compliant": {
+        "name": "Megfelelő"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Konkrét állapotok",
+        "all_states": "Összes állapot"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Főkönyv visszaállítása",
+      "description": "Törli egy követő megőrzött napi-vödör előzményeit. A hosszú időszakok újraépülnek a rögzítő adataiból, ahol azok még elérhetők. Ez nem vonható vissza.",
+      "fields": {
+        "confirm": {
+          "name": "Megerősítés",
+          "description": "Engedélyezni kell a visszaállítás végrehajtásához. Véd a véletlen előzményvesztés ellen."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "A rögzítő nem érhető el",
+      "description": "Az Entity State Tracker a rögzítőre támaszkodik az állapotidőtartamok kiszámításához. A rögzítő nem érhető el, ezért a követés mostantól csak élő felhalmozásra vált vissza, és nem tudja pótolni a múltbeli előzményeket. Engedélyezze a rögzítő integrációt a teljes időszak-előzmény visszaállításához."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Állítsa a confirm értéket true-ra a főkönyv visszaállításához. Ez törli a megőrzött előzményeket, és nem vonható vissza."
+    }
+  }
+}

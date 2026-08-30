@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Traccia un'entità",
+        "description": "Scegli un'entità per tracciare quanto tempo trascorre nei suoi stati su più intervalli di tempo.",
+        "data": {
+          "entity": "Entità da tracciare",
+          "name": "Nome (opzionale)"
+        },
+        "data_description": {
+          "entity": "L'entità di cui verranno misurate le durate degli stati. Un'entità per tracker — punta a un helper di gruppo per aggregarne diverse.",
+          "name": "Un nome descrittivo per questo tracker. Lascia vuoto per denominarlo in base all'entità e alla modalità (ad es. «Entity State Tracker - Living Room - Specific States»). Questo imposta il nome del dispositivo/configurazione; gli ID delle entità sensore seguono comunque la denominazione standard. Puoi creare più tracker per la stessa entità."
+        }
+      },
+      "mode": {
+        "title": "Modalità di tracciamento",
+        "description": "Scegli stati specifici da misurare, oppure rileva automaticamente ogni stato che l'entità segnala.",
+        "menu_options": {
+          "specific_states": "Stati specifici — misura gli stati che scegli",
+          "all_states": "Tutti gli stati — ripartizione automatica per stato"
+        }
+      },
+      "specific": {
+        "title": "Stati da tracciare",
+        "description": "Seleziona gli stati da misurare. Puoi digitare uno stato personalizzato non elencato.",
+        "data": {
+          "states": "Stati da tracciare",
+          "enable_compliance": "Abilita il punteggio di conformità"
+        },
+        "data_description": {
+          "states": "Gli stati dell'entità di cui vengono misurati durata e percentuale (es. on, heat, home). Precompilato con gli stati visti di recente.",
+          "enable_compliance": "Attiva per valutare quanta parte di ogni finestra l'entità ha trascorso in uno stato obiettivo desiderato, con una soglia superato/non superato opzionale."
+        }
+      },
+      "compliance": {
+        "title": "Quali stati contano come conformi?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Stato/i conforme/i",
+          "target_threshold": "Soglia di conformità (%, opzionale)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Se impostato, un sensore binario «Conforme» si attiva quando la percentuale di conformità raggiunge o supera questo valore. Lascia vuoto per saltare la soglia."
+        }
+      },
+      "frames": {
+        "title": "Intervalli di tempo",
+        "description": "Scegli quali intervalli di tempo tracciare. Gli intervalli più lunghi della conservazione del recorder si riempiono nel tempo.",
+        "data": {
+          "today": "Oggi",
+          "yesterday": "Ieri",
+          "24h": "Ultime 24 ore",
+          "7d": "Ultimi 7 giorni",
+          "30d": "Ultimi 30 giorni",
+          "month": "Questo mese",
+          "year": "Quest'anno",
+          "min_state_duration": "Durata minima dello stato (secondi)"
+        },
+        "data_description": {
+          "today": "Dalla mezzanotte locale.",
+          "yesterday": "Il giorno intero precedente.",
+          "24h": "Finestra mobile di 24 ore che termina ora.",
+          "7d": "Finestra mobile di 7 giorni che termina ora.",
+          "30d": "Gli ultimi 30 giorni locali interi.",
+          "month": "Dal 1° di questo mese.",
+          "year": "Dal 1° gennaio.",
+          "min_state_duration": "Se l'entità monitorata passa a uno stato e ne esce più velocemente di questo numero di secondi, quel breve momento viene ignorato — il suo tempo viene invece aggiunto allo stato precedente e non conta come cambiamento separato. Usalo per filtrare sensori che sfarfallano o rimbalzano. Imposta 0 per contare ogni cambiamento, per quanto breve."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Seleziona almeno uno stato da tracciare.",
+      "no_target_selected": "Seleziona almeno uno stato obiettivo, oppure disattiva il punteggio di conformità.",
+      "no_frames_selected": "Seleziona almeno un intervallo di tempo da tracciare."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Modifica tracker",
+        "description": "Regola gli intervalli tracciati e le impostazioni di questo tracker. L'entità tracciata e la modalità non possono essere modificate — crea un nuovo tracker per cambiarle.",
+        "data": {
+          "today": "Oggi",
+          "yesterday": "Ieri",
+          "24h": "Ultime 24 ore",
+          "7d": "Ultimi 7 giorni",
+          "30d": "Ultimi 30 giorni",
+          "month": "Questo mese",
+          "year": "Quest'anno",
+          "target": "Stato/i obiettivo",
+          "target_threshold": "Soglia di conformità (%, opzionale)",
+          "min_state_duration": "Durata minima dello stato (secondi)"
+        },
+        "data_description": {
+          "today": "Dalla mezzanotte locale.",
+          "yesterday": "Il giorno intero precedente.",
+          "24h": "Finestra mobile di 24 ore che termina ora.",
+          "7d": "Finestra mobile di 7 giorni che termina ora.",
+          "30d": "Gli ultimi 30 giorni locali interi.",
+          "month": "Dal 1° di questo mese.",
+          "year": "Dal 1° gennaio.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Se impostato, un sensore binario «Conforme» si attiva quando la percentuale di conformità raggiunge o supera questo valore. Lascia vuoto per saltare la soglia.",
+          "min_state_duration": "Se l'entità monitorata passa a uno stato e ne esce più velocemente di questo numero di secondi, quel breve momento viene ignorato — il suo tempo viene invece aggiunto allo stato precedente e non conta come cambiamento separato. Usalo per filtrare sensori che sfarfallano o rimbalzano. Imposta 0 per contare ogni cambiamento, per quanto breve."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Seleziona almeno uno stato obiettivo, oppure disattiva il punteggio di conformità.",
+      "no_frames_selected": "Seleziona almeno un intervallo di tempo da tracciare."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Durata ({frame})"
+      },
+      "breakdown": {
+        "name": "Ripartizione stati ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Attualmente nello stato"
+      },
+      "compliant": {
+        "name": "Conforme"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Stati specifici",
+        "all_states": "Tutti gli stati"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Reimposta il registro",
+      "description": "Cancella la cronologia persistente dei bucket giornalieri di un tracker. Gli intervalli lunghi vengono ricostruiti dai dati del recorder dove ancora disponibili. Questa operazione non può essere annullata.",
+      "fields": {
+        "confirm": {
+          "name": "Conferma",
+          "description": "Deve essere abilitato per eseguire la reimpostazione. Protegge dalla perdita accidentale della cronologia."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Il recorder non è disponibile",
+      "description": "Entity State Tracker si affida al recorder per calcolare le durate degli stati. Il recorder non è disponibile, quindi il tracciamento ricade d'ora in poi sulla sola accumulazione in tempo reale e non può recuperare la cronologia passata. Abilita l'integrazione recorder per ripristinare la cronologia completa degli intervalli."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Imposta confirm su true per reimpostare il registro. Questo cancella la cronologia persistente e non può essere annullato."
+    }
+  }
+}

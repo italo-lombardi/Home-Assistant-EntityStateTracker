@@ -1,0 +1,6 @@
+{
+  "name": "Entity State Tracker",
+  "render_readme": true,
+  "zip_release": false,
+  "homeassistant": "2026.8.0"
+}

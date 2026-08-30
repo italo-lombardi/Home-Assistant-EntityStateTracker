@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sledovať entitu",
+        "description": "Vyberte entitu na sledovanie, ako dlho sa nachádza vo svojich stavoch počas viacerých časových období.",
+        "data": {
+          "entity": "Entita na sledovanie",
+          "name": "Názov (voliteľné)"
+        },
+        "data_description": {
+          "entity": "Entita, ktorej doby trvania stavov sa budú merať. Jedna entita na sledovanie — nasmerujte na skupinového pomocníka na agregáciu viacerých.",
+          "name": "Priateľský názov pre tento sledovač. Ponechajte prázdne, aby bol pomenovaný podľa entity a režimu (napr. „Entity State Tracker - Living Room - Specific States“). Tým sa nastaví názov zariadenia/konfigurácie; ID entít senzorov naďalej dodržiavajú štandardné pomenovanie. Pre tú istú entitu môžete vytvoriť niekoľko sledovačov."
+        }
+      },
+      "mode": {
+        "title": "Režim sledovania",
+        "description": "Vyberte konkrétne stavy na meranie alebo automaticky zistite každý stav, ktorý entita hlási.",
+        "menu_options": {
+          "specific_states": "Konkrétne stavy — merajte stavy, ktoré zvolíte",
+          "all_states": "Všetky stavy — automatický rozpad podľa stavov"
+        }
+      },
+      "specific": {
+        "title": "Stavy na sledovanie",
+        "description": "Vyberte stavy na meranie. Môžete zadať vlastný stav, ktorý nie je v zozname.",
+        "data": {
+          "states": "Stavy na sledovanie",
+          "enable_compliance": "Povoliť hodnotenie zhody"
+        },
+        "data_description": {
+          "states": "Stavy entity, ktorých doba trvania a percento sa merajú (napr. on, heat, home). Predvyplnené nedávno pozorovanými stavmi.",
+          "enable_compliance": "Zapnite na hodnotenie, akú časť každého okna entita strávila v požadovanom cieľovom stave, s voliteľným prahom prešiel/neprešiel."
+        }
+      },
+      "compliance": {
+        "title": "Ktoré stavy sa počítajú ako zhodné?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Zhodný(é) stav(y)",
+          "target_threshold": "Prah zhody (%, voliteľné)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Ak je nastavené, binárny senzor „V zhode“ sa zapne, keď percento zhody dosiahne túto hodnotu alebo ju prekročí. Ponechajte prázdne na preskočenie prahu."
+        }
+      },
+      "frames": {
+        "title": "Časové obdobia",
+        "description": "Vyberte, ktoré časové obdobia sledovať. Obdobia dlhšie ako uchovávanie rekordéra sa doplnia časom.",
+        "data": {
+          "today": "Dnes",
+          "yesterday": "Včera",
+          "24h": "Posledných 24 hodín",
+          "7d": "Posledných 7 dní",
+          "30d": "Posledných 30 dní",
+          "month": "Tento mesiac",
+          "year": "Tento rok",
+          "min_state_duration": "Minimálna doba trvania stavu (sekundy)"
+        },
+        "data_description": {
+          "today": "Od miestnej polnoci.",
+          "yesterday": "Predchádzajúci celý deň.",
+          "24h": "Kĺzavé 24-hodinové okno končiace teraz.",
+          "7d": "Kĺzavé 7-dňové okno končiace teraz.",
+          "30d": "Posledných 30 celých miestnych dní.",
+          "month": "Od 1. dňa tohto mesiaca.",
+          "year": "Od 1. januára.",
+          "min_state_duration": "Ak sledovaná entita prejde do stavu a zase z neho rýchlejšie ako za tento počet sekúnd, tento krátky okamih sa ignoruje — jeho čas sa namiesto toho pripočíta k predchádzajúcemu stavu a nepočíta sa ako samostatná zmena. Použite to na filtrovanie blikajúcich alebo poskakujúcich senzorov. Nastavte na 0, aby sa počítala každá zmena, akokoľvek krátka."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Vyberte aspoň jeden stav na sledovanie.",
+      "no_target_selected": "Vyberte aspoň jeden cieľový stav, alebo vypnite hodnotenie zhody.",
+      "no_frames_selected": "Vyberte aspoň jedno časové obdobie na sledovanie."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Upraviť sledovanie",
+        "description": "Upravte sledované obdobia a nastavenia tohto sledovania. Sledovanú entitu a režim nemožno zmeniť — na ich zmenu vytvorte nové sledovanie.",
+        "data": {
+          "today": "Dnes",
+          "yesterday": "Včera",
+          "24h": "Posledných 24 hodín",
+          "7d": "Posledných 7 dní",
+          "30d": "Posledných 30 dní",
+          "month": "Tento mesiac",
+          "year": "Tento rok",
+          "target": "Cieľový stav (stavy)",
+          "target_threshold": "Prah zhody (%, voliteľné)",
+          "min_state_duration": "Minimálna doba trvania stavu (sekundy)"
+        },
+        "data_description": {
+          "today": "Od miestnej polnoci.",
+          "yesterday": "Predchádzajúci celý deň.",
+          "24h": "Kĺzavé 24-hodinové okno končiace teraz.",
+          "7d": "Kĺzavé 7-dňové okno končiace teraz.",
+          "30d": "Posledných 30 celých miestnych dní.",
+          "month": "Od 1. dňa tohto mesiaca.",
+          "year": "Od 1. januára.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Ak je nastavené, binárny senzor „V zhode“ sa zapne, keď percento zhody dosiahne túto hodnotu alebo ju prekročí. Ponechajte prázdne na preskočenie prahu.",
+          "min_state_duration": "Ak sledovaná entita prejde do stavu a zase z neho rýchlejšie ako za tento počet sekúnd, tento krátky okamih sa ignoruje — jeho čas sa namiesto toho pripočíta k predchádzajúcemu stavu a nepočíta sa ako samostatná zmena. Použite to na filtrovanie blikajúcich alebo poskakujúcich senzorov. Nastavte na 0, aby sa počítala každá zmena, akokoľvek krátka."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Vyberte aspoň jeden cieľový stav, alebo vypnite hodnotenie zhody.",
+      "no_frames_selected": "Vyberte aspoň jedno časové obdobie na sledovanie."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Doba trvania ({frame})"
+      },
+      "breakdown": {
+        "name": "Rozpad stavov ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Aktuálne v stave"
+      },
+      "compliant": {
+        "name": "V zhode"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Konkrétne stavy",
+        "all_states": "Všetky stavy"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Resetovať evidenciu",
+      "description": "Vymaže uloženú históriu denných priehradok pre sledovanie. Dlhé časové obdobia sa znovu zostavia z údajov rekordéra, kde sú stále dostupné. Túto akciu nemožno vrátiť späť.",
+      "fields": {
+        "confirm": {
+          "name": "Potvrdiť",
+          "description": "Musí byť povolené na vykonanie resetu. Chráni pred náhodnou stratou histórie."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Rekordér nie je dostupný",
+      "description": "Entity State Tracker sa pri výpočte dôb trvania stavov spolieha na rekordér. Rekordér nie je dostupný, takže sledovanie sa odteraz vracia iba k akumulácii naživo a nemôže doplniť minulú históriu. Povoľte integráciu rekordéra na obnovenie úplnej histórie časových období."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Nastavte confirm na true na reset evidencie. Tým sa vymaže uložená história a akciu nemožno vrátiť späť."
+    }
+  }
+}

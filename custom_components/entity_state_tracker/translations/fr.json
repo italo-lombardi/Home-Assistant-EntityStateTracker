@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Suivre une entité",
+        "description": "Choisissez une entité pour suivre le temps qu'elle passe dans ses états sur plusieurs périodes.",
+        "data": {
+          "entity": "Entité à suivre",
+          "name": "Nom (facultatif)"
+        },
+        "data_description": {
+          "entity": "L'entité dont les durées d'état seront mesurées. Une entité par suivi — pointez vers un assistant de groupe pour en agréger plusieurs.",
+          "name": "Un nom convivial pour ce suivi. Laissez vide pour le nommer d'après l'entité et le mode (p. ex. « Entity State Tracker - Living Room - Specific States »). Ceci définit le nom de l'appareil/de la configuration ; les ID des entités capteurs suivent toujours la nomenclature standard. Vous pouvez créer plusieurs suivis pour la même entité."
+        }
+      },
+      "mode": {
+        "title": "Mode de suivi",
+        "description": "Choisissez des états spécifiques à mesurer, ou découvrez automatiquement chaque état signalé par l'entité.",
+        "menu_options": {
+          "specific_states": "États spécifiques — mesurez les états que vous choisissez",
+          "all_states": "Tous les états — répartition automatique par état"
+        }
+      },
+      "specific": {
+        "title": "États à suivre",
+        "description": "Sélectionnez les états à mesurer. Vous pouvez saisir un état personnalisé non listé.",
+        "data": {
+          "states": "États à suivre",
+          "enable_compliance": "Activer le score de conformité"
+        },
+        "data_description": {
+          "states": "Les états d'entité dont la durée et le pourcentage sont mesurés (par ex. on, heat, home). Prérempli avec les états vus récemment.",
+          "enable_compliance": "Activez pour évaluer quelle part de chaque fenêtre l'entité a passée dans un état cible souhaité, avec un seuil réussite/échec facultatif."
+        }
+      },
+      "compliance": {
+        "title": "Quels états comptent comme conformes ?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "État(s) conforme(s)",
+          "target_threshold": "Seuil de conformité (%, facultatif)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Si défini, un capteur binaire « Conforme » s'active lorsque le pourcentage de conformité atteint ou dépasse cette valeur. Laissez vide pour ignorer le seuil."
+        }
+      },
+      "frames": {
+        "title": "Périodes",
+        "description": "Choisissez les périodes à suivre. Les périodes plus longues que la rétention du recorder se remplissent avec le temps.",
+        "data": {
+          "today": "Aujourd'hui",
+          "yesterday": "Hier",
+          "24h": "Dernières 24 heures",
+          "7d": "7 derniers jours",
+          "30d": "30 derniers jours",
+          "month": "Ce mois-ci",
+          "year": "Cette année",
+          "min_state_duration": "Durée d'état minimale (secondes)"
+        },
+        "data_description": {
+          "today": "Depuis minuit local.",
+          "yesterday": "La journée entière précédente.",
+          "24h": "Fenêtre glissante de 24 heures se terminant maintenant.",
+          "7d": "Fenêtre glissante de 7 jours se terminant maintenant.",
+          "30d": "Les 30 derniers jours locaux entiers.",
+          "month": "Depuis le 1er de ce mois.",
+          "year": "Depuis le 1er janvier.",
+          "min_state_duration": "Si l'entité suivie passe dans un état puis en ressort plus vite que ce nombre de secondes, ce bref instant est ignoré — son temps est ajouté à l'état précédent et il ne compte pas comme un changement distinct. Utilisez-le pour filtrer les capteurs qui scintillent ou rebondissent. Réglez sur 0 pour compter chaque changement, aussi bref soit-il."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Sélectionnez au moins un état à suivre.",
+      "no_target_selected": "Sélectionnez au moins un état cible, ou désactivez le score de conformité.",
+      "no_frames_selected": "Sélectionnez au moins une période à suivre."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Modifier le suivi",
+        "description": "Ajustez les périodes suivies et les paramètres de ce suivi. L'entité suivie et le mode ne peuvent pas être modifiés — créez un nouveau suivi pour les changer.",
+        "data": {
+          "today": "Aujourd'hui",
+          "yesterday": "Hier",
+          "24h": "Dernières 24 heures",
+          "7d": "7 derniers jours",
+          "30d": "30 derniers jours",
+          "month": "Ce mois-ci",
+          "year": "Cette année",
+          "target": "État(s) cible(s)",
+          "target_threshold": "Seuil de conformité (%, facultatif)",
+          "min_state_duration": "Durée d'état minimale (secondes)"
+        },
+        "data_description": {
+          "today": "Depuis minuit local.",
+          "yesterday": "La journée entière précédente.",
+          "24h": "Fenêtre glissante de 24 heures se terminant maintenant.",
+          "7d": "Fenêtre glissante de 7 jours se terminant maintenant.",
+          "30d": "Les 30 derniers jours locaux entiers.",
+          "month": "Depuis le 1er de ce mois.",
+          "year": "Depuis le 1er janvier.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Si défini, un capteur binaire « Conforme » s'active lorsque le pourcentage de conformité atteint ou dépasse cette valeur. Laissez vide pour ignorer le seuil.",
+          "min_state_duration": "Si l'entité suivie passe dans un état puis en ressort plus vite que ce nombre de secondes, ce bref instant est ignoré — son temps est ajouté à l'état précédent et il ne compte pas comme un changement distinct. Utilisez-le pour filtrer les capteurs qui scintillent ou rebondissent. Réglez sur 0 pour compter chaque changement, aussi bref soit-il."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Sélectionnez au moins un état cible, ou désactivez le score de conformité.",
+      "no_frames_selected": "Sélectionnez au moins une période à suivre."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Durée ({frame})"
+      },
+      "breakdown": {
+        "name": "Répartition des états ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Actuellement dans l'état"
+      },
+      "compliant": {
+        "name": "Conforme"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "États spécifiques",
+        "all_states": "Tous les états"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Réinitialiser le registre",
+      "description": "Efface l'historique des compartiments journaliers persistant d'un suivi. Les longues périodes se reconstruisent à partir des données du recorder lorsqu'elles sont encore disponibles. Ceci est irréversible.",
+      "fields": {
+        "confirm": {
+          "name": "Confirmer",
+          "description": "Doit être activé pour effectuer la réinitialisation. Protège contre une perte accidentelle de l'historique."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Le recorder est indisponible",
+      "description": "Entity State Tracker s'appuie sur le recorder pour calculer les durées d'état. Le recorder n'est pas disponible, le suivi bascule donc désormais sur une accumulation en direct uniquement et ne peut pas reconstituer l'historique passé. Activez l'intégration recorder pour restaurer l'historique complet des périodes."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Réglez confirm sur true pour réinitialiser le registre. Ceci efface l'historique persistant et est irréversible."
+    }
+  }
+}

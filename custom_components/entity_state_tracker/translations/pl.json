@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Śledź encję",
+        "description": "Wybierz encję, aby śledzić, jak długo przebywa w swoich stanach w wielu przedziałach czasowych.",
+        "data": {
+          "entity": "Encja do śledzenia",
+          "name": "Nazwa (opcjonalnie)"
+        },
+        "data_description": {
+          "entity": "Encja, której czasy trwania stanów będą mierzone. Jedna encja na tracker — wskaż pomocnika grupy, aby zagregować kilka.",
+          "name": "Przyjazna nazwa dla tego trackera. Pozostaw puste, aby nazwać go na podstawie encji i trybu (np. „Entity State Tracker - Living Room - Specific States”). Ustawia to nazwę urządzenia/konfiguracji; identyfikatory encji czujników nadal są zgodne ze standardowym nazewnictwem. Dla tej samej encji można utworzyć kilka trackerów."
+        }
+      },
+      "mode": {
+        "title": "Tryb śledzenia",
+        "description": "Wybierz konkretne stany do pomiaru lub automatycznie wykryj każdy stan zgłaszany przez encję.",
+        "menu_options": {
+          "specific_states": "Określone stany — mierz wybrane przez siebie stany",
+          "all_states": "Wszystkie stany — automatyczny podział na stany"
+        }
+      },
+      "specific": {
+        "title": "Stany do śledzenia",
+        "description": "Wybierz stany do pomiaru. Możesz wpisać niestandardowy stan, którego nie ma na liście.",
+        "data": {
+          "states": "Stany do śledzenia",
+          "enable_compliance": "Włącz ocenę zgodności"
+        },
+        "data_description": {
+          "states": "Stany encji, których czas trwania i procent są mierzone (np. on, heat, home). Wstępnie wypełnione stanami widzianymi niedawno.",
+          "enable_compliance": "Włącz, aby ocenić, jaką część każdego okna encja spędziła w pożądanym stanie docelowym, z opcjonalnym progiem zaliczenia/niezaliczenia."
+        }
+      },
+      "compliance": {
+        "title": "Które stany liczą się jako zgodne?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Stan(y) zgodny(e)",
+          "target_threshold": "Próg zgodności (%, opcjonalnie)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Jeśli ustawiono, czujnik binarny „Zgodny” włącza się, gdy procent zgodności osiągnie tę wartość lub ją przekroczy. Pozostaw puste, aby pominąć próg."
+        }
+      },
+      "frames": {
+        "title": "Przedziały czasowe",
+        "description": "Wybierz, które przedziały czasowe śledzić. Przedziały dłuższe niż okres przechowywania rejestratora wypełniają się z czasem.",
+        "data": {
+          "today": "Dzisiaj",
+          "yesterday": "Wczoraj",
+          "24h": "Ostatnie 24 godziny",
+          "7d": "Ostatnie 7 dni",
+          "30d": "Ostatnie 30 dni",
+          "month": "Ten miesiąc",
+          "year": "Ten rok",
+          "min_state_duration": "Minimalny czas trwania stanu (sekundy)"
+        },
+        "data_description": {
+          "today": "Od lokalnej północy.",
+          "yesterday": "Poprzedni pełny dzień.",
+          "24h": "Ruchome okno 24-godzinne kończące się teraz.",
+          "7d": "Ruchome okno 7-dniowe kończące się teraz.",
+          "30d": "Ostatnie 30 pełnych lokalnych dni.",
+          "month": "Od 1. dnia tego miesiąca.",
+          "year": "Od 1 stycznia.",
+          "min_state_duration": "Jeśli śledzona encja przechodzi w stan i wychodzi z niego szybciej niż ta liczba sekund, ta krótka chwila jest ignorowana — jej czas jest zamiast tego dodawany do poprzedniego stanu i nie liczy się jako osobna zmiana. Użyj tego do filtrowania migoczących lub odbijających czujników. Ustaw 0, aby liczyć każdą zmianę, jakkolwiek krótką."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Wybierz co najmniej jeden stan do śledzenia.",
+      "no_target_selected": "Wybierz co najmniej jeden stan docelowy lub wyłącz ocenę zgodności.",
+      "no_frames_selected": "Wybierz co najmniej jeden przedział czasowy do śledzenia."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edytuj tracker",
+        "description": "Dostosuj śledzone przedziały i ustawienia tego trackera. Śledzonej encji i trybu nie można zmienić — utwórz nowy tracker, aby je zmienić.",
+        "data": {
+          "today": "Dzisiaj",
+          "yesterday": "Wczoraj",
+          "24h": "Ostatnie 24 godziny",
+          "7d": "Ostatnie 7 dni",
+          "30d": "Ostatnie 30 dni",
+          "month": "Ten miesiąc",
+          "year": "Ten rok",
+          "target": "Stan(y) docelowy(e)",
+          "target_threshold": "Próg zgodności (%, opcjonalnie)",
+          "min_state_duration": "Minimalny czas trwania stanu (sekundy)"
+        },
+        "data_description": {
+          "today": "Od lokalnej północy.",
+          "yesterday": "Poprzedni pełny dzień.",
+          "24h": "Ruchome okno 24-godzinne kończące się teraz.",
+          "7d": "Ruchome okno 7-dniowe kończące się teraz.",
+          "30d": "Ostatnie 30 pełnych lokalnych dni.",
+          "month": "Od 1. dnia tego miesiąca.",
+          "year": "Od 1 stycznia.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Jeśli ustawiono, czujnik binarny „Zgodny” włącza się, gdy procent zgodności osiągnie tę wartość lub ją przekroczy. Pozostaw puste, aby pominąć próg.",
+          "min_state_duration": "Jeśli śledzona encja przechodzi w stan i wychodzi z niego szybciej niż ta liczba sekund, ta krótka chwila jest ignorowana — jej czas jest zamiast tego dodawany do poprzedniego stanu i nie liczy się jako osobna zmiana. Użyj tego do filtrowania migoczących lub odbijających czujników. Ustaw 0, aby liczyć każdą zmianę, jakkolwiek krótką."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Wybierz co najmniej jeden stan docelowy lub wyłącz ocenę zgodności.",
+      "no_frames_selected": "Wybierz co najmniej jeden przedział czasowy do śledzenia."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Czas trwania ({frame})"
+      },
+      "breakdown": {
+        "name": "Podział stanów ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Obecnie w stanie"
+      },
+      "compliant": {
+        "name": "Zgodny"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Określone stany",
+        "all_states": "Wszystkie stany"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Zresetuj rejestr",
+      "description": "Czyści utrwaloną historię dziennych segmentów trackera. Długie przedziały czasowe odbudowują się z danych rejestratora, gdy są jeszcze dostępne. Tej operacji nie można cofnąć.",
+      "fields": {
+        "confirm": {
+          "name": "Potwierdź",
+          "description": "Musi być włączone, aby przeprowadzić reset. Chroni przed przypadkową utratą historii."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Rejestrator jest niedostępny",
+      "description": "Entity State Tracker polega na rejestratorze przy obliczaniu czasów trwania stanów. Rejestrator jest niedostępny, więc śledzenie od teraz przechodzi wyłącznie na akumulację na żywo i nie może uzupełnić przeszłej historii. Włącz integrację rejestratora, aby przywrócić pełną historię przedziałów czasowych."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Ustaw confirm na true, aby zresetować rejestr. Czyści to utrwaloną historię i nie można tego cofnąć."
+    }
+  }
+}

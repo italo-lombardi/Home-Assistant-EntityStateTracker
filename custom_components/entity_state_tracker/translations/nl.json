@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Een entiteit volgen",
+        "description": "Kies een entiteit om te volgen hoe lang deze zich over meerdere tijdvakken in zijn toestanden bevindt.",
+        "data": {
+          "entity": "Te volgen entiteit",
+          "name": "Naam (optioneel)"
+        },
+        "data_description": {
+          "entity": "De entiteit waarvan de toestandsduren worden gemeten. Eén entiteit per tracker — wijs naar een groepshelper om er meerdere samen te voegen.",
+          "name": "Een herkenbare naam voor deze tracker. Laat leeg om deze naam te geven op basis van de entiteit en de modus (bijv. \"Entity State Tracker - Living Room - Specific States\"). Dit stelt de apparaat-/configuratienaam in; de sensor-entiteit-ID's volgen nog steeds de standaardnaamgeving. U kunt meerdere trackers voor dezelfde entiteit maken."
+        }
+      },
+      "mode": {
+        "title": "Volgmodus",
+        "description": "Kies specifieke toestanden om te meten, of ontdek automatisch elke toestand die de entiteit rapporteert.",
+        "menu_options": {
+          "specific_states": "Specifieke toestanden — meet de toestanden die je kiest",
+          "all_states": "Alle toestanden — automatische uitsplitsing per toestand"
+        }
+      },
+      "specific": {
+        "title": "Te volgen toestanden",
+        "description": "Selecteer de te meten toestanden. Je kunt een aangepaste toestand typen die niet in de lijst staat.",
+        "data": {
+          "states": "Te volgen toestanden",
+          "enable_compliance": "Nalevingsscore inschakelen"
+        },
+        "data_description": {
+          "states": "De entiteitstoestanden waarvan duur en percentage worden gemeten (bijv. on, heat, home). Vooraf ingevuld met recent geziene toestanden.",
+          "enable_compliance": "Schakel in om te scoren hoeveel van elk venster de entiteit in een gewenste doeltoestand doorbracht, met een optionele geslaagd/mislukt-drempel."
+        }
+      },
+      "compliance": {
+        "title": "Welke toestanden tellen als conform?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Conforme toestand(en)",
+          "target_threshold": "Nalevingsdrempel (%, optioneel)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Indien ingesteld, gaat een binaire sensor «Conform» aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan."
+        }
+      },
+      "frames": {
+        "title": "Tijdvakken",
+        "description": "Kies welke tijdvakken worden gevolgd. Tijdvakken langer dan de recorder-bewaring vullen zich na verloop van tijd.",
+        "data": {
+          "today": "Vandaag",
+          "yesterday": "Gisteren",
+          "24h": "Laatste 24 uur",
+          "7d": "Laatste 7 dagen",
+          "30d": "Laatste 30 dagen",
+          "month": "Deze maand",
+          "year": "Dit jaar",
+          "min_state_duration": "Minimale toestandsduur (seconden)"
+        },
+        "data_description": {
+          "today": "Sinds lokale middernacht.",
+          "yesterday": "De vorige hele dag.",
+          "24h": "Voortschrijdend venster van 24 uur dat nu eindigt.",
+          "7d": "Voortschrijdend venster van 7 dagen dat nu eindigt.",
+          "30d": "De laatste 30 hele lokale dagen.",
+          "month": "Sinds de 1e van deze maand.",
+          "year": "Sinds 1 januari.",
+          "min_state_duration": "Als de gevolgde entiteit sneller dan dit aantal seconden in een toestand komt en er weer uit gaat, wordt dat korte moment genegeerd — de tijd ervan wordt in plaats daarvan bij de vorige toestand opgeteld en telt niet als een aparte wijziging. Gebruik het om flikkerende of stuiterende sensoren te filteren. Stel in op 0 om elke wijziging te tellen, hoe kort ook."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Selecteer ten minste één toestand om te volgen.",
+      "no_target_selected": "Selecteer ten minste één doeltoestand, of schakel de nalevingsscore uit.",
+      "no_frames_selected": "Selecteer ten minste één tijdvak om te volgen."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Tracker bewerken",
+        "description": "Pas de gevolgde tijdvakken en instellingen voor deze tracker aan. De gevolgde entiteit en de modus kunnen niet worden gewijzigd — maak een nieuwe tracker om die te wijzigen.",
+        "data": {
+          "today": "Vandaag",
+          "yesterday": "Gisteren",
+          "24h": "Laatste 24 uur",
+          "7d": "Laatste 7 dagen",
+          "30d": "Laatste 30 dagen",
+          "month": "Deze maand",
+          "year": "Dit jaar",
+          "target": "Doeltoestand(en)",
+          "target_threshold": "Nalevingsdrempel (%, optioneel)",
+          "min_state_duration": "Minimale toestandsduur (seconden)"
+        },
+        "data_description": {
+          "today": "Sinds lokale middernacht.",
+          "yesterday": "De vorige hele dag.",
+          "24h": "Voortschrijdend venster van 24 uur dat nu eindigt.",
+          "7d": "Voortschrijdend venster van 7 dagen dat nu eindigt.",
+          "30d": "De laatste 30 hele lokale dagen.",
+          "month": "Sinds de 1e van deze maand.",
+          "year": "Sinds 1 januari.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Indien ingesteld, gaat een binaire sensor «Conform» aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan.",
+          "min_state_duration": "Als de gevolgde entiteit sneller dan dit aantal seconden in een toestand komt en er weer uit gaat, wordt dat korte moment genegeerd — de tijd ervan wordt in plaats daarvan bij de vorige toestand opgeteld en telt niet als een aparte wijziging. Gebruik het om flikkerende of stuiterende sensoren te filteren. Stel in op 0 om elke wijziging te tellen, hoe kort ook."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Selecteer ten minste één doeltoestand, of schakel de nalevingsscore uit.",
+      "no_frames_selected": "Selecteer ten minste één tijdvak om te volgen."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Duur ({frame})"
+      },
+      "breakdown": {
+        "name": "Toestandsuitsplitsing ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Momenteel in toestand"
+      },
+      "compliant": {
+        "name": "Conform"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Specifieke toestanden",
+        "all_states": "Alle toestanden"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Grootboek opnieuw instellen",
+      "description": "Wist de bewaarde dagelijkse-bucketgeschiedenis van een tracker. Lange tijdvakken worden opnieuw opgebouwd uit recorder-gegevens waar nog beschikbaar. Dit kan niet ongedaan worden gemaakt.",
+      "fields": {
+        "confirm": {
+          "name": "Bevestigen",
+          "description": "Moet ingeschakeld zijn om het opnieuw instellen uit te voeren. Beschermt tegen onbedoeld verlies van geschiedenis."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Recorder is niet beschikbaar",
+      "description": "Entity State Tracker vertrouwt op de recorder om toestandsduren te berekenen. De recorder is niet beschikbaar, dus het volgen valt vanaf nu terug op alleen live-accumulatie en kan geen verleden geschiedenis aanvullen. Schakel de recorder-integratie in om de volledige tijdvakgeschiedenis te herstellen."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Stel confirm in op true om het grootboek opnieuw in te stellen. Dit wist de bewaarde geschiedenis en kan niet ongedaan worden gemaakt."
+    }
+  }
+}

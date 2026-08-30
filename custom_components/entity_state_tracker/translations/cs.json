@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Sledovat entitu",
+        "description": "Vyberte entitu pro sledování, jak dlouho se nachází ve svých stavech napříč více časovými obdobími.",
+        "data": {
+          "entity": "Entita ke sledování",
+          "name": "Název (volitelné)"
+        },
+        "data_description": {
+          "entity": "Entita, jejíž doby trvání stavů se budou měřit. Jedna entita na sledování — nasměrujte na skupinového pomocníka pro agregaci více entit.",
+          "name": "Přátelský název pro tento sledovač. Ponechte prázdné, aby byl pojmenován podle entity a režimu (např. „Entity State Tracker - Living Room - Specific States“). Tím se nastaví název zařízení/konfigurace; ID entit senzorů se nadále řídí standardním pojmenováním. Pro stejnou entitu můžete vytvořit několik sledovačů."
+        }
+      },
+      "mode": {
+        "title": "Režim sledování",
+        "description": "Vyberte konkrétní stavy k měření nebo automaticky zjistěte každý stav, který entita hlásí.",
+        "menu_options": {
+          "specific_states": "Konkrétní stavy — měřte stavy, které zvolíte",
+          "all_states": "Všechny stavy — automatický rozpad podle stavů"
+        }
+      },
+      "specific": {
+        "title": "Stavy ke sledování",
+        "description": "Vyberte stavy k měření. Můžete zadat vlastní stav, který není v seznamu.",
+        "data": {
+          "states": "Stavy ke sledování",
+          "enable_compliance": "Povolit hodnocení shody"
+        },
+        "data_description": {
+          "states": "Stavy entity, jejichž doba trvání a procento se měří (např. on, heat, home). Předvyplněno nedávno pozorovanými stavy.",
+          "enable_compliance": "Zapněte pro hodnocení, jakou část každého okna entita strávila v požadovaném cílovém stavu, s volitelným prahem prošel/neprošel."
+        }
+      },
+      "compliance": {
+        "title": "Které stavy se počítají jako shodné?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Shodný(é) stav(y)",
+          "target_threshold": "Práh shody (%, volitelné)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Pokud je nastaveno, binární senzor „Ve shodě“ se zapne, když procento shody dosáhne této hodnoty nebo ji překročí. Ponechte prázdné pro přeskočení prahu."
+        }
+      },
+      "frames": {
+        "title": "Časová období",
+        "description": "Vyberte, která časová období sledovat. Období delší než uchovávání rekordéru se doplní časem.",
+        "data": {
+          "today": "Dnes",
+          "yesterday": "Včera",
+          "24h": "Posledních 24 hodin",
+          "7d": "Posledních 7 dní",
+          "30d": "Posledních 30 dní",
+          "month": "Tento měsíc",
+          "year": "Letos",
+          "min_state_duration": "Minimální doba trvání stavu (sekundy)"
+        },
+        "data_description": {
+          "today": "Od místní půlnoci.",
+          "yesterday": "Předchozí celý den.",
+          "24h": "Klouzavé 24hodinové okno končící teď.",
+          "7d": "Klouzavé 7denní okno končící teď.",
+          "30d": "Posledních 30 celých místních dní.",
+          "month": "Od 1. dne tohoto měsíce.",
+          "year": "Od 1. ledna.",
+          "min_state_duration": "Pokud sledovaná entita přejde do stavu a zase z něj rychleji než za tento počet sekund, tento krátký okamžik se ignoruje — jeho čas se přičte k předchozímu stavu a nepočítá se jako samostatná změna. Použijte to k filtrování blikajících nebo poskakujících senzorů. Nastavte 0, aby se počítala každá změna, jakkoli krátká."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Vyberte alespoň jeden stav ke sledování.",
+      "no_target_selected": "Vyberte alespoň jeden cílový stav, nebo vypněte hodnocení shody.",
+      "no_frames_selected": "Vyberte alespoň jedno časové období ke sledování."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Upravit sledování",
+        "description": "Upravte sledovaná období a nastavení tohoto sledování. Sledovanou entitu a režim nelze změnit — pro jejich změnu vytvořte nové sledování.",
+        "data": {
+          "today": "Dnes",
+          "yesterday": "Včera",
+          "24h": "Posledních 24 hodin",
+          "7d": "Posledních 7 dní",
+          "30d": "Posledních 30 dní",
+          "month": "Tento měsíc",
+          "year": "Letos",
+          "target": "Cílový stav (stavy)",
+          "target_threshold": "Práh shody (%, volitelné)",
+          "min_state_duration": "Minimální doba trvání stavu (sekundy)"
+        },
+        "data_description": {
+          "today": "Od místní půlnoci.",
+          "yesterday": "Předchozí celý den.",
+          "24h": "Klouzavé 24hodinové okno končící teď.",
+          "7d": "Klouzavé 7denní okno končící teď.",
+          "30d": "Posledních 30 celých místních dní.",
+          "month": "Od 1. dne tohoto měsíce.",
+          "year": "Od 1. ledna.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Pokud je nastaveno, binární senzor „Ve shodě“ se zapne, když procento shody dosáhne této hodnoty nebo ji překročí. Ponechte prázdné pro přeskočení prahu.",
+          "min_state_duration": "Pokud sledovaná entita přejde do stavu a zase z něj rychleji než za tento počet sekund, tento krátký okamžik se ignoruje — jeho čas se přičte k předchozímu stavu a nepočítá se jako samostatná změna. Použijte to k filtrování blikajících nebo poskakujících senzorů. Nastavte 0, aby se počítala každá změna, jakkoli krátká."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Vyberte alespoň jeden cílový stav, nebo vypněte hodnocení shody.",
+      "no_frames_selected": "Vyberte alespoň jedno časové období ke sledování."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Doba trvání ({frame})"
+      },
+      "breakdown": {
+        "name": "Rozpad stavů ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Aktuálně ve stavu"
+      },
+      "compliant": {
+        "name": "Ve shodě"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Konkrétní stavy",
+        "all_states": "Všechny stavy"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Resetovat evidenci",
+      "description": "Vymaže uloženou historii denních přihrádek pro sledování. Dlouhá časová období se znovu sestaví z dat rekordéru, kde jsou stále dostupná. Tuto akci nelze vrátit zpět.",
+      "fields": {
+        "confirm": {
+          "name": "Potvrdit",
+          "description": "Musí být povoleno k provedení resetu. Chrání před náhodnou ztrátou historie."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Rekordér není dostupný",
+      "description": "Entity State Tracker se při výpočtu dob trvání stavů spoléhá na rekordér. Rekordér není dostupný, takže sledování se od nynějška vrací pouze k akumulaci naživo a nemůže doplnit minulou historii. Povolte integraci rekordéru pro obnovení úplné historie časových období."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Nastavte confirm na true pro reset evidence. Tím se vymaže uložená historie a akci nelze vrátit zpět."
+    }
+  }
+}

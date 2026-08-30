@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Spåra en entitet",
+        "description": "Välj en entitet för att spåra hur länge den befinner sig i sina tillstånd över flera tidsperioder.",
+        "data": {
+          "entity": "Entitet att spåra",
+          "name": "Namn (valfritt)"
+        },
+        "data_description": {
+          "entity": "Entiteten vars tillståndslängder mäts. En entitet per spårare — peka på en grupphjälpare för att aggregera flera.",
+          "name": "Ett vänligt namn för denna spårare. Lämna tomt för att namnge den efter entiteten och läget (t.ex. ”Entity State Tracker - Living Room - Specific States”). Detta anger enhets-/konfigurationsnamnet; sensorentiteternas ID:n följer fortfarande standardnamngivningen. Du kan skapa flera spårare för samma entitet."
+        }
+      },
+      "mode": {
+        "title": "Spårningsläge",
+        "description": "Välj specifika tillstånd att mäta, eller upptäck automatiskt varje tillstånd entiteten rapporterar.",
+        "menu_options": {
+          "specific_states": "Specifika tillstånd — mät de tillstånd du väljer",
+          "all_states": "Alla tillstånd — automatisk uppdelning per tillstånd"
+        }
+      },
+      "specific": {
+        "title": "Tillstånd att spåra",
+        "description": "Välj de tillstånd som ska mätas. Du kan skriva in ett eget tillstånd som inte finns i listan.",
+        "data": {
+          "states": "Tillstånd att spåra",
+          "enable_compliance": "Aktivera efterlevnadspoäng"
+        },
+        "data_description": {
+          "states": "Entitetstillstånden vars varaktighet och procent mäts (t.ex. on, heat, home). Förifyllt med nyligen sedda tillstånd.",
+          "enable_compliance": "Aktivera för att poängsätta hur stor del av varje fönster entiteten tillbringade i ett önskat måltillstånd, med en valfri godkänd/underkänd-tröskel."
+        }
+      },
+      "compliance": {
+        "title": "Vilka tillstånd räknas som efterlevande?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Efterlevande tillstånd",
+          "target_threshold": "Efterlevnadströskel (%, valfritt)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "Om angivet slås en binär sensor «Efterlevande» på när efterlevnadsprocenten når eller överstiger detta värde. Lämna tomt för att hoppa över tröskeln."
+        }
+      },
+      "frames": {
+        "title": "Tidsperioder",
+        "description": "Välj vilka tidsperioder som ska spåras. Perioder längre än recorderns lagring fylls på med tiden.",
+        "data": {
+          "today": "Idag",
+          "yesterday": "Igår",
+          "24h": "Senaste 24 timmarna",
+          "7d": "Senaste 7 dagarna",
+          "30d": "Senaste 30 dagarna",
+          "month": "Denna månad",
+          "year": "I år",
+          "min_state_duration": "Minsta tillståndslängd (sekunder)"
+        },
+        "data_description": {
+          "today": "Sedan lokal midnatt.",
+          "yesterday": "Den föregående hela dagen.",
+          "24h": "Rullande 24-timmarsfönster som slutar nu.",
+          "7d": "Rullande 7-dagarsfönster som slutar nu.",
+          "30d": "De senaste 30 hela lokala dagarna.",
+          "month": "Sedan den 1:a denna månad.",
+          "year": "Sedan den 1 januari.",
+          "min_state_duration": "Om den spårade entiteten växlar till ett tillstånd och ut igen snabbare än detta antal sekunder ignoreras det korta ögonblicket — dess tid läggs istället till det föregående tillståndet och räknas inte som en separat ändring. Använd det för att filtrera flimrande eller studsande sensorer. Ställ in på 0 för att räkna varje ändring, hur kort den än är."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Välj minst ett tillstånd att spåra.",
+      "no_target_selected": "Välj minst ett måltillstånd, eller stäng av efterlevnadspoäng.",
+      "no_frames_selected": "Välj minst en tidsperiod att spåra."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Redigera spårare",
+        "description": "Justera de spårade perioderna och inställningarna för denna spårare. Den spårade entiteten och läget kan inte ändras — skapa en ny spårare för att ändra dem.",
+        "data": {
+          "today": "Idag",
+          "yesterday": "Igår",
+          "24h": "Senaste 24 timmarna",
+          "7d": "Senaste 7 dagarna",
+          "30d": "Senaste 30 dagarna",
+          "month": "Denna månad",
+          "year": "I år",
+          "target": "Måltillstånd",
+          "target_threshold": "Efterlevnadströskel (%, valfritt)",
+          "min_state_duration": "Minsta tillståndslängd (sekunder)"
+        },
+        "data_description": {
+          "today": "Sedan lokal midnatt.",
+          "yesterday": "Den föregående hela dagen.",
+          "24h": "Rullande 24-timmarsfönster som slutar nu.",
+          "7d": "Rullande 7-dagarsfönster som slutar nu.",
+          "30d": "De senaste 30 hela lokala dagarna.",
+          "month": "Sedan den 1:a denna månad.",
+          "year": "Sedan den 1 januari.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "Om angivet slås en binär sensor «Efterlevande» på när efterlevnadsprocenten når eller överstiger detta värde. Lämna tomt för att hoppa över tröskeln.",
+          "min_state_duration": "Om den spårade entiteten växlar till ett tillstånd och ut igen snabbare än detta antal sekunder ignoreras det korta ögonblicket — dess tid läggs istället till det föregående tillståndet och räknas inte som en separat ändring. Använd det för att filtrera flimrande eller studsande sensorer. Ställ in på 0 för att räkna varje ändring, hur kort den än är."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Välj minst ett måltillstånd, eller stäng av efterlevnadspoäng.",
+      "no_frames_selected": "Välj minst en tidsperiod att spåra."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Varaktighet ({frame})"
+      },
+      "breakdown": {
+        "name": "Tillståndsuppdelning ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "För närvarande i tillstånd"
+      },
+      "compliant": {
+        "name": "Efterlevande"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Specifika tillstånd",
+        "all_states": "Alla tillstånd"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Återställ liggare",
+      "description": "Rensar den bevarade daglig-bucket-historiken för en spårare. Långa tidsperioder byggs upp igen från recorder-data där de fortfarande är tillgängliga. Detta kan inte ångras.",
+      "fields": {
+        "confirm": {
+          "name": "Bekräfta",
+          "description": "Måste vara aktiverat för att utföra återställningen. Skyddar mot oavsiktlig historikförlust."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Recordern är otillgänglig",
+      "description": "Entity State Tracker förlitar sig på recordern för att beräkna tillståndslängder. Recordern är inte tillgänglig, så spårningen faller från och med nu tillbaka på enbart live-ackumulering och kan inte fylla i tidigare historik. Aktivera recorder-integrationen för att återställa fullständig tidsperiodshistorik."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Sätt confirm till true för att återställa liggaren. Detta rensar den bevarade historiken och kan inte ångras."
+    }
+  }
+}

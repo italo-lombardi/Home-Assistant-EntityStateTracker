@@ -1,0 +1,26 @@
+{
+  "version": "0.2",
+  "words": [
+    "italo",
+    "lombardi",
+    "HACS",
+    "homeassistant",
+    "aiohttp",
+    "voluptuous",
+    "automations",
+    "cooldown",
+    "lovelace",
+    "buildid",
+    "entity_state_tracker",
+    "EntityStateTracker",
+    "freezegun",
+    "hysteresis",
+    "purgeable",
+    "backfill",
+    "recompute",
+    "unrecorded",
+    "changelog",
+    "numeric",
+    "donut"
+  ]
+}

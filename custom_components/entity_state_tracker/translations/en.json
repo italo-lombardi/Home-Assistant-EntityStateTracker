@@ -1,0 +1,164 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Track an Entity",
+        "description": "Choose an entity to track how long it spends in its states across multiple time frames.",
+        "data": {
+          "entity": "Entity to track",
+          "name": "Name (optional)"
+        },
+        "data_description": {
+          "entity": "The entity whose state durations will be measured. One entity per tracker — point at a group helper to aggregate several.",
+          "name": "A friendly name for this tracker. Leave blank to name it after the entity and mode (e.g. \"Entity State Tracker - Living Room - Specific States\"). This sets the device/config name; the sensor entity IDs still follow the standard naming. You can create several trackers for the same entity."
+        }
+      },
+      "mode": {
+        "title": "Tracking Mode",
+        "description": "Pick specific states to measure, or auto-discover every state the entity reports.",
+        "menu_options": {
+          "specific_states": "Specific states — measure the states you choose",
+          "all_states": "All states — auto-discover a per-state breakdown"
+        }
+      },
+      "specific": {
+        "title": "States to Track",
+        "description": "Select the states to measure. You can type a custom state that isn't listed.",
+        "data": {
+          "states": "States to track",
+          "enable_compliance": "Enable compliance scoring"
+        },
+        "data_description": {
+          "states": "The entity states whose duration and percentage are measured (e.g. on, heat, home). Prefilled with states seen recently.",
+          "enable_compliance": "Turn on to score how much of each window the entity spent in a desired target state, with an optional pass/fail threshold."
+        }
+      },
+      "compliance": {
+        "title": "Which states count as compliant?",
+        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "data": {
+          "target": "Compliant state(s)",
+          "target_threshold": "Compliance threshold (%, optional)"
+        },
+        "data_description": {
+          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target_threshold": "If set, a 'Compliant' binary sensor turns on when the compliance percentage meets or exceeds this value. Leave empty to skip the threshold."
+        }
+      },
+      "frames": {
+        "title": "Time Frames",
+        "description": "Choose which time frames to track. Long frames (30 days, month, year) won't be complete straight away: Home Assistant's recorder only keeps a few days of history, so these windows start partial and fill in day by day as the tracker records its own data. Short frames are accurate immediately.",
+        "data": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "24h": "Last 24 hours",
+          "7d": "Last 7 days",
+          "30d": "Last 30 days",
+          "month": "This month",
+          "year": "This year",
+          "min_state_duration": "Minimum state duration (seconds)"
+        },
+        "data_description": {
+          "today": "Since local midnight.",
+          "yesterday": "The previous whole day.",
+          "24h": "Rolling 24-hour window ending now.",
+          "7d": "Rolling 7-day window ending now.",
+          "30d": "The last 30 whole local days.",
+          "month": "Since the 1st of this month.",
+          "year": "Since 1 January.",
+          "min_state_duration": "If the tracked entity flips into a state and back out again faster than this many seconds, that brief moment is ignored — its time is added to the previous state instead, and it does not count as a separate change. Use it to filter flickering or bouncing sensors. Set to 0 to count every change, however short."
+        }
+      }
+    },
+    "error": {
+      "no_states_selected": "Select at least one state to track.",
+      "no_target_selected": "Select at least one target state, or turn off compliance scoring.",
+      "no_frames_selected": "Select at least one time frame to track."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Edit Tracker",
+        "description": "Adjust the tracked frames and settings for this tracker. The tracked entity and mode cannot be changed — create a new tracker to change those.",
+        "data": {
+          "today": "Today",
+          "yesterday": "Yesterday",
+          "24h": "Last 24 hours",
+          "7d": "Last 7 days",
+          "30d": "Last 30 days",
+          "month": "This month",
+          "year": "This year",
+          "target": "Target state(s)",
+          "target_threshold": "Compliance threshold (%, optional)",
+          "min_state_duration": "Minimum state duration (seconds)"
+        },
+        "data_description": {
+          "today": "Since local midnight.",
+          "yesterday": "The previous whole day.",
+          "24h": "Rolling 24-hour window ending now.",
+          "7d": "Rolling 7-day window ending now.",
+          "30d": "The last 30 whole local days.",
+          "month": "Since the 1st of this month.",
+          "year": "Since 1 January.",
+          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target_threshold": "If set, a 'Compliant' binary sensor turns on when the compliance percentage meets or exceeds this value. Leave empty to skip the threshold.",
+          "min_state_duration": "If the tracked entity flips into a state and back out again faster than this many seconds, that brief moment is ignored — its time is added to the previous state instead, and it does not count as a separate change. Use it to filter flickering or bouncing sensors. Set to 0 to count every change, however short."
+        }
+      }
+    },
+    "error": {
+      "no_target_selected": "Select at least one target state, or turn off compliance scoring.",
+      "no_frames_selected": "Select at least one time frame to track."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "duration": {
+        "name": "Duration ({frame})"
+      },
+      "breakdown": {
+        "name": "State Breakdown ({frame})"
+      }
+    },
+    "binary_sensor": {
+      "currently_in_state": {
+        "name": "Currently in State"
+      },
+      "compliant": {
+        "name": "Compliant"
+      }
+    }
+  },
+  "selector": {
+    "mode": {
+      "options": {
+        "specific_states": "Specific states",
+        "all_states": "All states"
+      }
+    }
+  },
+  "services": {
+    "reset_ledger": {
+      "name": "Reset ledger",
+      "description": "Clear the persisted daily-bucket history for every Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "fields": {
+        "confirm": {
+          "name": "Confirm",
+          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+        }
+      }
+    }
+  },
+  "issues": {
+    "recorder_off": {
+      "title": "Recorder is unavailable",
+      "description": "Entity State Tracker relies on the recorder to compute state durations. The recorder is not available, so tracking falls back to live-only accumulation from now on and cannot backfill past history. Enable the recorder integration to restore full time-frame history."
+    }
+  },
+  "exceptions": {
+    "reset_not_confirmed": {
+      "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+    }
+  }
+}
