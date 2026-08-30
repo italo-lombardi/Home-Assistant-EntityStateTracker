@@ -69,7 +69,7 @@ def _device_info(coordinator: EntityStateTrackerCoordinator) -> DeviceInfo:
     label = coordinator.entry.title or coordinator.entity_id
     return DeviceInfo(
         identifiers={(DOMAIN, coordinator.entry.entry_id)},
-        name=tracker_device_name(label, coordinator.mode),
+        name=tracker_device_name(label),
         manufacturer="Entity State Tracker",
         entry_type=DeviceEntryType.SERVICE,
     )

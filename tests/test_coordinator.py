@@ -374,6 +374,195 @@ async def test_backfill_carry_forward_across_gap(
 
 
 # --------------------------------------------------------------------------- #
+# H1 — min_state_duration change re-backfills closed-day buckets
+# --------------------------------------------------------------------------- #
+
+
+async def test_h1_min_duration_change_clears_and_rebuilds_ledger(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """An options edit that CHANGES min_state_duration resets the ledger's
+    closed-day buckets and re-backfills them with the new glitch threshold (H1).
+
+    The stored ledger was built under threshold 5.0 (a stale old-threshold
+    bucket); config now carries 0. On first-refresh the coordinator detects
+    built != current, clears ``daily`` + resets ``last_updated_day`` to None, and
+    backfill rebuilds closed days from the recorder — so the stale bucket does
+    NOT persist and ``built_min_state_duration`` is stamped to the new value.
+    """
+    now = _utc(2026, 6, 10, 12, 0)
+    specific_config_entry.add_to_hass(hass)
+    c = EntityStateTrackerCoordinator(hass, specific_config_entry)
+    assert c.min_state_duration == 0  # config threshold
+    # Seed a ledger built under the OLD threshold (5.0) with a stale bucket whose
+    # secs were computed under that threshold.
+    ledger = await c.store.get_or_create_tracker(
+        c._entry_id, c.entity_id, c.mode, c.tracked_states, c.target_states
+    )
+    ledger.daily["2026-06-05"] = {"heat": {"secs": 111.0, "count": 7}}
+    await c.store.set_meta(
+        c._entry_id, last_updated_day="2026-06-09", built_min_state_duration=5.0
+    )
+    c._ledger = (await c.store.load()).trackers[c._entry_id]
+
+    # Recorder rebuilds each closed day as a full-day "heat" block under the new
+    # threshold; the day-start carry-forward row stamps the window start.
+    patch_recorder.mock.side_effect = lambda *a, **k: [  # type: ignore[attr-defined]
+        _FakeState("heat", a[2])
+    ]
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        await _first_refresh(hass, c)
+
+    rebuilt = (await c.store.load()).trackers[c._entry_id]
+    # The stale old-threshold bucket is gone (secs 111.0 / count 7 do not persist).
+    assert rebuilt.daily.get("2026-06-05", {}).get("heat", {}).get("secs") != 111.0
+    # Rebuilt closed days carry the recorder's full-day block under the new value.
+    assert rebuilt.daily["2026-06-09"]["heat"]["secs"] == pytest.approx(86400.0)
+    # The threshold the ledger was built with is stamped to the new (config) value.
+    assert rebuilt.built_min_state_duration == 0
+    await c.async_shutdown()
+
+
+async def test_h1_unchanged_min_duration_keeps_ledger(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """An unchanged min_state_duration does NOT reset the ledger (H1 no-op path).
+
+    built == current (both 0), so the closed-day buckets are preserved and
+    ``last_updated_day`` is not rewound — backfill resumes normally.
+    """
+    now = _utc(2026, 6, 10, 12, 0)
+    specific_config_entry.add_to_hass(hass)
+    c = EntityStateTrackerCoordinator(hass, specific_config_entry)
+    ledger = await c.store.get_or_create_tracker(
+        c._entry_id, c.entity_id, c.mode, c.tracked_states, c.target_states
+    )
+    # A pre-existing closed-day bucket built under the SAME threshold (0).
+    ledger.daily["2026-06-05"] = {"heat": {"secs": 4242.0, "count": 3}}
+    await c.store.set_meta(
+        c._entry_id, last_updated_day="2026-06-09", built_min_state_duration=0.0
+    )
+    c._ledger = (await c.store.load()).trackers[c._entry_id]
+
+    patch_recorder.mock.side_effect = lambda *a, **k: []  # type: ignore[attr-defined]
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        await _first_refresh(hass, c)
+
+    kept = (await c.store.load()).trackers[c._entry_id]
+    # The bucket survives untouched; no rewind of the marker triggered a rebuild.
+    assert kept.daily["2026-06-05"] == {"heat": {"secs": 4242.0, "count": 3}}
+    assert kept.built_min_state_duration == 0
+    await c.async_shutdown()
+
+
+async def test_h1_legacy_ledger_no_built_field_not_wiped(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """A legacy ledger (built_min_state_duration is None) is NOT wiped on upgrade.
+
+    The field-introducing upgrade seeds the current value without clearing
+    existing history — only a genuine subsequent change triggers a rebuild.
+    """
+    now = _utc(2026, 6, 10, 12, 0)
+    specific_config_entry.add_to_hass(hass)
+    c = EntityStateTrackerCoordinator(hass, specific_config_entry)
+    ledger = await c.store.get_or_create_tracker(
+        c._entry_id, c.entity_id, c.mode, c.tracked_states, c.target_states
+    )
+    ledger.daily["2026-06-05"] = {"heat": {"secs": 999.0, "count": 2}}
+    await c.store.set_meta(c._entry_id, last_updated_day="2026-06-09")
+    c._ledger = (await c.store.load()).trackers[c._entry_id]
+    assert c._ledger.built_min_state_duration is None  # legacy
+
+    patch_recorder.mock.side_effect = lambda *a, **k: []  # type: ignore[attr-defined]
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        await _first_refresh(hass, c)
+
+    kept = (await c.store.load()).trackers[c._entry_id]
+    assert kept.daily["2026-06-05"] == {"heat": {"secs": 999.0, "count": 2}}
+    assert kept.built_min_state_duration == 0  # seeded to current, no wipe
+    await c.async_shutdown()
+
+
+# --------------------------------------------------------------------------- #
+# L4 — overflow warning is per-(entry, frame), warned once per coordinator
+# --------------------------------------------------------------------------- #
+
+
+async def test_l4_warn_overflow_logs_once_per_frame(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """_warn_overflow logs once per frame label for THIS coordinator, then dedups.
+
+    A FrameResult whose breakdown exceeds the window by more than the tolerance
+    warns once; a second call on the same frame label is suppressed. A different
+    frame label warns independently. Diagnostic only — never raised."""
+    c = await _make_coordinator(hass, specific_config_entry)
+    from custom_components.entity_state_tracker.models import FrameResult
+
+    over = FrameResult(window_seconds=100.0, breakdown_seconds={"on": 500.0})
+    other = FrameResult(window_seconds=100.0, breakdown_seconds={"on": 400.0})
+    with caplog.at_level(logging.WARNING):
+        c._warn_overflow("24h", over)
+        c._warn_overflow("24h", over)  # dedup: same (entry, frame)
+        c._warn_overflow("7d", other)  # independent frame label
+    warnings = [r for r in caplog.records if "exceeds window" in r.getMessage()]
+    assert len(warnings) == 2
+    assert {"24h", "7d"} == set(c._warned_overflow)
+
+
+async def test_l4_warn_overflow_no_warn_within_tolerance(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """A breakdown within OVERFLOW_TOLERANCE_SECS of the window does not warn."""
+    c = await _make_coordinator(hass, specific_config_entry)
+    from custom_components.entity_state_tracker.models import FrameResult
+
+    # 100.5 exceeds 100.0 by 0.5s < 1.0s tolerance → no warning, no dedup entry.
+    ok = FrameResult(window_seconds=100.0, breakdown_seconds={"on": 100.5})
+    with caplog.at_level(logging.WARNING):
+        c._warn_overflow("24h", ok)
+    assert not [r for r in caplog.records if "exceeds window" in r.getMessage()]
+    assert "24h" not in c._warned_overflow
+
+
+async def test_l4_overflow_warns_independently_per_coordinator(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    all_states_config_entry: MockConfigEntry,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    """Two coordinators (distinct entry_ids) warn INDEPENDENTLY for the same frame.
+
+    The pre-fix module-global guard suppressed tracker B's real overflow if
+    tracker A warned that frame label first. With the per-coordinator guard both
+    warn (L4)."""
+    from custom_components.entity_state_tracker.models import FrameResult
+
+    ca = await _make_coordinator(hass, specific_config_entry)
+    cb = await _make_coordinator(hass, all_states_config_entry)
+    over = FrameResult(window_seconds=100.0, breakdown_seconds={"on": 500.0})
+    with caplog.at_level(logging.WARNING):
+        ca._warn_overflow("24h", over)
+        cb._warn_overflow("24h", over)  # same label, DIFFERENT coordinator
+    warnings = [r for r in caplog.records if "exceeds window" in r.getMessage()]
+    # BOTH warned — no cross-instance suppression.
+    assert len(warnings) == 2
+    assert "24h" in ca._warned_overflow
+    assert "24h" in cb._warned_overflow
+
+
+# --------------------------------------------------------------------------- #
 # Live state-change fold
 # --------------------------------------------------------------------------- #
 

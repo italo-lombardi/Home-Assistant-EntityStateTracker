@@ -1219,8 +1219,15 @@ def test_subset_percent_empty_subset_none() -> None:
 
 
 async def test_query_recorder_none_when_recorder_off() -> None:
+    # get_instance RAISES KeyError when the recorder is not set up (verified
+    # against HA core: it reads hass.data[DATA_INSTANCE] via lru_cache). The
+    # dead `instance is None` branch is gone; the KeyError is the absence signal
+    # and query_recorder maps it to None so the caller falls back to live-only.
     hass = MagicMock()
-    with patch("homeassistant.components.recorder.get_instance", return_value=None):
+    with patch(
+        "homeassistant.components.recorder.get_instance",
+        side_effect=KeyError("recorder"),
+    ):
         result = await E.query_recorder(
             hass, "sensor.x", _utc(2026, 1, 1), _utc(2026, 1, 2)
         )
@@ -1404,14 +1411,6 @@ def test_f3_compliance_percent_unchanged_window_denominator() -> None:
 _ALL_FRAMES = ("today", "yesterday", "24h", "7d", "30d", "month", "year")
 
 
-@pytest.fixture(autouse=True)
-def _reset_overflow_warned():
-    """Clear the module-level once-per-label overflow-warn set between tests."""
-    E._WARNED_OVERFLOW.clear()
-    yield
-    E._WARNED_OVERFLOW.clear()
-
-
 @pytest.mark.parametrize("frame", _ALL_FRAMES)
 @pytest.mark.parametrize("tz", [NY, TOKYO])
 def test_frame_agnostic_breakdown_never_exceeds_window(
@@ -1481,8 +1480,6 @@ def test_frame_agnostic_breakdown_never_exceeds_window(
     assert sum(fr.breakdown_seconds.values()) <= fr.window_seconds + 1e-6
     assert fr.unaccounted_seconds >= 0.0
     assert sum(fr.breakdown_pct.values()) <= 100.0 + 1.0
-    # No spurious overflow warning on realistic per-frame input.
-    assert frame not in E._WARNED_OVERFLOW
 
 
 @pytest.mark.parametrize("tz", [NY, TOKYO])
@@ -1599,42 +1596,31 @@ def test_retention_edge_ledger_fills_head_below_recorder_floor() -> None:
     assert sum(fr.breakdown_seconds.values()) <= fr.window_seconds + 1e-6
 
 
-def test_invariant_guard_warns_once_and_clamps(caplog) -> None:
-    """v8: Σbreakdown > window logs a warning ONCE per frame label and still
-    clamps unaccounted to 0.0 (never negative, never raises)."""
+def test_invariant_guard_clamps_overflow_to_zero() -> None:
+    """v8/L4: Σbreakdown > window clamps unaccounted to 0.0 (never negative).
+
+    The engine is now warning-free — it only clamps; the once-per-(entry, frame)
+    diagnostic warning moved to the coordinator (L4), tested in
+    ``tests/test_coordinator.py``. Here we pin the pure engine's clamp: an
+    over-count leaves ``unaccounted_seconds == 0.0``, never negative, never
+    raising.
+    """
     now = dt.datetime(2026, 5, 20, 15, 0, 0, tzinfo=NY)
     # Force an over-count: recent alone exceeds the 24h window.
     recent = {"on": {"secs": 200000.0, "count": 1}}  # > 86400 window
-    import logging
-
-    with caplog.at_level(logging.WARNING):
-        fr1 = E.compute_frame(
-            "24h",
-            now,
-            NY,
-            recent,
-            {},
-            None,
-            mode="all_states",
-            tracked_states=None,
-            target_states=None,
-            prior_dominant=None,
-        )
-        # A second call on the same label must NOT re-warn (once-per-label).
-        E.compute_frame(
-            "24h",
-            now,
-            NY,
-            recent,
-            {},
-            None,
-            mode="all_states",
-            tracked_states=None,
-            target_states=None,
-            prior_dominant=None,
-        )
-    warnings = [r for r in caplog.records if "exceeds window" in r.getMessage()]
-    assert len(warnings) == 1
-    assert "24h" in warnings[0].getMessage()
+    fr = E.compute_frame(
+        "24h",
+        now,
+        NY,
+        recent,
+        {},
+        None,
+        mode="all_states",
+        tracked_states=None,
+        target_states=None,
+        prior_dominant=None,
+    )
     # Clamped, never negative.
-    assert fr1.unaccounted_seconds == 0.0
+    assert fr.unaccounted_seconds == 0.0
+    # The breakdown itself is untouched (clamp only affects unaccounted).
+    assert fr.breakdown_seconds["on"] == pytest.approx(200000.0)

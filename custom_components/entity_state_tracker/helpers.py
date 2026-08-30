@@ -7,8 +7,6 @@ a single source of truth.
 
 from __future__ import annotations
 
-from hashlib import md5
-
 from .const import FRAMES
 
 # Human labels per frame. Plain nouns for calendar frames; the rolling frames
@@ -25,11 +23,11 @@ _FRAME_LABELS: dict[str, str] = {
 }
 
 
-def tracker_device_name(entity_label: str, mode: str) -> str:
+def tracker_device_name(entity_label: str) -> str:
     """Return the tracker's device name: ``Entity State Tracker — <label>`` (§5).
 
-    ``mode`` is accepted so callers pass what they have; the device name is
-    mode-independent by design (one device per config entry regardless of mode).
+    The device name is mode-independent by design — one device per config entry
+    regardless of mode — so it takes only the entity label.
     """
     return f"Entity State Tracker — {entity_label}"
 
@@ -41,43 +39,6 @@ def normalize_state(state: str) -> str:
     recorded ``heat`` (§4 prefilled states are case-normalized).
     """
     return state.strip().lower()
-
-
-def state_color(state: str) -> str:
-    """Return a deterministic ``#rrggbb`` color for a state string (§5.3).
-
-    Hash the state name to a stable hue, so a state always gets the same color
-    across runs and adding a new state never recolors the existing ones. Fixed
-    saturation/lightness keep slices legible; only the hue varies.
-    """
-    digest = md5(state.encode(), usedforsecurity=False).digest()
-    hue = int.from_bytes(digest[:2], "big") / 65535.0
-    return _hsl_to_hex(hue, 0.55, 0.55)
-
-
-def _hsl_to_hex(h: float, s: float, lightness: float) -> str:
-    """Convert HSL (each 0..1) to a ``#rrggbb`` string."""
-    if s == 0:
-        r = g = b = lightness
-    else:
-        q = lightness * (1 + s) if lightness < 0.5 else lightness + s - lightness * s
-        p = 2 * lightness - q
-        r = _hue_to_rgb(p, q, h + 1 / 3)
-        g = _hue_to_rgb(p, q, h)
-        b = _hue_to_rgb(p, q, h - 1 / 3)
-    return f"#{round(r * 255):02x}{round(g * 255):02x}{round(b * 255):02x}"
-
-
-def _hue_to_rgb(p: float, q: float, t: float) -> float:
-    """One channel of an HSL→RGB conversion (standard piecewise form)."""
-    t %= 1.0
-    if t < 1 / 6:
-        return p + (q - p) * 6 * t
-    if t < 1 / 2:
-        return q
-    if t < 2 / 3:
-        return p + (q - p) * (2 / 3 - t) * 6
-    return p
 
 
 def frame_label(frame_key: str) -> str:
@@ -97,14 +58,9 @@ def unique_id(entry_id: str, frame: str, metric: str) -> str:
 
 
 if __name__ == "__main__":  # pragma: no cover
-    # Self-check: state_color is deterministic and every canonical frame labels.
-    assert state_color("on") == state_color("on")
-    assert state_color("on") != state_color("off")
-    assert all(c in "0123456789abcdef" for c in state_color("heat")[1:])
+    # Self-check: normalization, device name, and every canonical frame labels.
     assert normalize_state("  Heat ") == "heat"
-    assert tracker_device_name("Front Door", "all_states") == (
-        "Entity State Tracker — Front Door"
-    )
+    assert tracker_device_name("Front Door") == ("Entity State Tracker — Front Door")
     assert frame_label("24h") == "Last 24 hours"
     assert frame_label("today") == "Today"
     assert frame_label("mystery") == "mystery"

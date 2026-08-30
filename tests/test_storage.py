@@ -10,14 +10,46 @@ import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError
 
+from custom_components.entity_state_tracker.const import (
+    STORAGE_KEY_FMT,
+    STORAGE_VERSION,
+)
 from custom_components.entity_state_tracker.models import StoredData, TrackerLedger
-from custom_components.entity_state_tracker.storage import EntityStateTrackerStore
+from custom_components.entity_state_tracker.storage import (
+    EntityStateTrackerStore,
+    _MigratingStore,
+)
 
 ENTRY_ID = "est_entry"
 
 
 def _store(hass: HomeAssistant) -> EntityStateTrackerStore:
     return EntityStateTrackerStore(hass, ENTRY_ID)
+
+
+async def test_migration_v1_doc_roundtrips_unchanged(hass: HomeAssistant) -> None:
+    """M4: the migration hook is a no-op for v1 — a v1 doc loads unchanged.
+
+    The stub exists so a future v2 has a single place to transform old
+    documents instead of HA's default ``_async_migrate_func`` raising. For v1
+    the document is returned byte-for-byte identical."""
+    store = _MigratingStore(
+        hass, STORAGE_VERSION, STORAGE_KEY_FMT.format(entry_id=ENTRY_ID)
+    )
+    doc = {
+        "version": STORAGE_VERSION,
+        "trackers": {
+            ENTRY_ID: {
+                "entity_id": "climate.living_room",
+                "mode": "all_states",
+                "daily": {"2026-08-29": {"heat": {"secs": 12.5, "count": 3}}},
+                "built_min_state_duration": 5.0,
+            }
+        },
+    }
+    migrated = await store._async_migrate_func(1, 1, doc)
+    assert migrated == doc
+    assert migrated is doc  # no-op: same object, nothing transformed
 
 
 async def test_load_cold_then_warm(hass: HomeAssistant) -> None:

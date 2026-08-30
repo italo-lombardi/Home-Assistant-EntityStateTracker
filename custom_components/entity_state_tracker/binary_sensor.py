@@ -14,6 +14,8 @@ coordinator tick that recomputes an unchanged value writes no recorder row.
 
 from __future__ import annotations
 
+from typing import Any
+
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
@@ -68,7 +70,7 @@ def _device_info(coordinator: EntityStateTrackerCoordinator) -> DeviceInfo:
     label = coordinator.entry.title or coordinator.entity_id
     return DeviceInfo(
         identifiers={(DOMAIN, coordinator.entry.entry_id)},
-        name=tracker_device_name(label, coordinator.mode),
+        name=tracker_device_name(label),
         manufacturer="Entity State Tracker",
         entry_type=DeviceEntryType.SERVICE,
     )
@@ -102,6 +104,12 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
     _attr_has_entity_name = True
     _attr_translation_key = TRANSLATION_KEY_COMPLIANT
 
+    # compliance_percent churns on essentially every transition on today's frame,
+    # so strip it from the recorder (mirrors DurationSensor/BreakdownSensor, §5.3)
+    # — it stays queryable as a live attribute; our ledger is the history store.
+    # target / target_threshold / frame are config-stable and stay recorded.
+    _unrecorded_attributes = frozenset({"compliance_percent"})
+
     def __init__(self, coordinator: EntityStateTrackerCoordinator) -> None:
         """Initialize the compliant binary sensor."""
         super().__init__(coordinator)
@@ -130,3 +138,22 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
         if frame is None or frame.compliance_percent is None:
             return None
         return frame.compliance_percent >= threshold
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """Return why the sensor is (non-)compliant: the score, bar, and frame.
+
+        ``compliance_percent`` is ``None`` before first data or when its frame is
+        absent — the target/threshold/frame config surface regardless so the user
+        always sees what bar is being applied to which window.
+        """
+        data = self.coordinator.data
+        frame = data.frames.get(self._frame_key) if data is not None else None
+        return {
+            "compliance_percent": frame.compliance_percent
+            if frame is not None
+            else None,
+            "target": self.coordinator.target_states,
+            "target_threshold": self.coordinator.target_threshold,
+            "frame": self._frame_key,
+        }

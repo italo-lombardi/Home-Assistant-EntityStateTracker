@@ -288,3 +288,60 @@ async def test_compliant_defaults_to_today_when_no_frames_enabled(
     sensor = CompliantBinarySensor(coordinator)
 
     assert sensor._frame_key == "today"
+
+
+async def test_compliant_extra_attributes(
+    hass: HomeAssistant, compliance_config_entry: MockConfigEntry
+) -> None:
+    """Attributes expose the score, target set, threshold, and scored frame."""
+    coordinator = _make_coordinator(hass, compliance_config_entry)
+    coordinator.data = TrackerData(
+        frames={"today": FrameResult(window_seconds=1.0, compliance_percent=88.0)}
+    )
+    sensor = CompliantBinarySensor(coordinator)
+
+    assert sensor.extra_state_attributes == {
+        "compliance_percent": 88.0,
+        "target": ["heat"],
+        "target_threshold": 80,
+        "frame": "today",
+    }
+
+
+async def test_compliant_extra_attributes_none_when_no_data(
+    hass: HomeAssistant, compliance_config_entry: MockConfigEntry
+) -> None:
+    """With no data the score is None but the config still surfaces."""
+    coordinator = _make_coordinator(hass, compliance_config_entry)
+    coordinator.data = None
+    sensor = CompliantBinarySensor(coordinator)
+
+    assert sensor.extra_state_attributes == {
+        "compliance_percent": None,
+        "target": ["heat"],
+        "target_threshold": 80,
+        "frame": "today",
+    }
+
+
+async def test_compliant_extra_attributes_none_when_frame_absent(
+    hass: HomeAssistant, compliance_config_entry: MockConfigEntry
+) -> None:
+    """A missing scored frame leaves compliance_percent None, config intact."""
+    coordinator = _make_coordinator(hass, compliance_config_entry)
+    coordinator.data = TrackerData(frames={})
+    sensor = CompliantBinarySensor(coordinator)
+
+    assert sensor.extra_state_attributes["compliance_percent"] is None
+    assert sensor.extra_state_attributes["frame"] == "today"
+
+
+async def test_compliant_compliance_percent_unrecorded(
+    hass: HomeAssistant, compliance_config_entry: MockConfigEntry
+) -> None:
+    """The volatile compliance_percent is stripped from the recorder (§5.3)."""
+    coordinator = _make_coordinator(hass, compliance_config_entry)
+    sensor = CompliantBinarySensor(coordinator)
+
+    assert "compliance_percent" in sensor._unrecorded_attributes
+    assert "target" not in sensor._unrecorded_attributes
