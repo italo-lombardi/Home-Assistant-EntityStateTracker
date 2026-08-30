@@ -390,6 +390,23 @@ const cardStyles = css`
     font-weight: 500;
   }
 
+  .source-context .source-link {
+    color: var(--est-text-primary);
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+
+  .source-context .source-link:hover {
+    color: var(--est-accent);
+    text-decoration: underline;
+  }
+
+  .source-context .source-link:focus-visible {
+    outline: 2px solid var(--est-accent);
+    outline-offset: 1px;
+  }
+
   .body {
     padding: 4px 16px 16px;
   }
@@ -702,18 +719,50 @@ class EntityStateTrackerCard extends LitElement {
     if (!sourceId) return nothing;
     const st = this.hass.states[sourceId];
     const friendly = (st && st.attributes && st.attributes.friendly_name) || sourceId;
+    // The source name opens the tracked entity's more-info dialog (EA parity).
+    // role/tabindex + Enter/Space keep it keyboard-accessible; the click fires
+    // hass-more-info for the SOURCE entity (not the tracker sensor).
+    const name = html`<span
+      class="source-link"
+      role="button"
+      tabindex="0"
+      @click=${(e) => this._handleEntityClick(e, sourceId)}
+      @keydown=${(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          this._handleEntityClick(e, sourceId);
+        }
+      }}
+      >${friendly}</span
+    >`;
     if (!st) {
       return html`<div class="source-context">
-        Tracking: ${friendly} · unavailable
+        Tracking: ${name} · unavailable
       </div>`;
     }
     const changed = fmtLastChanged(st.last_changed);
     return html`<div class="source-context">
-      Tracking: ${friendly} ·
+      Tracking: ${name} ·
       <span class="current">${st.state}</span>${changed
         ? html` · ${changed}`
         : nothing}
     </div>`;
+  }
+
+  // Open the more-info dialog for an entity (EA parity). Stops propagation so a
+  // click on the source name doesn't also trigger any card-level handler; fires
+  // the standard `hass-more-info` event HA's dialog manager listens for. Guards
+  // a missing/non-string id (never dispatches an empty more-info).
+  _handleEntityClick(e, entityId) {
+    e.stopPropagation();
+    if (typeof entityId !== "string" || !entityId) return;
+    this.dispatchEvent(
+      new CustomEvent("hass-more-info", {
+        detail: { entityId },
+        bubbles: true,
+        composed: true,
+      })
+    );
   }
 
   _deriveTitle(sensors) {
@@ -902,10 +951,13 @@ class EntityStateTrackerCard extends LitElement {
     const inner = 24;
     let angle = -Math.PI / 2;
     const single = slices.length === 1;
-    // Compute each slice as a plain {d, color, evenodd} descriptor. The <path>
-    // elements are emitted INLINE inside the single `html` <svg> template below,
-    // so the browser parses them in the SVG namespace lexically — no separate
-    // `svg` template tag needed (HA's LitElement prototype does not expose one).
+    // Compute each slice as a plain {d, color, evenodd} descriptor, then build
+    // the whole <svg> IMPERATIVELY with document.createElementNS below. HA's
+    // LitElement prototype exposes no `svg` template tag, and a <path>
+    // interpolated into an `html` <svg> is parsed standalone in the HTML
+    // namespace → an unknown element that never paints (the "legend shows,
+    // arcs don't" bug). createElementNS guarantees the SVG namespace, so the
+    // geometry renders; Lit renders a returned Node value in place as-is.
     const paths = slices.map((s) => {
       const frac = s.secs / total;
       // A full-circle slice (only slice, or frac≈1) has coincident arc
@@ -932,13 +984,7 @@ class EntityStateTrackerCard extends LitElement {
           : nothing}
       </div>
       <div class="pie-wrap">
-        <svg class="pie-svg" width="100" height="100" viewBox="0 0 100 100">
-          ${paths.map((p) =>
-            p.evenodd
-              ? html`<path d="${p.d}" fill="${p.color}" fill-rule="evenodd"></path>`
-              : html`<path d="${p.d}" fill="${p.color}"></path>`
-          )}
-        </svg>
+        ${this._pieSvg(paths)}
         <div class="legend">
           ${slices.map(
             (s) => html`<div class="legend-item">
@@ -952,6 +998,29 @@ class EntityStateTrackerCard extends LitElement {
         </div>
       </div>
     `;
+  }
+
+  // Build the donut <svg> as a real SVG-namespaced DOM node. Every element is
+  // created with createElementNS(SVG_NS, …) so <path> lands in
+  // http://www.w3.org/2000/svg and the browser renders it as geometry. Lit
+  // renders a Node child value directly (no re-parsing, no namespace loss),
+  // which sidesteps the missing `svg` template tag entirely. Rebuilt each
+  // render — cheap (a handful of nodes) and always fresh.
+  _pieSvg(paths) {
+    const NS = "http://www.w3.org/2000/svg";
+    const el = document.createElementNS(NS, "svg");
+    el.setAttribute("class", "pie-svg");
+    el.setAttribute("width", "100");
+    el.setAttribute("height", "100");
+    el.setAttribute("viewBox", "0 0 100 100");
+    for (const p of paths) {
+      const path = document.createElementNS(NS, "path");
+      path.setAttribute("d", p.d);
+      path.setAttribute("fill", p.color);
+      if (p.evenodd) path.setAttribute("fill-rule", "evenodd");
+      el.appendChild(path);
+    }
+    return el;
   }
 
   // Full donut RING for a single 100% slice — outer + inner circle as one
