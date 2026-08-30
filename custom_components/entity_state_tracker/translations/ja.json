@@ -140,12 +140,16 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "台帳をリセット",
-      "description": "トラッカーの保存された日次バケット履歴を消去します。長い時間枠は、まだ利用可能な場合はレコーダーのデータから再構築されます。これは元に戻せません。",
+      "name": "Reset ledger",
+      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
       "fields": {
         "confirm": {
-          "name": "確認",
-          "description": "リセットを実行するには有効にする必要があります。誤って履歴を失うのを防ぎます。"
+          "name": "Confirm",
+          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }

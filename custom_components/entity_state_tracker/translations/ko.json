@@ -140,12 +140,16 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "원장 재설정",
-      "description": "추적기의 유지된 일일 버킷 기록을 지웁니다. 긴 기간은 아직 사용 가능한 경우 레코더 데이터에서 다시 구축됩니다. 이 작업은 취소할 수 없습니다.",
+      "name": "Reset ledger",
+      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
       "fields": {
         "confirm": {
-          "name": "확인",
-          "description": "재설정을 수행하려면 활성화해야 합니다. 실수로 기록을 잃는 것을 방지합니다."
+          "name": "Confirm",
+          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }

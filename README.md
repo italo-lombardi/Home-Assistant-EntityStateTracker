@@ -151,6 +151,8 @@ The frame's **percent** and **compliance percent** (when a target is set) ride a
 
 The `compliant` binary sensor also exposes `compliance_percent`, `target`, `target_threshold`, and `frame` as attributes, so you can see *why* it is on or off at a glance.
 
+> **Frame note:** the `compliant` sensor scores the `today` frame — the only window whose compliance is "now". `today` is enabled by default, but if you disable it the sensor falls back to the **first enabled frame** in canonical order (`today` → `yesterday` → `24h` → `7d` → `30d` → `month` → `year`). With `today` off, "compliant" can therefore mean e.g. year-compliance rather than the live day. The active window is always shown in the sensor's `frame` attribute — keep `today` enabled if you want live/day compliance.
+
 ![Specific-states sensors](assets/06_specific_sensors.png)
 
 ### All-states mode
@@ -223,7 +225,14 @@ data:
   confirm: true
 ```
 
-`confirm: true` is required — resetting the ledger discards accumulated long-window history that cannot be rebuilt beyond the recorder's retention. The reset applies to every tracker (each config entry owns its own store and is reset together).
+`confirm: true` is required — resetting the ledger discards accumulated long-window history that cannot be rebuilt beyond the recorder's retention. With no `entity_id`, the reset applies to **every** tracker (each config entry owns its own store). Pass an optional `entity_id` (the *tracked* entity, not the tracker's own sensor) to reset only the tracker(s) watching that entity — a multi-tracker setup can wipe one tracker's history without touching the rest:
+
+```yaml
+service: entity_state_tracker.reset_ledger
+data:
+  confirm: true
+  entity_id: climate.living_room
+```
 
 ---
 

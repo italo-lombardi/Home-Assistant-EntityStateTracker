@@ -141,11 +141,15 @@
   "services": {
     "reset_ledger": {
       "name": "Reset ledger",
-      "description": "Clear the persisted daily-bucket history for every Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
+      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
       "fields": {
         "confirm": {
           "name": "Confirm",
           "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }
@@ -159,6 +163,9 @@
   "exceptions": {
     "reset_not_confirmed": {
       "message": "Set confirm to true to reset the ledger. This clears persisted history and cannot be undone."
+    },
+    "reset_no_match": {
+      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

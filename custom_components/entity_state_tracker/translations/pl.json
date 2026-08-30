@@ -140,12 +140,16 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Zresetuj rejestr",
-      "description": "Czyści utrwaloną historię dziennych segmentów trackera. Długie przedziały czasowe odbudowują się z danych rejestratora, gdy są jeszcze dostępne. Tej operacji nie można cofnąć.",
+      "name": "Reset ledger",
+      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
       "fields": {
         "confirm": {
-          "name": "Potwierdź",
-          "description": "Musi być włączone, aby przeprowadzić reset. Chroni przed przypadkową utratą historii."
+          "name": "Confirm",
+          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }

@@ -211,6 +211,61 @@ function frameFromEntityId(entityId) {
   return m ? m.frame : null;
 }
 
+// The object_id with the trailing `_<metric>_<label_slug>` stripped, so every
+// frame of one tracker — and both its metrics (duration for specific mode,
+// state_breakdown for all-states) — collapse to a common device stem. Shared by
+// the card (row discovery) and the editor (tracker dropdown). Returns the id
+// unchanged when it carries no recognisable frame label.
+function stemOf(entityId) {
+  const m = _matchFrame(entityId);
+  if (!m) return entityId;
+  // Drop the label-slug (+ its leading "_").
+  let stem = entityId.slice(0, entityId.length - m.slug.length - 1);
+  // Drop the metric segment if present, so duration and state_breakdown both
+  // reduce to the same device stem.
+  for (const metric of METRIC_SLUGS) {
+    if (stem.endsWith(`_${metric}`)) {
+      stem = stem.slice(0, stem.length - metric.length - 1);
+      break;
+    }
+  }
+  return stem;
+}
+
+// Discover the distinct tracker stems present in `hass`, each paired with a
+// representative sensor entity_id (the first frame sensor of that tracker) — the
+// value the card's `entity` config expects. Mirrors EA's `_getGroupOptions`
+// (a slug list built from the integration's sensors), adapted to EST's
+// stem-based discovery. Returns [{stem, entityId, label}] sorted by label.
+function trackerOptions(hass) {
+  if (!hass) return [];
+  const byStem = new Map();
+  for (const id of Object.keys(hass.states)) {
+    if (!id.startsWith(DOMAIN_PREFIX)) continue;
+    if (!frameFromEntityId(id)) continue;
+    const stem = stemOf(id);
+    // Keep the first sensor seen per stem as the representative `entity` value.
+    if (!byStem.has(stem)) byStem.set(stem, id);
+  }
+  return [...byStem.entries()]
+    .map(([stem, entityId]) => ({
+      stem,
+      entityId,
+      label: prettifyStem(stem),
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+// Prettify a tracker stem's device segment into a human label (Title Case).
+function prettifyStem(stem) {
+  const device = stem.slice(DOMAIN_PREFIX.length);
+  if (!device) return "Entity State Tracker";
+  return device
+    .split("_")
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(" ");
+}
+
 // -----------------------------------------------------------------------------
 const cardStyles = css`
   :host {
@@ -430,6 +485,10 @@ class EntityStateTrackerCard extends LitElement {
     return cardStyles;
   }
 
+  static getConfigElement() {
+    return document.createElement("entity-state-tracker-card-editor");
+  }
+
   static getStubConfig(hass) {
     // Preview: find any tracker sensor and offer its stem as the entity.
     const match = Object.keys(hass.states).find((id) =>
@@ -494,24 +553,10 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // The object_id with the trailing `_<metric>_<label_slug>` stripped, so every
-  // frame of one tracker — and both its metrics (duration for specific mode,
-  // state_breakdown for all-states) — collapse to a common stem.
-  // Strip the full matched label-slug first, then a known trailing metric
-  // segment, leaving `sensor.entity_state_tracker_<device>`.
+  // frame of one tracker — and both its metrics — collapse to a common stem.
+  // Delegates to the shared module-level `stemOf` (also used by the editor).
   _stemOf(entityId) {
-    const m = _matchFrame(entityId);
-    if (!m) return entityId;
-    // Drop the label-slug (+ its leading "_").
-    let stem = entityId.slice(0, entityId.length - m.slug.length - 1);
-    // Drop the metric segment if present, so duration and state_breakdown both
-    // reduce to the same device stem.
-    for (const metric of METRIC_SLUGS) {
-      if (stem.endsWith(`_${metric}`)) {
-        stem = stem.slice(0, stem.length - metric.length - 1);
-        break;
-      }
-    }
-    return stem;
+    return stemOf(entityId);
   }
 
   _framesToShow(sensors) {
@@ -560,16 +605,8 @@ class EntityStateTrackerCard extends LitElement {
     // Never reverse-engineer a title from friendly_name (labels like "Last 24
     // hours" have variable token counts, so the old 2-token strip mangled
     // them). Prettify the tracker stem's device segment instead — stable
-    // regardless of metric or frame label.
-    const stem = this._stemOf(sensors[0]?.entity_id || "");
-    const device = stem.slice(DOMAIN_PREFIX.length);
-    if (device) {
-      return device
-        .split("_")
-        .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
-        .join(" ");
-    }
-    return "Entity State Tracker";
+    // regardless of metric or frame label (shared with the editor dropdown).
+    return prettifyStem(this._stemOf(sensors[0]?.entity_id || ""));
   }
 
   // A sensor is a breakdown (all-states) sensor when it carries the breakdown
@@ -903,3 +940,190 @@ class EntityStateTrackerCard extends LitElement {
 }
 
 customElements.define("entity-state-tracker-card", EntityStateTrackerCard);
+
+// --- Card Editor ---
+//
+// Mirrors the Entity Availability card editor (its proven, browser-tested
+// pattern): a vanilla LitElement with hand-rolled inputs + a `_updateConfig`
+// that fires `config-changed`, NOT `ha-form`. Same properties/style bootstrap,
+// same `.value`/`@change` bindings, same undefined-key stripping. Adapted to
+// EST's config keys: entity (tracker), chart, frame (pie/table only), title.
+
+class EntityStateTrackerCardEditor extends LitElement {
+  static get properties() {
+    return {
+      hass: { attribute: false },
+      _config: { state: true },
+    };
+  }
+
+  static get styles() {
+    return css`
+      .editor-row {
+        margin-bottom: 12px;
+      }
+      .editor-row label {
+        display: block;
+        font-weight: 500;
+        margin-bottom: 4px;
+      }
+      .editor-row input[type="text"],
+      .editor-row select {
+        width: 100%;
+        padding: 8px;
+        border: 1px solid var(--divider-color, #ccc);
+        border-radius: 4px;
+        box-sizing: border-box;
+        background: var(--card-background-color, var(--primary-background-color, #fafafa));
+        color: var(--primary-text-color, #212121);
+      }
+      .editor-hint {
+        font-size: 12px;
+        color: var(--secondary-text-color, #727272);
+        margin-top: 4px;
+      }
+    `;
+  }
+
+  setConfig(config) {
+    this._config = config;
+  }
+
+  // Frame options for the pie/table frame picker — only frames the chosen
+  // tracker actually publishes, so we never offer a window the coordinator
+  // isn't computing. Falls back to the full canonical set when no tracker is
+  // resolved yet (e.g. a raw entity_id typed by hand).
+  _frameOptions() {
+    const configured = this._config?.entity;
+    if (this.hass && configured) {
+      const stem = stemOf(configured);
+      const frames = new Set();
+      for (const id of Object.keys(this.hass.states)) {
+        if (!id.startsWith(DOMAIN_PREFIX)) continue;
+        const frame = frameFromEntityId(id);
+        if (frame && stemOf(id) === stem) frames.add(frame);
+      }
+      if (frames.size > 0) {
+        return FRAME_ORDER.filter((f) => frames.has(f));
+      }
+    }
+    return FRAME_ORDER;
+  }
+
+  render() {
+    if (!this._config) return html``;
+
+    const chart = this._config.chart || "bars";
+    // frame only affects pie (single-frame) and table (column emphasis); it is
+    // meaningless for bars (every frame is a row), so hide it there.
+    const showFrame = chart === "pie" || chart === "table";
+    const options = trackerOptions(this.hass);
+
+    return html`
+      <div style="padding: 16px;">
+        <div class="editor-row">
+          <label>Tracker Entity</label>
+          ${options.length > 0
+            ? html`<select
+                .value=${this._config.entity || ""}
+                @change=${(e) => this._updateConfig("entity", e.target.value)}
+              >
+                ${this._config.entity &&
+                !options.some((o) => o.entityId === this._config.entity)
+                  ? html`<option value=${this._config.entity} selected>
+                      ${this._config.entity}
+                    </option>`
+                  : nothing}
+                ${options.map(
+                  (o) => html`<option
+                    value=${o.entityId}
+                    ?selected=${this._config.entity === o.entityId}
+                  >
+                    ${o.label}
+                  </option>`
+                )}
+              </select>`
+            : html`<input
+                type="text"
+                .value=${this._config.entity || ""}
+                @input=${(e) => this._updateConfig("entity", e.target.value)}
+                placeholder="sensor.entity_state_tracker_…"
+              />`}
+          <div class="editor-hint">
+            Pick any sensor from the tracker you want to show — the card finds
+            the rest of that tracker's frames automatically.
+          </div>
+        </div>
+        <div class="editor-row">
+          <label>Chart</label>
+          <select
+            .value=${chart}
+            @change=${(e) => this._updateConfig("chart", e.target.value)}
+          >
+            <option value="bars" ?selected=${chart === "bars"}>Bars (one row per frame)</option>
+            <option value="pie" ?selected=${chart === "pie"}>Pie (one frame's breakdown)</option>
+            <option value="table" ?selected=${chart === "table"}>Table (states × frames)</option>
+          </select>
+        </div>
+        ${showFrame
+          ? html`<div class="editor-row">
+              <label>Frame${chart === "pie" ? "" : " (emphasis)"}</label>
+              <select
+                .value=${this._config.frame || ""}
+                @change=${(e) =>
+                  this._updateConfig("frame", e.target.value || undefined)}
+              >
+                <option value="" ?selected=${!this._config.frame}>
+                  ${chart === "pie" ? "First available" : "All frames"}
+                </option>
+                ${this._frameOptions().map(
+                  (f) => html`<option
+                    value=${f}
+                    ?selected=${this._config.frame === f}
+                  >
+                    ${FRAME_LABELS[f] || f}
+                  </option>`
+                )}
+              </select>
+              <div class="editor-hint">
+                ${chart === "pie"
+                  ? "Which frame the pie breaks down."
+                  : "Optional — the table shows every enabled frame as a column."}
+              </div>
+            </div>`
+          : nothing}
+        <div class="editor-row">
+          <label>Title (optional)</label>
+          <input
+            type="text"
+            .value=${this._config.title || ""}
+            @input=${(e) =>
+              this._updateConfig("title", e.target.value || undefined)}
+            placeholder="Defaults to the tracker's name"
+          />
+        </div>
+      </div>
+    `;
+  }
+
+  _updateConfig(key, value) {
+    if (!this._config) return;
+    const newConfig = { ...this._config, [key]: value };
+    Object.keys(newConfig).forEach((k) => {
+      if (newConfig[k] === undefined) delete newConfig[k];
+    });
+    this._config = newConfig;
+    this.dispatchEvent(
+      new CustomEvent("config-changed", {
+        detail: { config: this._config },
+        bubbles: true,
+        composed: true,
+      })
+    );
+  }
+}
+
+customElements.define(
+  "entity-state-tracker-card-editor",
+  EntityStateTrackerCardEditor
+);

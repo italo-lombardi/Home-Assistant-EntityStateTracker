@@ -139,16 +139,18 @@ async def _async_seen_states(hass: HomeAssistant, entity_id: str) -> list[str]:
 
     — deduped, in that order. The recorder-derived distinct states are capped at
     ``_SEEN_PREFILL_CAP`` (most-recent kept) so a numeric entity with hundreds of
-    distinct values can't flood the selector; ``unavailable`` and ``unknown`` are
-    ALWAYS offered last (unavailable before unknown), on top of the cap, because
+    distinct values can't flood the selector; the current live state is pulled
+    out BEFORE the cap and re-prepended after, so it ALWAYS survives even when the
+    recorder set exceeds the cap. ``unavailable`` and ``unknown`` are ALWAYS
+    offered last (unavailable before unknown), on top of the cap, because
     entities routinely pass through them (startup, source outage) and tracking
     them is a common ask but they are filtered from the live/recorder scan.
     ``custom_value=True`` on the selector lets the user type any omitted state.
     """
-    seen: list[str] = []
+    live: str | None = None
     state = hass.states.get(entity_id)
     if state is not None and state.state not in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-        seen.append(state.state.lower())
+        live = state.state.lower()
 
     from datetime import timedelta
 
@@ -164,29 +166,38 @@ async def _async_seen_states(hass: HomeAssistant, entity_id: str) -> list[str]:
         )
         return [s.state.lower() for s in changes.get(entity_id, [])]
 
+    recorder: list[str] = []
     try:
         instance = get_instance(hass)  # raises if recorder not set up
-        seen.extend(await instance.async_add_executor_job(_distinct))
+        recorder = await instance.async_add_executor_job(_distinct)
     except Exception as err:  # noqa: BLE001 - recorder absent/failed: prefill is best-effort
         _LOGGER.debug("State prefill for %s skipped: %s", entity_id, err)
 
-    # Dedup preserving order (current live state stays first). Recorder history
-    # arrives oldest-first, so a straight dedup keeps chronological order — which
-    # is what the cap trims from the FRONT (oldest) to keep the most-recent
-    # _SEEN_PREFILL_CAP distinct states. Drop unavailable/unknown here: they are
-    # ALWAYS re-appended at the tail below (in a fixed order), so a recorder scan
-    # that surfaced them must not pin them mid-list.
+    # Cap the RECORDER-derived distinct set only — never the live state. Recorder
+    # history arrives oldest-first, so a straight dedup keeps chronological order;
+    # the cap trims from the FRONT (oldest) to keep the most-recent
+    # ``_SEEN_PREFILL_CAP`` distinct states. Drop unavailable/unknown (and the
+    # live state, re-prepended below) here: unavailable/unknown are ALWAYS
+    # re-appended at the tail in a fixed order, so a recorder scan that surfaced
+    # them must not pin them mid-list. Excluding the live state before the cap
+    # guarantees the CURRENT state survives even for an entity with >cap distinct
+    # recorder states (else the front-trim would drop the index-0 live state and
+    # violate this function's ``[current live state, ...]`` contract).
     distinct = [
-        s for s in dict.fromkeys(seen) if s not in (STATE_UNAVAILABLE, STATE_UNKNOWN)
+        s
+        for s in dict.fromkeys(recorder)
+        if s not in (STATE_UNAVAILABLE, STATE_UNKNOWN) and s != live
     ]
     if len(distinct) > _SEEN_PREFILL_CAP:
         distinct = distinct[-_SEEN_PREFILL_CAP:]
 
-    # Always offer "unavailable" then "unknown" (in that order) as the LAST two
-    # options, on TOP of the cap: entities routinely pass through both and they
-    # are filtered from the current-state check above, so seed them explicitly.
-    # The distinct set already excludes them, so no dedup pass is needed.
-    return [*distinct, STATE_UNAVAILABLE, STATE_UNKNOWN]
+    # Re-prepend the live state (on TOP of the cap) so it is always offered first,
+    # then always offer "unavailable" then "unknown" (in that order) as the LAST
+    # two options: entities routinely pass through both and they are filtered from
+    # the current-state check above, so seed them explicitly. Neither the distinct
+    # set nor the live state includes them, so no dedup pass is needed.
+    head = [live] if live is not None else []
+    return [*head, *distinct, STATE_UNAVAILABLE, STATE_UNKNOWN]
 
 
 class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):

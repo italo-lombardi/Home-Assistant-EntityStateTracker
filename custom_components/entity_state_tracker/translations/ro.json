@@ -140,12 +140,16 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Resetează registrul",
-      "description": "Șterge istoricul persistent al segmentelor zilnice pentru un urmăritor. Intervalele lungi se reconstruiesc din datele recorderului acolo unde sunt încă disponibile. Această acțiune nu poate fi anulată.",
+      "name": "Reset ledger",
+      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
       "fields": {
         "confirm": {
-          "name": "Confirmă",
-          "description": "Trebuie activat pentru a efectua resetarea. Protejează împotriva pierderii accidentale a istoricului."
+          "name": "Confirm",
+          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }

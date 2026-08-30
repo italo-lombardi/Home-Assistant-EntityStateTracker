@@ -140,12 +140,16 @@
   },
   "services": {
     "reset_ledger": {
-      "name": "Resetovať evidenciu",
-      "description": "Vymaže uloženú históriu denných priehradok pre sledovanie. Dlhé časové obdobia sa znovu zostavia z údajov rekordéra, kde sú stále dostupné. Túto akciu nemožno vrátiť späť.",
+      "name": "Reset ledger",
+      "description": "Clear the persisted daily-bucket history for Entity State Tracker. Long time frames rebuild from recorder data where still available. This cannot be undone.",
       "fields": {
         "confirm": {
-          "name": "Potvrdiť",
-          "description": "Musí byť povolené na vykonanie resetu. Chráni pred náhodnou stratou histórie."
+          "name": "Confirm",
+          "description": "Must be enabled to carry out the reset. Guards against accidental history loss."
+        },
+        "entity_id": {
+          "name": "Tracked entity",
+          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
         }
       }
     }

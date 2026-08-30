@@ -99,7 +99,18 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
 
 
 class CompliantBinarySensor(DedupCoordinatorBinarySensor):
-    """ON when today's compliance percentage meets the configured threshold."""
+    """ON when today's compliance percentage meets the configured threshold.
+
+    Frame note: this sensor scores the ``today`` frame — the only window whose
+    compliance is "now" rather than a historical span. ``today`` is default-on,
+    but a user MAY disable it; when it is off, the sensor falls back to the FIRST
+    enabled frame (``enabled_frames[0]``, canonical order today→…→year). So with
+    ``today`` disabled, "compliant" can silently mean e.g. year-compliance —
+    whichever enabled frame comes first in canonical order. The active frame is
+    always surfaced in the ``frame`` extra-state attribute so the user can see
+    which window is being scored. Keep ``today`` enabled if you want the sensor
+    to track live/day compliance.
+    """
 
     _attr_has_entity_name = True
     _attr_translation_key = TRANSLATION_KEY_COMPLIANT
@@ -129,7 +140,12 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
 
     @property
     def is_on(self) -> bool | None:
-        """Return True when compliance meets the threshold, None when unknown."""
+        """Return True when compliance meets the threshold, None when unknown.
+
+        Scores ``self._frame_key`` — ``today`` when enabled, else the first
+        enabled frame (see the class docstring): with ``today`` off this may be a
+        long window, so the score is that frame's compliance, not the live day.
+        """
         threshold = self.coordinator.target_threshold
         data = self.coordinator.data
         if threshold is None or data is None:

@@ -15,6 +15,7 @@ from custom_components.entity_state_tracker.coordinator import (
 )
 from custom_components.entity_state_tracker.services import (
     ATTR_CONFIRM,
+    ATTR_ENTITY_ID,
     async_setup_services,
     async_unload_services,
 )
@@ -113,6 +114,79 @@ async def test_reset_ledger_iterates_all_coordinators(
 
     coord_a.async_reset_ledger.assert_awaited_once()
     coord_b.async_reset_ledger.assert_awaited_once()
+
+
+async def test_reset_ledger_targets_one_entity(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    all_states_config_entry: MockConfigEntry,
+) -> None:
+    """A targeted reset resets only the tracker(s) watching that entity."""
+    coord_a = _make_coordinator(hass, specific_config_entry)  # climate.living_room
+    coord_b = _make_coordinator(
+        hass, all_states_config_entry
+    )  # binary_sensor.front_door
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][specific_config_entry.entry_id] = coord_a
+    hass.data[DOMAIN][all_states_config_entry.entry_id] = coord_b
+
+    await async_setup_services(hass)
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_RESET_LEDGER,
+        {ATTR_CONFIRM: True, ATTR_ENTITY_ID: "climate.living_room"},
+        blocking=True,
+    )
+
+    coord_a.async_reset_ledger.assert_awaited_once()
+    coord_b.async_reset_ledger.assert_not_awaited()
+
+
+async def test_reset_ledger_targets_multiple_entities(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    all_states_config_entry: MockConfigEntry,
+) -> None:
+    """A multi-entity target resets every matching tracker (list target)."""
+    coord_a = _make_coordinator(hass, specific_config_entry)
+    coord_b = _make_coordinator(hass, all_states_config_entry)
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][specific_config_entry.entry_id] = coord_a
+    hass.data[DOMAIN][all_states_config_entry.entry_id] = coord_b
+
+    await async_setup_services(hass)
+    await hass.services.async_call(
+        DOMAIN,
+        SERVICE_RESET_LEDGER,
+        {
+            ATTR_CONFIRM: True,
+            ATTR_ENTITY_ID: ["climate.living_room", "binary_sensor.front_door"],
+        },
+        blocking=True,
+    )
+
+    coord_a.async_reset_ledger.assert_awaited_once()
+    coord_b.async_reset_ledger.assert_awaited_once()
+
+
+async def test_reset_ledger_target_no_match_raises(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+) -> None:
+    """A target that matches no loaded tracker raises, resetting nothing."""
+    coord = _make_coordinator(hass, specific_config_entry)  # climate.living_room
+    hass.data.setdefault(DOMAIN, {})[specific_config_entry.entry_id] = coord
+
+    await async_setup_services(hass)
+    with pytest.raises(ServiceValidationError):
+        await hass.services.async_call(
+            DOMAIN,
+            SERVICE_RESET_LEDGER,
+            {ATTR_CONFIRM: True, ATTR_ENTITY_ID: "sensor.does_not_exist"},
+            blocking=True,
+        )
+
+    coord.async_reset_ledger.assert_not_awaited()
 
 
 async def test_setup_services_idempotent(

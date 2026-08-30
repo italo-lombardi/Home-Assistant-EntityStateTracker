@@ -173,6 +173,71 @@ async def test_seen_states_caps_recorder_derived_at_50(hass: HomeAssistant) -> N
     assert seen[-2:] == ["unavailable", "unknown"]
 
 
+async def test_seen_states_cap_keeps_live_state(hass: HomeAssistant) -> None:
+    """A live state survives the cap even with >cap distinct recorder states.
+
+    The live state is pulled out BEFORE the cap and re-prepended after, so the
+    ``[current live state, ...]`` contract holds even when the recorder-derived
+    set alone exceeds ``_SEEN_PREFILL_CAP`` (the front-trim must never drop the
+    index-0 live state). The live value here is NOT among the recorder states, so
+    the cap keeps a full ``_SEEN_PREFILL_CAP`` recorder states on top of it →
+    cap + live + unavailable + unknown.
+    """
+    hass.states.async_set("sensor.numeric", "live_now")
+    distinct = [f"{float(i)}" for i in range(120)]  # 120 distinct numeric states
+
+    def _fake_changes(*_a: Any, **_k: Any) -> dict[str, list[_State]]:
+        return {"sensor.numeric": [_State(s) for s in distinct]}
+
+    with (
+        patch("homeassistant.components.recorder.get_instance") as mock_get_instance,
+        patch(
+            "homeassistant.components.recorder.history.state_changes_during_period",
+            side_effect=_fake_changes,
+        ),
+    ):
+        mock_get_instance.return_value.async_add_executor_job = _run_sync
+        seen = await _async_seen_states(hass, "sensor.numeric")
+
+    # Live state is first and PRESENT despite >cap recorder states.
+    assert seen[0] == "live_now"
+    assert "live_now" in seen
+    # live + cap recorder states + unavailable + unknown.
+    assert len(seen) == _SEEN_PREFILL_CAP + 3
+    assert seen[1 : _SEEN_PREFILL_CAP + 1] == distinct[-_SEEN_PREFILL_CAP:]
+    assert seen[-2:] == ["unavailable", "unknown"]
+
+
+async def test_seen_states_cap_dedups_live_from_recorder(hass: HomeAssistant) -> None:
+    """When the live state is also in the recorder set, it appears once (first).
+
+    Excluding the live value from the recorder-derived ``distinct`` before the
+    cap means the cap keeps ``_SEEN_PREFILL_CAP`` OTHER states, and the live
+    state is not duplicated when re-prepended.
+    """
+    # Live "5.0" is also one of the recorder states → must not double-count.
+    hass.states.async_set("sensor.numeric", "5.0")
+    distinct = [f"{float(i)}" for i in range(120)]
+
+    def _fake_changes(*_a: Any, **_k: Any) -> dict[str, list[_State]]:
+        return {"sensor.numeric": [_State(s) for s in distinct]}
+
+    with (
+        patch("homeassistant.components.recorder.get_instance") as mock_get_instance,
+        patch(
+            "homeassistant.components.recorder.history.state_changes_during_period",
+            side_effect=_fake_changes,
+        ),
+    ):
+        mock_get_instance.return_value.async_add_executor_job = _run_sync
+        seen = await _async_seen_states(hass, "sensor.numeric")
+
+    assert seen[0] == "5.0"
+    assert seen.count("5.0") == 1
+    # live + cap recorder states + unavailable + unknown.
+    assert len(seen) == _SEEN_PREFILL_CAP + 3
+
+
 # ---------------------------------------------------------------------------
 # Flow-driving helpers
 # ---------------------------------------------------------------------------
