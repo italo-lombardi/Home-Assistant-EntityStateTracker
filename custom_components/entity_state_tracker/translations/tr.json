@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Hangi durumlar uyumlu olarak sayılır?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Uyumluluk, varlığın burada seçtiğiniz durumlardan herhangi birinde geçirdiği her zaman aralığının yüzdesi olarak puanlanır. Bu durumlar izlenen durumlardan bağımsızdır — uyumluluğu, aksi takdirde izlemediğiniz bir durum üzerinden puanlayabilirsiniz (örneğin, bir difüzörün ne kadar süre „on“ olduğunu izleyin, ancak „off“u uyumlu/istenen durum olarak işaretleyin). Kolaylık için izlenen durumlarınızla önceden doldurulur; serbestçe değiştirin. Listede olmayan özel bir durum da yazabilirsiniz.",
         "data": {
           "target": "Uyumlu durum(lar)",
           "target_threshold": "Uyumluluk eşiği (%, isteğe bağlı)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Uyumlu/istenen sayılan durumlar. Bunlardan herhangi birinde geçirilen süre puanlanır. İzlenen durumlardan bağımsızdır — varlığın olabileceği herhangi bir durumu seçin.",
           "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya aştığında bir «Uyumlu» ikili sensör açılır. Eşiği atlamak için boş bırakın."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Son 30 tam yerel gün.",
           "month": "Bu ayın 1'inden itibaren.",
           "year": "1 Ocak'tan itibaren.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Uyumlu kabul edilen durumlar kümesi. Bunlardan herhangi birinde bulunmak sayılır. İzlenen durumlardan bağımsızdır — varlığın olabileceği herhangi bir durumu seçin. Yalnızca uyumluluk puanlaması etkinken kullanılır.",
           "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya aştığında bir «Uyumlu» ikili sensör açılır. Eşiği atlamak için boş bırakın.",
           "min_state_duration": "İzlenen varlık bir duruma girip bu saniye sayısından daha hızlı çıkarsa, o kısa an yok sayılır — süresi bunun yerine önceki duruma eklenir ve ayrı bir değişiklik olarak sayılmaz. Titreşen veya zıplayan sensörleri filtrelemek için kullanın. Ne kadar kısa olursa olsun her değişikliği saymak için 0 olarak ayarlayın."
         }

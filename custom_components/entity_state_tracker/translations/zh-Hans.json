@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "哪些状态算作合规？",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "合规性按实体在你此处所选任一状态中度过的每个时间范围的百分比计分。这些状态独立于被跟踪的状态——你可以对平时并不跟踪的状态计分（例如：跟踪扩香器处于「on」的时长，但把「off」标记为合规/期望状态）。为方便起见已预填你的被跟踪状态；可自由更改。也可以输入列表中没有的自定义状态。",
         "data": {
           "target": "合规状态",
           "target_threshold": "合规阈值（%，可选）"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "被视为合规/期望的状态。在其中任一状态中度过的时间都会计分。独立于被跟踪的状态——可选择实体可能处于的任意状态。",
           "target_threshold": "如果设置，当合规百分比达到或超过此值时，“合规”二元传感器将开启。留空以跳过阈值。"
         }
       },
@@ -101,7 +101,7 @@
           "30d": "过去 30 个完整的本地日。",
           "month": "自本月 1 日起。",
           "year": "自 1 月 1 日起。",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "被视为合规的状态集合。处于其中任一状态即计入。独立于被跟踪的状态——可选择实体可能处于的任意状态。仅在启用合规计分时使用。",
           "target_threshold": "如果设置，当合规百分比达到或超过此值时，“合规”二元传感器将开启。留空以跳过阈值。",
           "min_state_duration": "如果被跟踪的实体进入某个状态后，在少于此秒数内又退出，则忽略这一短暂时刻——其时间会计入前一个状态，并且不算作单独的一次变化。用它来过滤闪烁或抖动的传感器。设为 0 则计入每一次变化，无论多短。"
         }

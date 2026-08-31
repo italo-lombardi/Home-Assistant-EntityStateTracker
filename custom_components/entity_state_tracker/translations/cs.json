@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Které stavy se počítají jako shodné?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Shoda se hodnotí jako procento každého časového rámce, které entita strávila v některém ze stavů, které zde zvolíte. Tyto stavy jsou nezávislé na sledovaných stavech — shodu můžete hodnotit vůči stavu, který jinak nesledujete (například sledujte, jak dlouho je difuzér „on“, ale jako vyhovující/požadovaný stav označte „off“). Předvyplněno vašimi sledovanými stavy pro pohodlí; můžete je volně změnit. Můžete také zadat vlastní stav, který není v seznamu.",
         "data": {
           "target": "Shodný(é) stav(y)",
           "target_threshold": "Práh shody (%, volitelné)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Stavy, které se počítají jako vyhovující/požadované. Hodnotí se čas strávený v kterémkoli z nich. Nezávislé na sledovaných stavech — zvolte libovolný stav, ve kterém entita může být.",
           "target_threshold": "Pokud je nastaveno, binární senzor „Ve shodě“ se zapne, když procento shody dosáhne této hodnoty nebo ji překročí. Ponechte prázdné pro přeskočení prahu."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Posledních 30 celých místních dní.",
           "month": "Od 1. dne tohoto měsíce.",
           "year": "Od 1. ledna.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Sada stavů považovaných za vyhovující. Počítá se pobyt v kterémkoli z nich. Nezávislé na sledovaných stavech — zvolte libovolný stav, ve kterém entita může být. Používá se pouze při zapnutém hodnocení shody.",
           "target_threshold": "Pokud je nastaveno, binární senzor „Ve shodě“ se zapne, když procento shody dosáhne této hodnoty nebo ji překročí. Ponechte prázdné pro přeskočení prahu.",
           "min_state_duration": "Pokud sledovaná entita přejde do stavu a zase z něj rychleji než za tento počet sekund, tento krátký okamžik se ignoruje — jeho čas se přičte k předchozímu stavu a nepočítá se jako samostatná změna. Použijte to k filtrování blikajících nebo poskakujících senzorů. Nastavte 0, aby se počítala každá změna, jakkoli krátká."
         }

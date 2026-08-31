@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Koja se stanja računaju kao usklađena?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Usklađenost se boduje kao postotak svakog vremenskog okvira koji je entitet proveo u bilo kojem od stanja koja ovdje odaberete. Ta su stanja neovisna o praćenim stanjima — usklađenost možete bodovati prema stanju koje inače ne pratite (na primjer, pratite koliko je dugo raspršivač „on“, ali označite „off“ kao usklađeno/željeno stanje). Unaprijed popunjeno vašim praćenim stanjima radi praktičnosti; slobodno promijenite. Možete i upisati prilagođeno stanje kojeg nema na popisu.",
         "data": {
           "target": "Usklađeno(a) stanje(a)",
           "target_threshold": "Prag usklađenosti (%, neobavezno)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Stanja koja se broje kao usklađena/željena. Boduje se vrijeme provedeno u bilo kojem od njih. Neovisna o praćenim stanjima — odaberite bilo koje stanje u kojem entitet može biti.",
           "target_threshold": "Ako je postavljeno, binarni senzor „Usklađeno” uključuje se kada postotak usklađenosti dosegne ili premaši ovu vrijednost. Ostavi prazno za preskakanje praga."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Zadnjih 30 cijelih lokalnih dana.",
           "month": "Od 1. u ovom mjesecu.",
           "year": "Od 1. siječnja.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Skup stanja koja se smatraju usklađenima. Boravak u bilo kojem od njih se broji. Neovisna o praćenim stanjima — odaberite bilo koje stanje u kojem entitet može biti. Koristi se samo kada je uključeno bodovanje usklađenosti.",
           "target_threshold": "Ako je postavljeno, binarni senzor „Usklađeno” uključuje se kada postotak usklađenosti dosegne ili premaši ovu vrijednost. Ostavi prazno za preskakanje praga.",
           "min_state_duration": "Ako praćeni entitet prijeđe u stanje i izađe iz njega brže od ovoga broja sekundi, taj se kratki trenutak zanemaruje — njegovo se vrijeme umjesto toga dodaje prethodnom stanju i ne računa se kao zasebna promjena. Upotrijebite to za filtriranje treperavih ili poskakujućih senzora. Postavite na 0 da se broji svaka promjena, koliko god kratka bila."
         }

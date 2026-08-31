@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Które stany liczą się jako zgodne?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Zgodność jest punktowana jako procent każdego przedziału czasu, przez który encja pozostawała w którymkolwiek ze stanów wybranych tutaj. Te stany są niezależne od stanów śledzonych — zgodność można punktować względem stanu, którego w innym przypadku nie śledzisz (na przykład śledź, jak długo dyfuzor jest „on“, ale oznacz „off“ jako stan zgodny/pożądany). Dla wygody wstępnie wypełnione śledzonymi stanami; zmień dowolnie. Możesz też wpisać niestandardowy stan, którego nie ma na liście.",
         "data": {
           "target": "Stan(y) zgodny(e)",
           "target_threshold": "Próg zgodności (%, opcjonalnie)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Stany liczone jako zgodne/pożądane. Punktowany jest czas spędzony w którymkolwiek z nich. Niezależne od stanów śledzonych — wybierz dowolny stan, w którym encja może się znajdować.",
           "target_threshold": "Jeśli ustawiono, czujnik binarny „Zgodny” włącza się, gdy procent zgodności osiągnie tę wartość lub ją przekroczy. Pozostaw puste, aby pominąć próg."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Ostatnie 30 pełnych lokalnych dni.",
           "month": "Od 1. dnia tego miesiąca.",
           "year": "Od 1 stycznia.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Zbiór stanów uznawanych za zgodne. Przebywanie w którymkolwiek z nich jest liczone. Niezależne od stanów śledzonych — wybierz dowolny stan, w którym encja może się znajdować. Używane tylko, gdy włączone jest punktowanie zgodności.",
           "target_threshold": "Jeśli ustawiono, czujnik binarny „Zgodny” włącza się, gdy procent zgodności osiągnie tę wartość lub ją przekroczy. Pozostaw puste, aby pominąć próg.",
           "min_state_duration": "Jeśli śledzona encja przechodzi w stan i wychodzi z niego szybciej niż ta liczba sekund, ta krótka chwila jest ignorowana — jej czas jest zamiast tego dodawany do poprzedniego stanu i nie liczy się jako osobna zmiana. Użyj tego do filtrowania migoczących lub odbijających czujników. Ustaw 0, aby liczyć każdą zmianę, jakkolwiek krótką."
         }

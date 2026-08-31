@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Kurios būsenos laikomos atitinkančiomis?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Atitiktis vertinama kaip kiekvieno laiko intervalo procentinė dalis, kurią objektas praleido bet kurioje čia pasirinktoje būsenoje. Šios būsenos nepriklauso nuo sekamų būsenų — atitiktį galite vertinti pagal būseną, kurios kitaip nesekate (pavyzdžiui, sekite, kiek laiko difuzorius yra „on“, bet „off“ pažymėkite kaip atitinkančią/pageidaujamą būseną). Patogumui iš anksto užpildyta jūsų sekamomis būsenomis; laisvai keiskite. Taip pat galite įvesti pasirinktinę sąraše nesančią būseną.",
         "data": {
           "target": "Atitinkanti (-čios) būsena (-os)",
           "target_threshold": "Atitikties slenkstis (%, neprivaloma)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Būsenos, laikomos atitinkančiomis/pageidaujamomis. Vertinamas bet kurioje iš jų praleistas laikas. Nepriklauso nuo sekamų būsenų — pasirinkite bet kurią būseną, kurioje objektas gali būti.",
           "target_threshold": "Jei nustatyta, dvejetainis jutiklis „Atitinka“ įsijungia, kai atitikties procentas pasiekia arba viršija šią vertę. Palikite tuščią, kad praleistumėte slenkstį."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Paskutinės 30 visų vietinių dienų.",
           "month": "Nuo šio mėnesio 1 dienos.",
           "year": "Nuo sausio 1 dienos.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Atitinkančiomis laikomų būsenų rinkinys. Buvimas bet kurioje iš jų įskaičiuojamas. Nepriklauso nuo sekamų būsenų — pasirinkite bet kurią būseną, kurioje objektas gali būti. Naudojama tik įjungus atitikties vertinimą.",
           "target_threshold": "Jei nustatyta, dvejetainis jutiklis „Atitinka“ įsijungia, kai atitikties procentas pasiekia arba viršija šią vertę. Palikite tuščią, kad praleistumėte slenkstį.",
           "min_state_duration": "Jei stebimas objektas pereina į būseną ir iš jos išeina greičiau nei per tiek sekundžių, ta trumpa akimirka ignoruojama — jos laikas pridedamas prie ankstesnės būsenos ir neskaičiuojamas kaip atskiras pokytis. Naudokite tai mirgantiems arba šokinėjantiems jutikliams filtruoti. Nustatykite 0, kad būtų skaičiuojamas kiekvienas pokytis, kad ir koks trumpas."
         }

@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Ktoré stavy sa počítajú ako zhodné?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Zhoda sa hodnotí ako percento každého časového rámca, ktoré entita strávila v niektorom zo stavov, ktoré tu zvolíte. Tieto stavy sú nezávislé od sledovaných stavov — zhodu môžete hodnotiť voči stavu, ktorý inak nesledujete (napríklad sledujte, ako dlho je difuzér „on“, ale ako vyhovujúci/požadovaný stav označte „off“). Pre pohodlie predvyplnené vašimi sledovanými stavmi; voľne meňte. Môžete tiež zadať vlastný stav, ktorý nie je v zozname.",
         "data": {
           "target": "Zhodný(é) stav(y)",
           "target_threshold": "Prah zhody (%, voliteľné)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Stavy, ktoré sa počítajú ako vyhovujúce/požadované. Hodnotí sa čas strávený v ktoromkoľvek z nich. Nezávislé od sledovaných stavov — zvoľte ľubovoľný stav, v ktorom entita môže byť.",
           "target_threshold": "Ak je nastavené, binárny senzor „V zhode“ sa zapne, keď percento zhody dosiahne túto hodnotu alebo ju prekročí. Ponechajte prázdne na preskočenie prahu."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Posledných 30 celých miestnych dní.",
           "month": "Od 1. dňa tohto mesiaca.",
           "year": "Od 1. januára.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Množina stavov považovaných za vyhovujúce. Počíta sa pobyt v ktoromkoľvek z nich. Nezávislé od sledovaných stavov — zvoľte ľubovoľný stav, v ktorom entita môže byť. Používa sa iba pri zapnutom hodnotení zhody.",
           "target_threshold": "Ak je nastavené, binárny senzor „V zhode“ sa zapne, keď percento zhody dosiahne túto hodnotu alebo ju prekročí. Ponechajte prázdne na preskočenie prahu.",
           "min_state_duration": "Ak sledovaná entita prejde do stavu a zase z neho rýchlejšie ako za tento počet sekúnd, tento krátky okamih sa ignoruje — jeho čas sa namiesto toho pripočíta k predchádzajúcemu stavu a nepočíta sa ako samostatná zmena. Použite to na filtrovanie blikajúcich alebo poskakujúcich senzorov. Nastavte na 0, aby sa počítala každá zmena, akokoľvek krátka."
         }

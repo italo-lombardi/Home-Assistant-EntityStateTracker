@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "どの状態をコンプライアンスとして数えますか？",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "コンプライアンスは、エンティティがここで選択したいずれかの状態にあった各期間の割合として算出されます。これらの状態は追跡対象の状態とは独立しています。追跡していない状態に対してもコンプライアンスを採点できます（例：ディフューザーが「on」である時間を追跡しつつ、「off」を準拠/望ましい状態として指定）。利便性のため追跡状態が初期入力されていますが、自由に変更できます。一覧にないカスタム状態を入力することもできます。",
         "data": {
           "target": "コンプライアンス状態",
           "target_threshold": "コンプライアンスしきい値（%、任意）"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "準拠/望ましいとみなす状態。いずれかで過ごした時間が採点されます。追跡状態とは独立しており、エンティティが取り得る任意の状態を選べます。",
           "target_threshold": "設定すると、コンプライアンス率がこの値以上になったときに「コンプライアンス」バイナリセンサーがオンになります。しきい値をスキップするには空欄のままにします。"
         }
       },
@@ -101,7 +101,7 @@
           "30d": "過去30日間の完全な現地日。",
           "month": "今月1日から。",
           "year": "1月1日から。",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "準拠とみなす状態の集合。いずれかにあると加算されます。追跡状態とは独立しており、エンティティが取り得る任意の状態を選べます。コンプライアンス採点が有効な場合にのみ使用されます。",
           "target_threshold": "設定すると、コンプライアンス率がこの値以上になったときに「コンプライアンス」バイナリセンサーがオンになります。しきい値をスキップするには空欄のままにします。",
           "min_state_duration": "追跡中のエンティティがある状態に入ってから、この秒数より速く出た場合、その短い瞬間は無視され、その時間は代わりに前の状態に加算され、別個の変化としてはカウントされません。ちらつくセンサーや跳ねるセンサーをフィルタリングするために使用します。どんなに短くてもすべての変化をカウントするには 0 に設定します。"
         }

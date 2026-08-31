@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Hvilke tilstande tæller som overholdende?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Overholdelse beregnes som den procentdel af hvert tidsrum, hvor enheden var i en af de tilstande, du vælger her. Disse tilstande er uafhængige af de sporede tilstande — du kan score overholdelse på en tilstand, du ellers ikke sporer (spor f.eks. hvor længe en diffuser er „on“, men markér „off“ som den overholdende/ønskede tilstand). Udfyldt på forhånd med dine sporede tilstande for nemheds skyld; ret det frit. Du kan også skrive en brugerdefineret tilstand, der ikke er på listen.",
         "data": {
           "target": "Overholdende tilstand(e)",
           "target_threshold": "Overholdelsestærskel (%, valgfrit)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "De tilstande, der tæller som overholdende/ønskede. Tid brugt i en af dem scores. Uafhængige af de sporede tilstande — vælg enhver tilstand, enheden kan være i.",
           "target_threshold": "Hvis angivet, tændes en binær sensor «Overholdende», når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "De sidste 30 hele lokale dage.",
           "month": "Siden den 1. i denne måned.",
           "year": "Siden 1. januar.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Sættet af tilstande, der betragtes som overholdende. At være i en af dem tæller. Uafhængige af de sporede tilstande — vælg enhver tilstand, enheden kan være i. Bruges kun, når scoring af overholdelse er aktiveret.",
           "target_threshold": "Hvis angivet, tændes en binær sensor «Overholdende», når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over.",
           "min_state_duration": "Hvis den sporede enhed skifter til en tilstand og ud igen hurtigere end dette antal sekunder, ignoreres dette korte øjeblik — dets tid lægges i stedet til den forrige tilstand, og det tæller ikke som en separat ændring. Brug det til at filtrere flimrende eller hoppende sensorer. Sæt til 0 for at tælle hver ændring, uanset hvor kort."
         }

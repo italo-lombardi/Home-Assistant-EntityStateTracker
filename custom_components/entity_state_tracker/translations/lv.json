@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Kuri stāvokļi tiek uzskatīti par atbilstošiem?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Atbilstība tiek vērtēta kā procentuālā daļa no katra laika perioda, ko entītija pavadīja kādā no šeit izvēlētajiem stāvokļiem. Šie stāvokļi ir neatkarīgi no izsekotajiem stāvokļiem — atbilstību varat vērtēt pēc stāvokļa, ko citādi neizsekojat (piemēram, izsekojiet, cik ilgi difuzors ir „on“, bet „off“ atzīmējiet kā atbilstošo/vēlamo stāvokli). Ērtībai iepriekš aizpildīts ar izsekotajiem stāvokļiem; mainiet brīvi. Varat arī ievadīt pielāgotu stāvokli, kas nav sarakstā.",
         "data": {
           "target": "Atbilstošs(-i) stāvoklis(-ļi)",
           "target_threshold": "Atbilstības slieksnis (%, neobligāts)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Stāvokļi, kas tiek uzskatīti par atbilstošiem/vēlamiem. Tiek vērtēts jebkurā no tiem pavadītais laiks. Neatkarīgi no izsekotajiem stāvokļiem — izvēlieties jebkuru stāvokli, kādā entītija var būt.",
           "target_threshold": "Ja iestatīts, binārais sensors „Atbilstošs” ieslēdzas, kad atbilstības procents sasniedz vai pārsniedz šo vērtību. Atstājiet tukšu, lai izlaistu slieksni."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Pēdējās 30 pilnās vietējās dienas.",
           "month": "Kopš šī mēneša 1. datuma.",
           "year": "Kopš 1. janvāra.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Par atbilstošiem uzskatīto stāvokļu kopa. Atrašanās jebkurā no tiem tiek ieskaitīta. Neatkarīgi no izsekotajiem stāvokļiem — izvēlieties jebkuru stāvokli, kādā entītija var būt. Izmanto tikai tad, kad ir iespējota atbilstības vērtēšana.",
           "target_threshold": "Ja iestatīts, binārais sensors „Atbilstošs” ieslēdzas, kad atbilstības procents sasniedz vai pārsniedz šo vērtību. Atstājiet tukšu, lai izlaistu slieksni.",
           "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā izietuz ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu."
         }
