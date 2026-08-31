@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Entitatea ale cărei durate de stare vor fi măsurate. O entitate per urmăritor — indică un ajutor de grup pentru a agrega mai multe.",
-          "name": "Un nume prietenos pentru acest urmăritor. Lasă gol pentru a-l denumi după entitate și mod (de ex. „Entity State Tracker - Living Room - Specific States”). Aceasta setează numele dispozitivului/configurației; ID-urile entităților senzor urmează în continuare denumirea standard. Poți crea mai multe urmăritoare pentru aceeași entitate."
+          "name": "Un nume prietenos pentru acest urmăritor. Lasă gol pentru a-l denumi după entitate și mod (de ex. „Living Room (Specific States)”). Aceasta setează numele dispozitivului/configurației; ID-urile entităților senzor urmează în continuare denumirea standard. Poți crea mai multe urmăritoare pentru aceeași entitate."
         }
       },
       "mode": {

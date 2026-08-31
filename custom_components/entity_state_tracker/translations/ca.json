@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "L'entitat les durades d'estat de la qual es mesuraran. Una entitat per seguidor — apunteu a un ajudant de grup per agregar-ne diverses.",
-          "name": "Un nom descriptiu per a aquest rastrejador. Deixeu-ho en blanc per anomenar-lo segons l'entitat i el mode (p. ex. «Entity State Tracker - Living Room - Specific States»). Això estableix el nom del dispositiu/configuració; els ID de les entitats sensor segueixen igualment la nomenclatura estàndard. Podeu crear diversos rastrejadors per a la mateixa entitat."
+          "name": "Un nom descriptiu per a aquest rastrejador. Deixeu-ho en blanc per anomenar-lo segons l'entitat i el mode (p. ex. «Living Room (Specific States)»). Això estableix el nom del dispositiu/configuració; els ID de les entitats sensor segueixen igualment la nomenclatura estàndard. Podeu crear diversos rastrejadors per a la mateixa entitat."
         }
       },
       "mode": {

@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Entītija, kuras stāvokļu ilgumi tiks mērīti. Viena entītija uz sekotāju — norādiet uz grupas palīgu, lai apkopotu vairākas.",
-          "name": "Draudzīgs nosaukums šim izsekotājam. Atstājiet tukšu, lai to nosauktu pēc entītijas un režīma (piem., “Entity State Tracker - Living Room - Specific States”). Tas iestata ierīces/konfigurācijas nosaukumu; sensoru entītiju ID joprojām atbilst standarta nosaukumu piešķiršanai. Vienai entītijai varat izveidot vairākus izsekotājus."
+          "name": "Draudzīgs nosaukums šim izsekotājam. Atstājiet tukšu, lai to nosauktu pēc entītijas un režīma (piem., “Living Room (Specific States)”). Tas iestata ierīces/konfigurācijas nosaukumu; sensoru entītiju ID joprojām atbilst standarta nosaukumu piešķiršanai. Vienai entītijai varat izveidot vairākus izsekotājus."
         }
       },
       "mode": {

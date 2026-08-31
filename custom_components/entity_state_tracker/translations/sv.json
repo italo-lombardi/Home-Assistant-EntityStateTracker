@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Entiteten vars tillståndslängder mäts. En entitet per spårare — peka på en grupphjälpare för att aggregera flera.",
-          "name": "Ett vänligt namn för denna spårare. Lämna tomt för att namnge den efter entiteten och läget (t.ex. ”Entity State Tracker - Living Room - Specific States”). Detta anger enhets-/konfigurationsnamnet; sensorentiteternas ID:n följer fortfarande standardnamngivningen. Du kan skapa flera spårare för samma entitet."
+          "name": "Ett vänligt namn för denna spårare. Lämna tomt för att namnge den efter entiteten och läget (t.ex. ”Living Room (Specific States)”). Detta anger enhets-/konfigurationsnamnet; sensorentiteternas ID:n följer fortfarande standardnamngivningen. Du kan skapa flera spårare för samma entitet."
         }
       },
       "mode": {

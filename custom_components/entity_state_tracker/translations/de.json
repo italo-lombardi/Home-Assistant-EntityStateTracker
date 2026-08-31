@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Die Entität, deren Zustandsdauern gemessen werden. Eine Entität pro Tracker — verweise auf einen Gruppen-Helfer, um mehrere zusammenzufassen.",
-          "name": "Ein sprechender Name für diesen Tracker. Leer lassen, um ihn nach der Entität und dem Modus zu benennen (z. B. „Entity State Tracker - Living Room - Specific States“). Dies legt den Geräte-/Konfigurationsnamen fest; die Sensor-Entitäts-IDs folgen weiterhin der Standardbenennung. Sie können mehrere Tracker für dieselbe Entität erstellen."
+          "name": "Ein sprechender Name für diesen Tracker. Leer lassen, um ihn nach der Entität und dem Modus zu benennen (z. B. „Living Room (Specific States)“). Dies legt den Geräte-/Konfigurationsnamen fest; die Sensor-Entitäts-IDs folgen weiterhin der Standardbenennung. Sie können mehrere Tracker für dieselbe Entität erstellen."
         }
       },
       "mode": {

@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Az entitás, amelynek állapotidőtartamait mérni fogjuk. Egy entitás követőnként — mutasson egy csoportsegédre több összesítéséhez.",
-          "name": "Barátságos név ennek a követőnek. Hagyja üresen, hogy az entitás és a mód alapján kapjon nevet (pl. „Entity State Tracker - Living Room - Specific States”). Ez a készülék/konfiguráció nevét állítja be; a szenzorentitások azonosítói továbbra is a szabványos elnevezést követik. Ugyanahhoz az entitáshoz több követőt is létrehozhat."
+          "name": "Barátságos név ennek a követőnek. Hagyja üresen, hogy az entitás és a mód alapján kapjon nevet (pl. „Living Room (Specific States)”). Ez a készülék/konfiguráció nevét állítja be; a szenzorentitások azonosítói továbbra is a szabványos elnevezést követik. Ugyanahhoz az entitáshoz több követőt is létrehozhat."
         }
       },
       "mode": {

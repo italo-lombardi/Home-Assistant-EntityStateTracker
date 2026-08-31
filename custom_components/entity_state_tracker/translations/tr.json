@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Durum sürelerinin ölçüleceği varlık. İzleyici başına bir varlık — birkaçını toplamak için bir grup yardımcısına yönlendirin.",
-          "name": "Bu izleyici için kolay anlaşılır bir ad. Varlığa ve moda göre adlandırmak için boş bırakın (örn. \"Entity State Tracker - Living Room - Specific States\"). Bu, cihaz/yapılandırma adını belirler; sensör varlık kimlikleri yine de standart adlandırmayı izler. Aynı varlık için birden fazla izleyici oluşturabilirsiniz."
+          "name": "Bu izleyici için kolay anlaşılır bir ad. Varlığa ve moda göre adlandırmak için boş bırakın (örn. \"Living Room (Specific States)\"). Bu, cihaz/yapılandırma adını belirler; sensör varlık kimlikleri yine de standart adlandırmayı izler. Aynı varlık için birden fazla izleyici oluşturabilirsiniz."
         }
       },
       "mode": {

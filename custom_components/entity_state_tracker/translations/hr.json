@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Entitet čija će se trajanja stanja mjeriti. Jedan entitet po pratitelju — usmjeri na grupni pomoćnik za objedinjavanje više njih.",
-          "name": "Prijateljski naziv za ovaj pratitelj. Ostavite prazno da se imenuje prema entitetu i načinu rada (npr. „Entity State Tracker - Living Room - Specific States“). Time se postavlja naziv uređaja/konfiguracije; ID-ovi entiteta senzora i dalje slijede standardno imenovanje. Možete stvoriti nekoliko pratitelja za isti entitet."
+          "name": "Prijateljski naziv za ovaj pratitelj. Ostavite prazno da se imenuje prema entitetu i načinu rada (npr. „Living Room (Specific States)“). Time se postavlja naziv uređaja/konfiguracije; ID-ovi entiteta senzora i dalje slijede standardno imenovanje. Možete stvoriti nekoliko pratitelja za isti entitet."
         }
       },
       "mode": {

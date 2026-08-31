@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Encja, której czasy trwania stanów będą mierzone. Jedna encja na tracker — wskaż pomocnika grupy, aby zagregować kilka.",
-          "name": "Przyjazna nazwa dla tego trackera. Pozostaw puste, aby nazwać go na podstawie encji i trybu (np. „Entity State Tracker - Living Room - Specific States”). Ustawia to nazwę urządzenia/konfiguracji; identyfikatory encji czujników nadal są zgodne ze standardowym nazewnictwem. Dla tej samej encji można utworzyć kilka trackerów."
+          "name": "Przyjazna nazwa dla tego trackera. Pozostaw puste, aby nazwać go na podstawie encji i trybu (np. „Living Room (Specific States)”). Ustawia to nazwę urządzenia/konfiguracji; identyfikatory encji czujników nadal są zgodne ze standardowym nazewnictwem. Dla tej samej encji można utworzyć kilka trackerów."
         }
       },
       "mode": {

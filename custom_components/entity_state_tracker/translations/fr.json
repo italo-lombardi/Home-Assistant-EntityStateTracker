@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "L'entité dont les durées d'état seront mesurées. Une entité par suivi — pointez vers un assistant de groupe pour en agréger plusieurs.",
-          "name": "Un nom convivial pour ce suivi. Laissez vide pour le nommer d'après l'entité et le mode (p. ex. « Entity State Tracker - Living Room - Specific States »). Ceci définit le nom de l'appareil/de la configuration ; les ID des entités capteurs suivent toujours la nomenclature standard. Vous pouvez créer plusieurs suivis pour la même entité."
+          "name": "Un nom convivial pour ce suivi. Laissez vide pour le nommer d'après l'entité et le mode (p. ex. « Living Room (Specific States) »). Ceci définit le nom de l'appareil/de la configuration ; les ID des entités capteurs suivent toujours la nomenclature standard. Vous pouvez créer plusieurs suivis pour la même entité."
         }
       },
       "mode": {
