@@ -397,17 +397,9 @@ const cardStyles = css`
     border-radius: 6px;
   }
 
-  .clickable:hover {
-    background: var(--est-bar-bg);
-  }
-
   .clickable:focus-visible {
     outline: 2px solid var(--est-accent);
     outline-offset: 2px;
-  }
-
-  .bar-compliance-status.clickable:hover {
-    background: var(--est-bar-bg);
   }
 
   .bar-label {
