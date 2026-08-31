@@ -489,12 +489,20 @@ const cardStyles = css`
   }
 
   /* Pie / donut */
-  .pie-wrap {
+  .pie-charts {
     display: flex;
-    align-items: center;
-    gap: 16px;
+    align-items: flex-start;
+    gap: 24px;
     flex-wrap: wrap;
     padding-top: 8px;
+  }
+
+  /* One chart column: legend on top, donut below. */
+  .pie-chart {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
   }
 
   .pie-svg {
@@ -961,6 +969,29 @@ class EntityStateTrackerCard extends LitElement {
       : nothing}`;
   }
 
+  // One donut column: caption, SVG, then legend BELOW. Shared by the state pie
+  // and the compliance gauge so both stack the same way inside .pie-charts.
+  // legendItems: [{color, label, value}].
+  _pieColumn(caption, paths, legendItems) {
+    return html`
+      <div class="pie-chart">
+        ${caption}
+        ${this._pieSvg(paths)}
+        <div class="legend">
+          ${legendItems.map(
+            (i) => html`<div class="legend-item">
+              <span class="legend-swatch" style="background:${i.color}"></span>
+              <span>${i.label}</span>
+              ${i.value != null
+                ? html`<span class="legend-value">${i.value}</span>`
+                : nothing}
+            </div>`
+          )}
+        </div>
+      </div>
+    `;
+  }
+
   // ---------------------------------------------------------------------------
   // Compliance gauge: a 2-slice donut answering "how much of the frame met the
   // target set" — compliant (green) vs not (red), from the aggregate
@@ -996,23 +1027,13 @@ class EntityStateTrackerCard extends LitElement {
       angle = a1;
       return { d: this._arc(cx, cy, r, inner, a0, a1), color: s.color, evenodd: false };
     });
-    return html`
-      <div class="frame-picker">
-        Compliance${threshold != null ? html` (target ≥ ${threshold}%)` : nothing}
-      </div>
-      <div class="pie-wrap">
-        ${this._pieSvg(paths)}
-        <div class="legend">
-          ${slices.map(
-            (s) => html`<div class="legend-item">
-              <span class="legend-swatch" style="background:${s.color}"></span>
-              <span>${s.state}</span>
-              <span class="legend-value">${fmtPct(s.pct)}</span>
-            </div>`
-          )}
-        </div>
-      </div>
-    `;
+    // No target line here — _metaHeader already states "Compliance target ≥ X%"
+    // once for the whole card; repeating it on the gauge is redundant.
+    return this._pieColumn(
+      html`<div class="frame-picker">Compliance</div>`,
+      paths,
+      slices.map((s) => ({ color: s.color, label: s.state, value: fmtPct(s.pct) }))
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -1118,34 +1139,31 @@ class EntityStateTrackerCard extends LitElement {
     });
 
     const incomplete = this._incomplete(a);
-    // Opt-in compliance gauge below the state donut — only when the card asks
+    // Opt-in compliance gauge beside the state donut — only when the card asks
     // for it AND the frame has a compliance figure to show.
     const gauge =
       this._config.compliance_pie && a.compliance_percent != null
         ? this._renderComplianceGauge(a)
         : nothing;
+    const stateCaption = html`<div class="frame-picker">
+      ${FRAME_LABELS[pick.frame] || pick.frame}${incomplete && a.data_start
+        ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
+        : nothing}
+    </div>`;
     return html`
       ${this._metaHeader(a)}
-      <div class="frame-picker">
-        ${FRAME_LABELS[pick.frame] || pick.frame}${incomplete && a.data_start
-          ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
-          : nothing}
+      <div class="pie-charts">
+        ${this._pieColumn(
+          stateCaption,
+          paths,
+          slices.map((s) => ({
+            color: s.color,
+            label: s.state,
+            value: html`${fmtDuration(s.secs)} · ${fmtPct(s.pct)}`,
+          }))
+        )}
+        ${gauge}
       </div>
-      <div class="pie-wrap">
-        ${this._pieSvg(paths)}
-        <div class="legend">
-          ${slices.map(
-            (s) => html`<div class="legend-item">
-              <span class="legend-swatch" style="background:${s.color}"></span>
-              <span>${s.state}</span>
-              <span class="legend-value"
-                >${fmtDuration(s.secs)} · ${fmtPct(s.pct)}</span
-              >
-            </div>`
-          )}
-        </div>
-      </div>
-      ${gauge}
     `;
   }
 
