@@ -1443,9 +1443,11 @@ class EntityStateTrackerCard extends LitElement {
     const bp = a.breakdown_pct || {};
     for (const st of Object.keys(bs)) rowData[st] = { secs: bs[st] || 0, pct: bp[st] };
     // Trailing "No data" row for window time attributed to no state (mirrors the
-    // pie's grey slice), so the % column sums to ~100.
+    // pie's grey slice), so the % column sums to ~100. Same >= 1s dust threshold
+    // as the pie's derived-slice filter, so a sub-second float residue never
+    // renders a "No data" row reading 0 s.
     const gap = Number(a.unaccounted_seconds) || 0;
-    if (gap > 0) {
+    if (gap >= 1) {
       const ws = Number(a.window_seconds) || 0;
       rowData[GAP_ROW] = { secs: gap, pct: ws > 0 ? (gap / ws) * 100 : null };
     }
