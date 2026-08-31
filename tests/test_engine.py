@@ -118,6 +118,66 @@ def test_resolve_frame_bounds_week_starts_local_monday(
     assert end == now.astimezone(UTC)
 
 
+@pytest.mark.parametrize(
+    ("frame", "now_local", "expected_start_local"),
+    [
+        # A DST transition INSIDE the rewound span is the trap: timedelta(days=N)
+        # on a ZoneInfo-aware datetime is WALL-CLOCK arithmetic (shifts the naive
+        # Y/M/D fields, re-derives the offset), NOT N*86400 s of absolute time —
+        # so the start still lands on local 00:00 and the absolute UTC span simply
+        # absorbs the 23h/25h day. These pin that: a naive "fix" that switched to
+        # absolute subtraction would push these to 01:00 / 23:00 and fail here.
+        # Each `now` is chosen so the DST Sunday lies STRICTLY INSIDE [start, now];
+        # a clean span (no transition inside) would pass under either model and
+        # test nothing.
+        #
+        # week — a Monday-anchored week only spans a DST transition on the Sunday
+        # itself (the switch is always Sunday = the week's LAST day). So `now` is
+        # that Sunday: spring-forward Sun 2026-03-08 rewinds weekday()=6 days to
+        # Mon 03-02; the 03-08 transition is inside the span (absolute rewind would
+        # land 03-02 01:00, not 00:00).
+        pytest.param("week", (2026, 3, 8, 12, 0), (2026, 3, 2, 0, 0), id="week-spring"),
+        # week — fall-back Sun 2026-11-01 rewinds to Mon 2026-10-26; transition
+        # inside the span (absolute rewind would land 10-26 23:00).
+        pytest.param(
+            "week", (2026, 11, 1, 12, 0), (2026, 10, 26, 0, 0), id="week-fall"
+        ),
+        # yesterday — today 2026-03-09 is the day AFTER spring-forward, so the
+        # transition sits inside [03-08 00:00, 03-09 00:00) (a 23h span).
+        pytest.param(
+            "yesterday", (2026, 3, 9, 12, 0), (2026, 3, 8, 0, 0), id="yesterday-spring"
+        ),
+        # yesterday — today 2026-11-02 is the day AFTER fall-back Sun 2026-11-01,
+        # so the transition sits inside [11-01 00:00, 11-02 00:00) (a 25h span).
+        pytest.param(
+            "yesterday", (2026, 11, 2, 12, 0), (2026, 11, 1, 0, 0), id="yesterday-fall"
+        ),
+        # 30d — today 2026-03-20 rewinds 30 days to 02-18 ACROSS spring-forward
+        # 03-08 (absolute rewind would land 02-18 01:00).
+        pytest.param("30d", (2026, 3, 20, 12, 0), (2026, 2, 18, 0, 0), id="30d-spring"),
+        # 30d — today 2026-11-20 rewinds 30 days to 10-21 ACROSS fall-back 11-01
+        # (absolute rewind would land 10-21 23:00).
+        pytest.param("30d", (2026, 11, 20, 12, 0), (2026, 10, 21, 0, 0), id="30d-fall"),
+    ],
+)
+def test_resolve_frame_bounds_dst_crossing_start_stays_local_midnight(
+    frame: str,
+    now_local: tuple[int, ...],
+    expected_start_local: tuple[int, ...],
+) -> None:
+    now = dt.datetime(*now_local, tzinfo=NY)
+    start, end = E.resolve_frame_bounds(frame, now, NY)
+    landed = start.astimezone(NY)
+    assert landed == dt.datetime(*expected_start_local, tzinfo=NY)
+    # The whole point: wall-clock 00:00, not 01:00 (spring) or 23:00 (fall).
+    assert landed.time() == dt.time(0, 0, 0)
+    # Prove the DST transition really is INSIDE the window: the absolute span is
+    # NOT a whole number of 24h (spring loses an hour, fall gains one). Without a
+    # crossing this would be 0 mod 3600*24 and the test would pass vacuously under
+    # absolute-time subtraction too — defeating the point.
+    assert (end - start).total_seconds() % 86400 != 0
+
+
 def test_resolve_frame_bounds_normalises_foreign_zone_now() -> None:
     # now given in UTC; boundary must still land on NY local midnight.
     now_utc = dt.datetime(2026, 1, 15, 4, 0, tzinfo=UTC)  # = 2026-01-14 23:00 NY

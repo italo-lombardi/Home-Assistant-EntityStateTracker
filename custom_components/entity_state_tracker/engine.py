@@ -87,7 +87,7 @@ def resolve_frame_bounds(
         return today_midnight_local.astimezone(dt.UTC), now_utc
 
     if frame_key == "yesterday":
-        start = today_midnight_local - dt.timedelta(days=1)
+        start = _rewind_local_days(today_midnight_local, 1, tz)
         return start.astimezone(dt.UTC), today_midnight_local.astimezone(dt.UTC)
 
     if frame_key == "24h":
@@ -95,7 +95,7 @@ def resolve_frame_bounds(
 
     if frame_key == "week":
         # Week-to-date: since local Monday 00:00 (ISO weekday 1) → now.
-        start = today_midnight_local - dt.timedelta(days=local_now.weekday())
+        start = _rewind_local_days(today_midnight_local, local_now.weekday(), tz)
         return start.astimezone(dt.UTC), now_utc
 
     if frame_key == "7d":
@@ -103,7 +103,7 @@ def resolve_frame_bounds(
 
     if frame_key == "30d":
         # Last 30 WHOLE local days — ends at today's local midnight, not now.
-        start = today_midnight_local - dt.timedelta(days=30)
+        start = _rewind_local_days(today_midnight_local, 30, tz)
         return (
             start.astimezone(dt.UTC),
             today_midnight_local.astimezone(dt.UTC),
@@ -638,6 +638,27 @@ def _start_of_local_day(local_dt: dt.datetime, tz: dt.tzinfo) -> dt.datetime:
     return dt.datetime.combine(
         local_dt.astimezone(tz).date(), dt.time(0, 0, 0), tzinfo=tz
     )
+
+
+def _rewind_local_days(
+    midnight_local: dt.datetime, n: int, tz: dt.tzinfo
+) -> dt.datetime:
+    """Return the local midnight ``n`` calendar days before ``midnight_local``.
+
+    THE day-rewind rule for calendar frames whose start is "N whole local days
+    ago" (``yesterday`` N=1, ``week`` N=weekday(), ``30d`` N=30). Correctness is
+    made structural rather than implicit: rewind by ``n`` days, then RE-SNAP to
+    local midnight. The re-snap is what guarantees DST-safety and self-documents
+    it — even though ``midnight_local - timedelta(days=n)`` already lands on local
+    00:00 today (subtracting a ``timedelta`` from a ``ZoneInfo``-aware datetime is
+    wall-clock arithmetic: it shifts the naive Y/M/D fields and lazily re-derives
+    the offset, so the wall clock stays 00:00 while the absolute UTC span absorbs
+    the 23h/25h DST day), that safety hinges on a subtle tz property. Snapping via
+    ``_start_of_local_day`` makes the midnight landing explicit and immune to a
+    future refactor to absolute-time subtraction (``now_utc - timedelta``), which
+    WOULD drift the start to 01:00/23:00 across a transition.
+    """
+    return _start_of_local_day(midnight_local - dt.timedelta(days=n), tz)
 
 
 def _parse_local_day_start(day_iso: str, tz: dt.tzinfo) -> dt.datetime | None:
