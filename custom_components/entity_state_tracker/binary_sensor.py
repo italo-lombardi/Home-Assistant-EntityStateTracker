@@ -194,9 +194,7 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
         {"compliance_percent", "data_start", "window_coverage", "has_gap"}
     )
 
-    def __init__(
-        self, coordinator: EntityStateTrackerCoordinator, frame: str
-    ) -> None:
+    def __init__(self, coordinator: EntityStateTrackerCoordinator, frame: str) -> None:
         """Initialize the compliant binary sensor for one frame."""
         super().__init__(coordinator)
         self._frame_key = frame
