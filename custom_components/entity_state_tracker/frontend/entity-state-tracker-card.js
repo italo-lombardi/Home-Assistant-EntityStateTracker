@@ -1139,8 +1139,9 @@ class EntityStateTrackerCard extends LitElement {
       // Trailing grey slice for window time attributed to no state, so the
       // donut visibly sums to 100. "No data" when the window predates our
       // history, else "In progress" (a transient open-state lag). Guarded on
-      // the attr being present (falsy/absent on older backends).
-      const gap = Number(a.unaccounted_seconds);
+      // the attr being present (falsy/absent on older backends). Same NaN-safe
+      // coercion as the specific-mode branch (Math.max(0, …||0)).
+      const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
       if (gap > 0) {
         const ws = Number(a.window_seconds) || 0;
         slices.push({
