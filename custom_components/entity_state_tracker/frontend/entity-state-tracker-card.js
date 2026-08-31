@@ -405,28 +405,31 @@ const cardStyles = css`
     background: var(--est-accent);
   }
 
-  .bar-compliance {
-    height: 6px;
-    border-radius: 3px;
-    background: var(--est-bar-bg);
-    margin-top: 3px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .bar-compliance .fill {
-    position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    border-radius: 3px;
-    background: var(--success-color, #4caf50);
-  }
-
-  .bar-compliance-label {
+  /* Compliance status chip: met vs not-met symbol + score/target text, in place
+     of the old second bar (a single pass/fail flag reads clearer than a bar). */
+  .bar-compliance-status {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
     font-size: 12px;
+    margin-top: 4px;
+  }
+
+  .bar-compliance-status .mark {
+    font-weight: 700;
+    line-height: 1;
+  }
+
+  .bar-compliance-status.met .mark {
+    color: var(--success-color, #4caf50);
+  }
+
+  .bar-compliance-status.unmet .mark {
+    color: var(--error-color, #f44336);
+  }
+
+  .bar-compliance-status .text {
     color: var(--est-text-secondary);
-    margin-top: 3px;
   }
 
   .transitions {
@@ -731,8 +734,8 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // ---------------------------------------------------------------------------
-  // Bars: one row per frame. % fill + "6.2 h · 26%"; compliance second bar when
-  // a target is set; transition line from counts/avg_duration_seconds.
+  // Bars: one row per frame. % fill + "6.2 h · 26%"; compliance pass/fail chip
+  // (✓/✗ + score) when a target is set; transition line from counts/avg_duration_seconds.
   // ---------------------------------------------------------------------------
   _renderBars(sensors) {
     return sensors.map((s) => {
@@ -778,25 +781,28 @@ class EntityStateTrackerCard extends LitElement {
           ></div>
         </div>
         ${a.compliance_percent != null
-          ? html`<div class="bar-compliance-label">
-                compliance ${fmtPct(a.compliance_percent)}${a.target_threshold !=
-                null
-                  ? ` (target ≥ ${a.target_threshold}%)`
-                  : ""}
-              </div>
-              <div class="bar-compliance">
-                <div
-                  class="fill"
-                  style="width:${Math.max(
-                    0,
-                    Math.min(100, Number(a.compliance_percent))
-                  )}%"
-                ></div>
-              </div>`
+          ? this._complianceStatus(a)
           : nothing}
         ${this._transitionLine(a, this._isBreakdown(s) ? s.state : null)}
       </div>`;
     });
+  }
+
+  // Compliance status chip: pass/fail mark + score, replacing the old second
+  // bar. Met = score ≥ threshold (or no threshold → always met, just informational).
+  // ✓ green when met, ✗ red when a threshold exists and is missed. Plain unicode
+  // marks (no icon dep). Caller already gated on compliance_percent != null.
+  _complianceStatus(a) {
+    const pct = Number(a.compliance_percent);
+    const hasTarget = a.target_threshold != null;
+    const met = !hasTarget || pct >= Number(a.target_threshold);
+    const text = hasTarget
+      ? `${met ? "Compliant" : "Not compliant"} · ${fmtPct(a.compliance_percent)} (target ≥ ${a.target_threshold}%)`
+      : `compliance ${fmtPct(a.compliance_percent)}`;
+    return html`<div class="bar-compliance-status ${met ? "met" : "unmet"}">
+      <span class="mark">${met ? "✓" : "✗"}</span>
+      <span class="text">${text}</span>
+    </div>`;
   }
 
   // Self-explanatory per-state transition line, state name ADJACENT to the
@@ -1033,7 +1039,7 @@ class EntityStateTrackerCard extends LitElement {
     }
     // Trailing pseudo-row for window time attributed to no state (breakdown
     // mode), mirroring the pie's grey slice so the table columns sum to 100.
-    const GAP_ROW = " gap"; // sentinel key, never a real state name
+    const GAP_ROW = "__gap__"; // sentinel key, never a real state name
     // Order rows by total seconds desc for a stable, readable table.
     const totals = {};
     for (const st of stateSet) totals[st] = 0;
@@ -1180,9 +1186,11 @@ class EntityStateTrackerCardEditor extends LitElement {
     if (!this._config) return html``;
 
     const chart = this._config.chart || "bars";
-    // frame only affects pie (single-frame) and table (column emphasis); it is
-    // meaningless for bars (every frame is a row), so hide it there.
-    const showFrame = chart === "pie" || chart === "table";
+    // The single `frame` picker only affects pie (which charts ONE frame).
+    // Bars and table render every frame (rows / columns), so the picker is
+    // meaningless there — hide it. Multi-frame selection for bars/table is the
+    // separate `frames` filter (see _framesToShow), not this picker.
+    const showFrame = chart === "pie";
     const options = trackerOptions(this.hass);
 
     return html`
