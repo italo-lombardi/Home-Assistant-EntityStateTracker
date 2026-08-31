@@ -1917,7 +1917,7 @@ def ec22_options_flow_target_and_glitch():
         raw = api("GET", f"/api/diagnostics/config_entry/{entry}")
         data = raw.get("data", raw)
         coord = data.get("coordinator", {})
-        # field name may be min_state_duration or nested; check both common spots.
+        # Top-level key of the coordinator block (diagnostics.py).
         return coord.get("min_state_duration")
 
     md = wait_for(_min_dur, 7, timeout=WAIT_FOR_TIMEOUT)
