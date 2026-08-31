@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Recorder ist nicht verfügbar",
       "description": "Entity State Tracker verlässt sich auf den Recorder, um Zustandsdauern zu berechnen. Der Recorder ist nicht verfügbar, daher fällt die Verfolgung ab jetzt auf reine Live-Akkumulation zurück und kann keinen vergangenen Verlauf nachfüllen. Aktiviere die Recorder-Integration, um den vollständigen Zeitraumverlauf wiederherzustellen."
     }
-  },
-  "exceptions": {}
+  }
 }

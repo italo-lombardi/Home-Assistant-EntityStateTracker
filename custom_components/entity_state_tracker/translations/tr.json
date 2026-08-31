@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Kaydedici kullanılamıyor",
       "description": "Entity State Tracker, durum sürelerini hesaplamak için kaydediciye dayanır. Kaydedici kullanılamıyor, bu nedenle izleme bundan böyle yalnızca canlı birikime geri döner ve geçmiş geçmişi dolduramaz. Tam zaman aralığı geçmişini geri yüklemek için kaydedici entegrasyonunu etkinleştirin."
     }
-  },
-  "exceptions": {}
+  }
 }

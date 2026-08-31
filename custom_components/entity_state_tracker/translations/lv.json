@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Ierakstītājs nav pieejams",
       "description": "Entity State Tracker paļaujas uz ierakstītāju, lai aprēķinātu stāvokļu ilgumus. Ierakstītājs nav pieejams, tāpēc sekošana no šī brīža atgriežas tikai pie tiešā uzkrājuma un nevar aizpildīt pagājušo vēsturi. Iespējojiet ierakstītāja integrāciju, lai atjaunotu pilnu laika posmu vēsturi."
     }
-  },
-  "exceptions": {}
+  }
 }

@@ -11,7 +11,7 @@ Ready-to-adapt automations for every feature. The examples use placeholder entit
 | Duration (Today) | `sensor.entity_state_tracker_garage_light_duration_today` |
 | Duration (Last 7 days) | `sensor.entity_state_tracker_garage_light_duration_last_7_days` |
 | State Breakdown (Last 24 hours) | `sensor.entity_state_tracker_garage_light_state_breakdown_last_24_hours` |
-| Currently in State | `binary_sensor.entity_state_tracker_garage_light_currently_in_state` |
+| Currently in State | `binary_sensor.entity_state_tracker_garage_light_in_a_tracked_state` |
 | Compliant | `binary_sensor.entity_state_tracker_garage_light_compliant` |
 
 > **Tip:** the tracked-state **percent** and **compliance percent** are attributes on each duration sensor (not their own entities). Watch them with a `template` trigger — e.g. `state_attr('sensor..._duration_today', 'percent')` — or read them in templates.
@@ -25,7 +25,7 @@ Ready-to-adapt automations for every feature. The examples use placeholder entit
 | Today's percentage (specific mode) | `template` | `state_attr('sensor..._duration_today', 'percent')` |
 | Today's compliance (specific mode, target set) | `template` | `state_attr('sensor..._duration_today', 'compliance_percent')` |
 | Compliant / not compliant (target threshold set) | `state` | `binary_sensor..._compliant`, `on`/`off` |
-| Currently in a tracked state (specific mode) | `state` | `binary_sensor..._currently_in_state`, `on`/`off` |
+| Currently in a tracked state (specific mode) | `state` | `binary_sensor..._in_a_tracked_state`, `on`/`off` |
 | A brand-new state appeared (all-states mode) | `event` | `entity_state_tracker_new_state` |
 | A per-state breakdown value (all-states mode) | `template` | Reads `breakdown_pct` / `counts` attributes off the breakdown sensor |
 
@@ -113,14 +113,14 @@ automation:
 
 ### Automation 4 — Currently-in-state binary sensor
 
-`currently_in_state` is `on` while the entity is in one of the tracked states right now — useful for "is it in a tracked state, and has it been for a while" logic. It has no device class, so it simply reads `on`/`off`.
+The `in_a_tracked_state` binary sensor is `on` while the entity is in one of the tracked states right now — useful for "is it in a tracked state, and has it been for a while" logic. It has no device class, so it simply reads `on`/`off`.
 
 ```yaml
 automation:
   alias: EST — pump on notice
   trigger:
     - platform: state
-      entity_id: binary_sensor.entity_state_tracker_well_pump_currently_in_state
+      entity_id: binary_sensor.entity_state_tracker_well_pump_in_a_tracked_state
       to: "on"
       for: "01:00:00"
   action:

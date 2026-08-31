@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "记录器不可用",
       "description": "Entity State Tracker 依赖记录器来计算状态时长。记录器不可用，因此跟踪从现在起回退为仅实时累积，无法回填过去的历史。启用记录器集成以恢复完整的时间范围历史。"
     }
-  },
-  "exceptions": {}
+  }
 }

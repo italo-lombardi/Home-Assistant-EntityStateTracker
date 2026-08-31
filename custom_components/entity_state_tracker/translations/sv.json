@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Recordern är otillgänglig",
       "description": "Entity State Tracker förlitar sig på recordern för att beräkna tillståndslängder. Recordern är inte tillgänglig, så spårningen faller från och med nu tillbaka på enbart live-ackumulering och kan inte fylla i tidigare historik. Aktivera recorder-integrationen för att återställa fullständig tidsperiodshistorik."
     }
-  },
-  "exceptions": {}
+  }
 }

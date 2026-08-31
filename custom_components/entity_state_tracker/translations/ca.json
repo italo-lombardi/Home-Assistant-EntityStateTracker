@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "El gravador no està disponible",
       "description": "Entity State Tracker es basa en el gravador per calcular les durades d'estat. El gravador no està disponible, així que el seguiment recorre d'ara endavant només a l'acumulació en directe i no pot reomplir l'historial passat. Activeu la integració del gravador per restaurar l'historial complet de períodes de temps."
     }
-  },
-  "exceptions": {}
+  }
 }

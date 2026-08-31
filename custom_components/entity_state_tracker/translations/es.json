@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "El recorder no está disponible",
       "description": "Entity State Tracker depende del recorder para calcular las duraciones de estado. El recorder no está disponible, por lo que el rastreo recurre a partir de ahora solo a la acumulación en vivo y no puede rellenar el historial pasado. Activa la integración del recorder para restaurar el historial completo de periodos."
     }
-  },
-  "exceptions": {}
+  }
 }

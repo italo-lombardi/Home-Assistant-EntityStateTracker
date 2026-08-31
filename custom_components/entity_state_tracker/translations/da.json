@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Recorder er utilgængelig",
       "description": "Entity State Tracker er afhængig af recorder for at beregne tilstandsvarigheder. Recorder er ikke tilgængelig, så sporingen falder fra nu af tilbage til ren live-akkumulering og kan ikke udfylde tidligere historik. Aktivér recorder-integrationen for at gendanne den fulde tidsrumshistorik."
     }
-  },
-  "exceptions": {}
+  }
 }

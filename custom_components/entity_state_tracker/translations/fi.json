@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Tallennin ei ole käytettävissä",
       "description": "Entity State Tracker luottaa tallentimeen tilojen kestojen laskennassa. Tallennin ei ole käytettävissä, joten seuranta siirtyy tästä lähtien pelkkään reaaliaikaiseen kertymiseen eikä voi täydentää mennyttä historiaa. Ota tallennin-integraatio käyttöön palauttaaksesi täyden aikajaksohistorian."
     }
-  },
-  "exceptions": {}
+  }
 }

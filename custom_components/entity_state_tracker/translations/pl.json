@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Rejestrator jest niedostępny",
       "description": "Entity State Tracker polega na rejestratorze przy obliczaniu czasów trwania stanów. Rejestrator jest niedostępny, więc śledzenie od teraz przechodzi wyłącznie na akumulację na żywo i nie może uzupełnić przeszłej historii. Włącz integrację rejestratora, aby przywrócić pełną historię przedziałów czasowych."
     }
-  },
-  "exceptions": {}
+  }
 }

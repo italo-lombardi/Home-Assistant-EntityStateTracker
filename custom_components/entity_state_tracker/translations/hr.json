@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Recorder nije dostupan",
       "description": "Entity State Tracker oslanja se na recorder za izračun trajanja stanja. Recorder nije dostupan pa se praćenje od sada vraća samo na akumulaciju uživo i ne može nadopuniti prošlu povijest. Omogući integraciju recordera za vraćanje potpune povijesti vremenskih razdoblja."
     }
-  },
-  "exceptions": {}
+  }
 }

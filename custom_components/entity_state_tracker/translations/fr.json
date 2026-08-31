@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Le recorder est indisponible",
       "description": "Entity State Tracker s'appuie sur le recorder pour calculer les durées d'état. Le recorder n'est pas disponible, le suivi bascule donc désormais sur une accumulation en direct uniquement et ne peut pas reconstituer l'historique passé. Activez l'intégration recorder pour restaurer l'historique complet des périodes."
     }
-  },
-  "exceptions": {}
+  }
 }

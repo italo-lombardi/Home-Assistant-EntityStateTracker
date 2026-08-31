@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "A rögzítő nem érhető el",
       "description": "Az Entity State Tracker a rögzítőre támaszkodik az állapotidőtartamok kiszámításához. A rögzítő nem érhető el, ezért a követés mostantól csak élő felhalmozásra vált vissza, és nem tudja pótolni a múltbeli előzményeket. Engedélyezze a rögzítő integrációt a teljes időszak-előzmény visszaállításához."
     }
-  },
-  "exceptions": {}
+  }
 }

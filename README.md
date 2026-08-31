@@ -224,7 +224,7 @@ The `tracker_id` is the tracker's config-entry id. You normally never type it by
 
 ## Automation examples
 
-See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `currently_in_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration_seconds` off a breakdown sensor, and guarding on `has_gap` / `window_coverage` — plus Telegram/TTS channels and cooldown patterns.
+See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `in_a_tracked_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration_seconds` off a breakdown sensor, and guarding on `has_gap` / `window_coverage` — plus Telegram/TTS channels and cooldown patterns.
 
 ---
 

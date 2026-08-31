@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Recorderul este indisponibil",
       "description": "Entity State Tracker se bazează pe recorder pentru a calcula duratele stărilor. Recorderul nu este disponibil, așa că urmărirea revine de acum înainte doar la acumularea în timp real și nu poate completa istoricul trecut. Activează integrarea recorder pentru a restabili istoricul complet al intervalelor de timp."
     }
-  },
-  "exceptions": {}
+  }
 }

@@ -144,7 +144,6 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Recorder is unavailable",

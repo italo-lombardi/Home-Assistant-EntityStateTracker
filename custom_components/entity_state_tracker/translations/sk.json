@@ -144,12 +144,10 @@
       }
     }
   },
-  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Rekordér nie je dostupný",
       "description": "Entity State Tracker sa pri výpočte dôb trvania stavov spolieha na rekordér. Rekordér nie je dostupný, takže sledovanie sa odteraz vracia iba k akumulácii naživo a nemôže doplniť minulú históriu. Povoľte integráciu rekordéra na obnovenie úplnej histórie časových období."
     }
-  },
-  "exceptions": {}
+  }
 }
