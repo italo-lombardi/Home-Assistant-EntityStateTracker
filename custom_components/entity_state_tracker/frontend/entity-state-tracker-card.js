@@ -316,9 +316,20 @@ function trackerOptions(hass) {
     .map(([stem, entityId]) => ({
       stem,
       entityId,
-      label: prettifyStem(stem),
+      // Prefer the registry device name (custom-named trackers pin the entity_id
+      // to a ULID stem, so prettifyStem alone would show the raw id).
+      label: deviceNameOf(hass, entityId) || prettifyStem(stem),
     }))
     .sort((a, b) => a.label.localeCompare(b.label));
+}
+
+// Resolve a sensor's device name from the registry maps HA exposes on hass.
+// Returns the user-set or integration-set name, or "" when unavailable.
+function deviceNameOf(hass, entityId) {
+  const devId = hass?.entities?.[entityId]?.device_id;
+  if (!devId) return "";
+  const dev = hass?.devices?.[devId];
+  return (dev && (dev.name_by_user || dev.name)) || "";
 }
 
 // Prettify a tracker stem into a human label (Title Case). The stem is a device
@@ -773,11 +784,14 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   _deriveTitle(sensors) {
-    // Never reverse-engineer a title from friendly_name (labels like "Last 24
-    // hours" have variable token counts, so the old 2-token strip mangled
-    // them). Prettify the tracker stem's device segment instead — stable
-    // regardless of metric or frame label (shared with the editor dropdown).
-    return prettifyStem(this._stemOf(sensors[0]?.entity_id || ""));
+    // Prefer the real device name from the registry — for a custom-named
+    // tracker the entity_id is pinned to `..._<slugify(entry_id)>_...`, so
+    // prettifying the stem yields the raw ULID ("...01m1a6t5..."). The device
+    // carries the human name ("Entity State Tracker — Global, Any Light"), which
+    // is what the user configured. Fall back to the prettified stem only when
+    // the device registry isn't reachable (e.g. card preview without hass).
+    const id = sensors[0]?.entity_id || "";
+    return deviceNameOf(this.hass, id) || prettifyStem(this._stemOf(id));
   }
 
   // A sensor is a breakdown (all-states) sensor when it carries the breakdown

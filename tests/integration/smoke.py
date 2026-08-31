@@ -954,7 +954,7 @@ def ec9_unrecorded(entry_allstates, eid_allstates, today_bd):
         "breakdown_seconds",
         "breakdown_pct",
         "counts",
-        "avg_duration",
+        "avg_duration_seconds",
         "previous_state",
         "window_seconds",
         "unaccounted_seconds",

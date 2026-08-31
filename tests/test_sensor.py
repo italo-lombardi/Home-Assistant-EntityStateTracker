@@ -354,7 +354,7 @@ def test_duration_attributes_without_target() -> None:
     # Transition metrics scoped to tracked states.
     assert set(attrs["counts"]) == {"heat", "auto"}
     assert attrs["counts"]["heat"] == 3
-    assert attrs["avg_duration"]["heat"] == 600.0
+    assert attrs["avg_duration_seconds"]["heat"] == 600.0
     # last_seen was dropped; auto simply carries no last-seen attribute now.
     assert "last_seen" not in attrs
 
@@ -405,7 +405,7 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
     # The volatile keys must all be excluded from recorded state_attributes.
     assert {
         "counts",
-        "avg_duration",
+        "avg_duration_seconds",
         "previous_state",
         "percent",
         "compliance_percent",
@@ -464,7 +464,7 @@ def test_breakdown_unrecorded_attributes_exact_set() -> None:
             "breakdown_seconds",
             "breakdown_pct",
             "counts",
-            "avg_duration",
+            "avg_duration_seconds",
             "previous_state",
             "window_seconds",
             "data_start",
@@ -492,7 +492,7 @@ def test_breakdown_attributes_sorted_by_seconds_desc() -> None:
     # "unaccounted" key trails last (it has no breakdown_seconds entry).
     assert list(attrs["breakdown_pct"]) == ["heat", "off", "auto", "unaccounted"]
     assert list(attrs["counts"]) == ["heat", "off", "auto"]
-    assert list(attrs["avg_duration"]) == ["heat", "off", "auto"]
+    assert list(attrs["avg_duration_seconds"]) == ["heat", "off", "auto"]
 
 
 def test_breakdown_attributes_carry_window_metrics_and_previous_state() -> None:
@@ -519,7 +519,7 @@ def test_breakdown_pct_carries_unaccounted_key_but_others_stay_pure() -> None:
     """breakdown_pct gains an "unaccounted" key; the per-state dicts do not.
 
     The additive key lets a template loop breakdown_pct to ~100, while
-    breakdown_seconds/counts/avg_duration stay pure per-state (it is not a real
+    breakdown_seconds/counts/avg_duration_seconds stay pure per-state (it is not a real
     state, so it has no seconds/count/avg).
     """
     coord = _breakdown_coord()
@@ -529,7 +529,7 @@ def test_breakdown_pct_carries_unaccounted_key_but_others_stay_pure() -> None:
     assert attrs["breakdown_pct"]["unaccounted"] == 10.0
     assert "unaccounted" not in attrs["breakdown_seconds"]
     assert "unaccounted" not in attrs["counts"]
-    assert "unaccounted" not in attrs["avg_duration"]
+    assert "unaccounted" not in attrs["avg_duration_seconds"]
 
 
 def test_breakdown_special_states_are_ordinary_rows() -> None:
