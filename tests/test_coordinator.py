@@ -1208,7 +1208,7 @@ async def test_update_data_queries_recorder_once_per_tick(
     c = await _make_coordinator(hass, entry)
     with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
         await _first_refresh(hass, c)
-        assert len(c.enabled_frames) == 7  # all frames on
+        assert len(c.enabled_frames) == 8  # all frames on
         patch_recorder.mock.reset_mock()  # type: ignore[attr-defined]
         await c._async_update_data()
     # ≤2 per the contract; the shared-slice design makes it exactly 1.

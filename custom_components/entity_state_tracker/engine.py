@@ -65,9 +65,9 @@ def resolve_frame_bounds(
     midnight/1st/Jan-1. ``end_utc`` is ``now`` for every open-ended window and
     the local-midnight edge for closed calendar frames (``yesterday``).
 
-    * calendar — ``today``/``yesterday``/``month``/``year`` snap to local
-      boundaries; ``end`` is ``now`` (or the closing midnight for
-      ``yesterday``).
+    * calendar — ``today``/``yesterday``/``week``/``month``/``year`` snap to
+      local boundaries; ``end`` is ``now`` (or the closing midnight for
+      ``yesterday``). ``week`` starts at local Monday 00:00 (week-to-date).
     * rolling — ``24h``/``7d`` are ``now − delta → now``.
     * ``30d`` — "last 30 whole local days": ``[today_midnight − 30 days,
       today_midnight)`` (§6.4), so the tail day is queryable-complete and the
@@ -92,6 +92,11 @@ def resolve_frame_bounds(
 
     if frame_key == "24h":
         return now_utc - dt.timedelta(hours=24), now_utc
+
+    if frame_key == "week":
+        # Week-to-date: since local Monday 00:00 (ISO weekday 1) → now.
+        start = today_midnight_local - dt.timedelta(days=local_now.weekday())
+        return start.astimezone(dt.UTC), now_utc
 
     if frame_key == "7d":
         return now_utc - dt.timedelta(days=7), now_utc

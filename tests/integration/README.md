@@ -115,6 +115,7 @@ ECs cannot run.
 | EC20 | Two trackers on the **same** source entity coexist: distinct config entries, non-colliding unique_ids, HA-disambiguated entity_ids, distinct devices |
 | EC21 | Compliance across multiple frames → one Compliant binary sensor **per** frame, each with its own `frame` attr honoring `is_on == compliance_percent >= threshold` |
 | EC22 | Options flow edits the compliance target **set** and `min_state_duration` → both take effect after reload (target_states attr + diagnostics `min_state_duration`) |
+| EC23 | `week` (week-to-date) frame → its `window_start` lands on the most recent local **Monday 00:00** (not "7 days ago"), and duration accrues like any frame |
 
 ## Notes on semantics that shape the tests
 

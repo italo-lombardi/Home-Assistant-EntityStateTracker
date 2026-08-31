@@ -38,7 +38,7 @@ def _utc(*args: int) -> dt.datetime:
 
 
 # --------------------------------------------------------------------------- #
-# resolve_frame_bounds — all 7 frames + the ValueError guard
+# resolve_frame_bounds — all 8 frames + the ValueError guard
 # --------------------------------------------------------------------------- #
 
 
@@ -51,6 +51,7 @@ def test_resolve_frame_bounds_unknown_raises() -> None:
     ("frame", "expected_start_local", "end_is_now"),
     [
         pytest.param("today", (2026, 1, 15, 0, 0), True, id="today"),
+        pytest.param("week", (2026, 1, 12, 0, 0), True, id="week"),
         pytest.param("month", (2026, 1, 1, 0, 0), True, id="month"),
         pytest.param("year", (2026, 1, 1, 0, 0), True, id="year"),
     ],
@@ -94,6 +95,27 @@ def test_resolve_frame_bounds_30d_is_last_30_whole_days() -> None:
     assert end.astimezone(NY) == dt.datetime(2026, 1, 31, 0, 0, tzinfo=NY)
     assert start.astimezone(NY) == dt.datetime(2026, 1, 1, 0, 0, tzinfo=NY)
     assert (end - start).total_seconds() == 30 * 86400
+
+
+@pytest.mark.parametrize(
+    ("now_local", "expected_monday"),
+    [
+        # 2026-01-12 is a Monday: week starts at that same local midnight.
+        pytest.param((2026, 1, 12, 9, 30), (2026, 1, 12, 0, 0), id="on-monday"),
+        # 2026-01-15 is a Thursday: week rewinds to Monday 2026-01-12.
+        pytest.param((2026, 1, 15, 9, 30), (2026, 1, 12, 0, 0), id="midweek"),
+        # 2026-01-18 is a Sunday: still the same week's Monday.
+        pytest.param((2026, 1, 18, 23, 59), (2026, 1, 12, 0, 0), id="sunday"),
+    ],
+)
+def test_resolve_frame_bounds_week_starts_local_monday(
+    now_local: tuple[int, ...],
+    expected_monday: tuple[int, ...],
+) -> None:
+    now = dt.datetime(*now_local, tzinfo=NY)
+    start, end = E.resolve_frame_bounds("week", now, NY)
+    assert start.astimezone(NY) == dt.datetime(*expected_monday, tzinfo=NY)
+    assert end == now.astimezone(UTC)
 
 
 def test_resolve_frame_bounds_normalises_foreign_zone_now() -> None:
