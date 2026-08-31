@@ -939,10 +939,14 @@ def ec5_ec6_ec7_allstates():
     for frame in ("today", "24h", "7d"):
         f_eid = eid_for(entry, frame, M_BREAKDOWN, reg)
         pop = wait_until(
-            lambda fe=f_eid: sum(
-                (gs(fe).get("attributes", {}).get("breakdown_seconds", {}) or {}).values()
-            )
-            > 0,
+            lambda fe=f_eid: (
+                sum(
+                    (
+                        gs(fe).get("attributes", {}).get("breakdown_seconds", {}) or {}
+                    ).values()
+                )
+                > 0
+            ),
             timeout=WAIT_FOR_TIMEOUT,
         )
         chk(
@@ -1724,7 +1728,6 @@ def ec19_entity_id_naming_convention():
     # Every frame-scoped sensor's default id ends with <metric_slug>_<frame_slug>.
     checked_any = False
     for uid, e in reg.items():
-        parts = uid.split("_")
         if uid.startswith(f"{entry}__"):  # binary sensor (empty frame)
             metric = uid[len(entry) + 2 :]
             tail = _METRIC_SLUG_TAIL.get(metric)

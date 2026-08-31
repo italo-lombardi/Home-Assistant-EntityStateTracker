@@ -192,7 +192,9 @@ if __name__ == "__main__":  # pragma: no cover
     assert tracker_device_name("Front Door") == ("Entity State Tracker — Front Door")
     # Prefix-doubling guard: a label already carrying the integration name must not
     # double it in the device name or the entity_id slug (the reported bug).
-    assert _strip_integration_prefix("Entity State Tracker - Italo - All") == "Italo - All"
+    assert (
+        _strip_integration_prefix("Entity State Tracker - Italo - All") == "Italo - All"
+    )
     assert _strip_integration_prefix("entity state tracker — Foo") == "Foo"
     assert _strip_integration_prefix("Living Room") == "Living Room"
     assert _strip_integration_prefix("Entity State Tracker") == "Entity State Tracker"
