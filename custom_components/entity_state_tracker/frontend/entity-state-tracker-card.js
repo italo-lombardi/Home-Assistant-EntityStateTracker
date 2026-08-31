@@ -1085,6 +1085,7 @@ class EntityStateTrackerCard extends LitElement {
           secs: gap,
           pct: ws > 0 ? (gap / ws) * 100 : null,
           color: "var(--est-bar-bg)",
+          derived: true, // computed filler, not a recorded state → dust-filterable
         });
       }
     } else {
@@ -1095,6 +1096,11 @@ class EntityStateTrackerCard extends LitElement {
       //   in-state = duration_seconds
       //   other    = window_seconds - duration_seconds - unaccounted_seconds
       //   no-data  = unaccounted_seconds  ("No data" past window / "In progress")
+      // The gap slice's label is best-effort: unaccounted_seconds can bundle BOTH
+      // a pre-history gap (has_gap=True) AND an in-progress tail (frame spans past
+      // `now`). We label by has_gap, so a frame with both shows the merged slice
+      // as "No data" — the in-progress portion is folded in. Accepted: the goal
+      // (never conflate no-data with a non-tracked state) still holds.
       // Prefer the raw seconds attr; pick.state is unit-converted to hours by HA
       // and thus unit-ambiguous.
       const inSecs =
@@ -1107,7 +1113,7 @@ class EntityStateTrackerCard extends LitElement {
       const tracked = (a.tracked_states || []).join(", ") || "tracked";
       slices = [
         { state: tracked, secs: inSecs, pct: pctOf(inSecs), color: stateColor(tracked) },
-        { state: "other", secs: other, pct: pctOf(other), color: "var(--est-bar-bg-alt)" },
+        { state: "other", secs: other, pct: pctOf(other), color: "var(--est-bar-bg-alt)", derived: true },
       ];
       if (gap > 0) {
         slices.push({
@@ -1115,14 +1121,16 @@ class EntityStateTrackerCard extends LitElement {
           secs: gap,
           pct: pctOf(gap),
           color: "var(--est-bar-bg)",
+          derived: true, // computed filler, not real occupancy → dust-filterable
         });
       }
     }
-    // Drop sub-second slices: the engine counts the current open state up to
-    // `now`, so a fully-covered window leaves only floating-point residue in
-    // unaccounted/other (e.g. 0.4s) — a dust slice that rounds to "0 s" and
-    // clutters the legend. >=1s is the smallest slice worth drawing here.
-    slices = slices.filter((s) => s.secs >= 1);
+    // Drop sub-second DERIVED slices (other / no-data): the engine counts the
+    // current open state up to `now`, so a fully-covered window leaves only
+    // floating-point residue there (e.g. 0.4s) — a dust slice that rounds to
+    // "0 s" and clutters the legend. Real state slices are never dropped: a
+    // genuine sub-second occupancy still shows.
+    slices = slices.filter((s) => s.secs >= 1 || !s.derived);
     const total = slices.reduce((n, s) => n + s.secs, 0) || 1;
 
     // Build a donut with stacked conic-gradient-free SVG arcs.
