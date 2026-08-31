@@ -374,15 +374,17 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
                 # Custom name from step 1 sets the config/device title; falls
                 # back to the entity_id prettified + the tracker mode so two
                 # trackers on the same entity (specific vs all-states) are
-                # distinguishable by title. unique_id + entity_id slugs are
-                # unaffected (they derive from entry_id / entity_id / mode).
+                # distinguishable by title. No "Entity State Tracker" prefix —
+                # the device already sits under that integration, so the prefix
+                # is redundant noise. unique_id + entity_id slugs are unaffected
+                # (they derive from entry_id / entity_id / mode).
                 custom_name = self._data.get(_KEY_NAME)
                 if custom_name:
                     title = custom_name
                 else:
                     base = entity_id.split(".", 1)[-1].replace("_", " ").title()
                     kind = "All States" if mode == MODE_ALL else "Specific States"
-                    title = f"Entity State Tracker - {base} - {kind}"
+                    title = f"{base} ({kind})"
                 return self.async_create_entry(title=title, data=data)
 
         defaults = {frame: frame in DEFAULT_FRAMES for frame in FRAMES}

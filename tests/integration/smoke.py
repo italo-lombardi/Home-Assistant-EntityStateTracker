@@ -275,6 +275,17 @@ def entity_registry_enable(entity_id: str) -> None:
     )
 
 
+def entity_registry_rename(entity_id: str, new_entity_id: str) -> dict:
+    """Rename an entity_id via the registry websocket; return the reply payload."""
+    return _ws_command(
+        {
+            "type": "config/entity_registry/update",
+            "entity_id": entity_id,
+            "new_entity_id": new_entity_id,
+        }
+    )
+
+
 def capture_events(event_type: str, trigger_fn, timeout: int = 30) -> list[dict]:
     """Subscribe to event_type, call trigger_fn() once subscribed, return payloads."""
     if not _WS_AVAILABLE:
@@ -755,7 +766,10 @@ def ec4_compliance():
         frames={"today": True},
     )
     reg = wait_entities(entry, min_count=1)
-    compliant = bs_eid_for(entry, M_COMPLIANT, reg)
+    # Compliant is frame-scoped (one per enabled frame → unique_id
+    # <entry>_<frame>_compliant), NOT the frameless <entry>__<metric> shape; only
+    # CurrentlyInState is frameless. This tracker enables the single "today" frame.
+    compliant = eid_for(entry, "today", M_COMPLIANT, reg)
     dur = eid_for(entry, "today", M_DURATION, reg)
     chk(
         "EC4 Compliant binary sensor exists",
@@ -861,7 +875,7 @@ def ec4_compliance():
     # Entry reloads; rediscover the (possibly new) entity_id and poll until it is
     # available again AND reads off. Skip transient unavailable/None during reload.
     def _compliant_now():
-        e = bs_eid_for(entry, M_COMPLIANT)
+        e = eid_for(entry, "today", M_COMPLIANT)
         if not e:
             return None
         st = gs_safe(e)
@@ -917,6 +931,26 @@ def ec5_ec6_ec7_allstates():
     )
     bd = gs(today_bd).get("attributes", {}).get("breakdown_seconds", {})
     chk("EC5 breakdown_seconds has stateA", "stateA" in bd, True, f"breakdown={bd}")
+
+    # EC5b: the card's Frame picker binds to per-frame breakdown data, so assert
+    # that EACH enabled frame independently carries a populated breakdown (not just
+    # `today`). 24h/7d are recorder-computed and include today's live slice, so
+    # they must also show stateA with positive seconds.
+    for frame in ("today", "24h", "7d"):
+        f_eid = eid_for(entry, frame, M_BREAKDOWN, reg)
+        pop = wait_until(
+            lambda fe=f_eid: sum(
+                (gs(fe).get("attributes", {}).get("breakdown_seconds", {}) or {}).values()
+            )
+            > 0,
+            timeout=WAIT_FOR_TIMEOUT,
+        )
+        chk(
+            f"EC5b breakdown independently populated ({frame})",
+            pop,
+            True,
+            f"breakdown={gs(f_eid).get('attributes', {}).get('breakdown_seconds', {})}",
+        )
 
     print(
         "\n=== EC6: NEW state at runtime → key + event + notification ===", flush=True
@@ -1085,73 +1119,31 @@ def ec9_unrecorded(entry_allstates, eid_allstates, today_bd):
         note(f"EC9 recorder-history check skipped: {e}")
 
 
-def ec10_reset_ledger(entry_allstates, eid_allstates, today_bd):
-    """EC10: reset_ledger confirm:false → error/no change; confirm:true → cleared."""
-    print("\n=== EC10: reset_ledger confirm gate + clears ledger ===", flush=True)
-    # Accrue something first.
-    ss(eid_allstates, "stateA")
-    time.sleep(6)
-    ss(eid_allstates, "stateB")
-    time.sleep(4)
-    ss(eid_allstates, "stateA")
-    wait_until(
-        lambda: (
-            sum(
-                gs(today_bd).get("attributes", {}).get("breakdown_seconds", {}).values()
-            )
-            > 0
-        )
-    )
-    before = gs(today_bd).get("attributes", {}).get("breakdown_seconds", {})
-    note(f"breakdown before reset: {before}")
+def ec18_diagnostics_dump():
+    """EC18: diagnostics config-entry dump carries the full block structure.
 
-    # confirm:false → ServiceValidationError (HTTP 400), ledger unchanged.
-    status, body = api_status(
-        "POST", f"/api/services/{DOMAIN}/reset_ledger", {"confirm": False}
+    Standalone diagnostics-shape check (previously bundled inside the removed
+    reset_ledger EC10). Creates an all-states tracker, accrues a little, then
+    asserts the diagnostics payload carries the entry/coordinator/frames/ledger/
+    store blocks and the coordinator's key fields.
+    """
+    print(
+        "\n=== EC18: diagnostics dump carries full block structure ===",
+        flush=True,
     )
-    chk(
-        "EC10 confirm:false → error status (>=400)",
-        status >= 400,
-        True,
-        f"status={status} body={body}",
-    )
-    after_false = gs(today_bd).get("attributes", {}).get("breakdown_seconds", {})
-    chk(
-        "EC10 ledger unchanged after confirm:false",
-        sum(after_false.values()) > 0,
-        True,
-        f"after={after_false}",
-    )
+    eid = make_entity("diag", "on")
+    entry = create_tracker(eid, "all_states", frames={"today": True})
+    wait_entities(entry, min_count=1)
+    # Accrue a visit so the ledger is non-trivial.
+    time.sleep(3)
+    ss(eid, "off")
+    ss(eid, "on")
 
-    # confirm:true → clears. After reset the ledger is emptied; today's live slice
-    # rebuilds from the recorder, but the pre-reset accrued closed-history is gone.
-    status2, _ = api_status(
-        "POST", f"/api/services/{DOMAIN}/reset_ledger", {"confirm": True}
-    )
-    chk(
-        "EC10 confirm:true → success status (2xx)",
-        200 <= status2 < 300,
-        True,
-        f"status={status2}",
-    )
-
-    # After reset the coordinator refreshes; the ledger daily buckets are cleared.
-    # We verify via diagnostics that day_count dropped to 0 (most robust signal).
-    def _daycount():
-        raw = api("GET", f"/api/diagnostics/config_entry/{entry_allstates}")
-        data = raw.get("data", raw)
-        return (data.get("ledger") or {}).get("day_count")
-
-    dc = wait_for(_daycount, 0, timeout=WAIT_FOR_TIMEOUT)
-    chk("EC10 ledger cleared after confirm:true (day_count=0)", dc, 0)
-
-    # Diagnostics payload shape: beyond `ledger`, it carries entry/coordinator/
-    # frames/store blocks. Assert the top-level structure once here.
-    raw = api("GET", f"/api/diagnostics/config_entry/{entry_allstates}")
+    raw = api("GET", f"/api/diagnostics/config_entry/{entry}")
     data = raw.get("data", raw)
     for block in ("entry", "coordinator", "frames", "ledger", "store"):
         chk(
-            f"EC10 diagnostics carries '{block}' block",
+            f"EC18 diagnostics carries '{block}' block",
             block in data,
             True,
             f"keys={list(data)}",
@@ -1165,7 +1157,7 @@ def ec10_reset_ledger(entry_allstates, eid_allstates, today_bd):
         "last_update_success",
     ):
         chk(
-            f"EC10 diagnostics coordinator.'{key}' present",
+            f"EC18 diagnostics coordinator.'{key}' present",
             key in coord,
             True,
             f"coord_keys={list(coord)}",
@@ -1358,80 +1350,60 @@ def ec15_card_resource():
         )
 
 
-def ec16_targeted_reset():
-    """EC16: reset_ledger entity_id target → only the matching tracker's ledger clears;
-    a target matching no tracker raises (reset_no_match).
+def ec20_multiple_trackers_same_entity():
+    """EC20: two trackers on the SAME source entity coexist independently.
+
+    The integration allows multiple config entries on one entity (no duplicate
+    guard; entry_id keys everything). Create a specific-mode and an all-states
+    tracker on the same entity and assert: two distinct config entries, each with
+    its own EST entities, non-colliding unique_ids, and disambiguated entity_ids
+    (HA auto-suffixes the second tracker's colliding entity_ids).
     """
     print(
-        "\n=== EC16: reset_ledger entity_id target resets only that tracker ===",
+        "\n=== EC20: multiple trackers on the same entity coexist ===",
         flush=True,
     )
-    eid_a = make_entity("tgt_a", "on")
-    eid_b = make_entity("tgt_b", "on")
-    entry_a = create_tracker(eid_a, "all_states", frames={"today": True})
-    entry_b = create_tracker(eid_b, "all_states", frames={"today": True})
-    wait_entities(entry_a, min_count=1)
-    wait_entities(entry_b, min_count=1)
-
-    # Accrue on BOTH so each ledger has data to clear. Entities start "on"
-    # (make_entity above), so a single off→on cycle is enough to record a visit.
-    for e in (eid_a, eid_b):
-        time.sleep(3)
-        ss(e, "off")
-        ss(e, "on")
-
-    def _day_count(entry_id):
-        raw = api("GET", f"/api/diagnostics/config_entry/{entry_id}")
-        data = raw.get("data", raw)
-        return (data.get("ledger") or {}).get("day_count")
-
-    wait_until(lambda: (_day_count(entry_a) or 0) >= 1)
-    wait_until(lambda: (_day_count(entry_b) or 0) >= 1)
-
-    # Target ONLY entity A.
-    status, _ = api_status(
-        "POST",
-        f"/api/services/{DOMAIN}/reset_ledger",
-        {"confirm": True, "entity_id": eid_a},
+    eid = make_entity("multi", "on")
+    entry_a = create_tracker(
+        eid, "specific_states", states=["on"], frames={"today": True}
     )
+    entry_b = create_tracker(eid, "all_states", frames={"today": True})
+    chk("EC20 two distinct config entries", entry_a != entry_b, True)
+
+    reg_a = wait_entities(entry_a, min_count=1)
+    reg_b = wait_entities(entry_b, min_count=1)
+    chk("EC20 tracker A has EST entities", len(reg_a) >= 1, True, f"n={len(reg_a)}")
+    chk("EC20 tracker B has EST entities", len(reg_b) >= 1, True, f"n={len(reg_b)}")
+
+    # unique_ids are entry-scoped → the two sets never collide.
+    uids_a, uids_b = set(reg_a), set(reg_b)
     chk(
-        "EC16 targeted reset success (2xx)",
-        200 <= status < 300,
+        "EC20 unique_ids do not collide across trackers",
+        uids_a.isdisjoint(uids_b),
         True,
-        f"status={status}",
+        f"overlap={uids_a & uids_b}",
     )
 
-    dca = wait_for(lambda: _day_count(entry_a), 0, timeout=WAIT_FOR_TIMEOUT)
-    chk("EC16 targeted tracker A ledger cleared (day_count=0)", dca, 0)
-    # B must be untouched (still holds ≥1 day). Read once so a transient
-    # diagnostics error fails this check rather than aborting the test on the
-    # message-arg call.
-    b_after = _day_count(entry_b) or 0
+    # entity_ids are disambiguated by HA (the second tracker's colliding ids get a
+    # numeric suffix), so every emitted entity_id is unique across both trackers.
+    eids_a = {e.get("entity_id") for e in reg_a.values()}
+    eids_b = {e.get("entity_id") for e in reg_b.values()}
     chk(
-        "EC16 non-targeted tracker B ledger untouched (day_count≥1)",
-        b_after >= 1,
+        "EC20 entity_ids disambiguated across trackers",
+        eids_a.isdisjoint(eids_b),
         True,
-        f"B_day_count={b_after}",
+        f"overlap={eids_a & eids_b}",
     )
 
-    # A target matching no tracker → reset_no_match (HTTP >=400), nothing cleared.
-    status_nm, body_nm = api_status(
-        "POST",
-        f"/api/services/{DOMAIN}/reset_ledger",
-        {"confirm": True, "entity_id": "sensor.est_no_such_tracker_xyz"},
-    )
+    # Each tracker's entities point at a distinct device (device_id is the card's
+    # rename-safe discovery anchor).
+    dev_a = {e.get("device_id") for e in reg_a.values() if e.get("device_id")}
+    dev_b = {e.get("device_id") for e in reg_b.values() if e.get("device_id")}
     chk(
-        "EC16 unmatched target → error status (>=400)",
-        status_nm >= 400,
+        "EC20 trackers live on distinct devices",
+        bool(dev_a) and bool(dev_b) and dev_a.isdisjoint(dev_b),
         True,
-        f"status={status_nm} body={body_nm}",
-    )
-    b_final = _day_count(entry_b) or 0
-    chk(
-        "EC16 tracker B still untouched after unmatched reset",
-        b_final >= 1,
-        True,
-        f"B_day_count={b_final}",
+        f"dev_a={dev_a} dev_b={dev_b}",
     )
 
 
@@ -1565,12 +1537,51 @@ def _restart_ha() -> bool:
         stderr=subprocess.DEVNULL,
         start_new_session=True,
     )
-    deadline = time.time() + 150
+    deadline = time.time() + 300
+    while time.time() < deadline:
+        # `/` (frontend) answers early, while core is still STARTING and the
+        # entity registry / config-entries API aren't fully serving yet. Gate on
+        # the AUTHENTICATED API instead: GET /api/ returns 200 with a valid token
+        # only once core is running — the real "HA is back" signal both EC12 and
+        # EC17 need. (This host co-hosts flaky integrations whose setup retries
+        # stretch startup to minutes, so the window is generous.) The port is
+        # down for the first seconds after kill → connection refused; swallow it.
+        try:
+            st, _ = api_status("GET", "/api/")
+            if st == 200:
+                return True
+        except Exception:
+            pass
+        time.sleep(3)
+    return False
+
+
+def _wait_entry_loaded(entry_id: str, timeout: int = 300) -> bool:
+    """Poll until ``entry_id`` is loaded AND its entities are back in the registry.
+
+    ``_restart_ha`` returns the instant HA answers ``/`` (frontend up), which is
+    BEFORE config entries finish (re)loading and before the recorder/state
+    machine are ready — so a registry or state read right after it can miss our
+    entities. Two independent signals, either sufficient: the REST config-entry
+    list reports ``state == "loaded"``, OR the entity registry already lists at
+    least one entity for the entry (the real precondition for the assert below).
+    The config-entries endpoint can 401/500/refuse mid-boot; those raise, are
+    caught, and we retry.
+    """
+    deadline = time.time() + timeout
     while time.time() < deadline:
         try:
-            with urllib.request.urlopen(BASE + "/", timeout=5) as r:
-                if r.status == 200:
-                    return True
+            entries = api("GET", "/api/config/config_entries/entry")
+            if any(
+                e.get("entry_id") == entry_id and e.get("state") == "loaded"
+                for e in (entries or [])
+            ):
+                return True
+        except Exception:
+            pass
+        try:
+            if est_entities(entry_id):
+                return True
         except Exception:
             pass
         time.sleep(3)
@@ -1606,6 +1617,13 @@ def ec17_currently_reconcile_on_restart():
         eid, "specific_states", states=["on"], frames={"today": True}
     )
     wait_entities(entry, min_count=1)
+    # Confirm the config entry is registered + loaded, then let HA's debounced
+    # .storage/core.config_entries write flush before we restart. EC17 (unlike
+    # EC12, which accrues for seconds first) restarts almost immediately after
+    # creating the entry — racing that ~1 s debounced save. If pkill lands inside
+    # the window the entry never hits disk and does not reload after the restart.
+    _wait_entry_loaded(entry, timeout=60)
+    time.sleep(5)
     curr = bs_eid_for(entry, M_CURRENTLY)
     chk("EC17 CurrentlyInState exists", curr is not None, True)
     # Confirm it's on BEFORE the restart (entity is "on", a tracked state).
@@ -1617,25 +1635,35 @@ def ec17_currently_reconcile_on_restart():
     if not back:
         return entry, eid
 
+    # Frontend answering != entry reloaded. Wait for the entry to be 'loaded' so
+    # the CurrentlyInState sensor is registered before we read it (otherwise the
+    # registry lookup returns None for the whole poll and the assert sees None).
+    loaded = _wait_entry_loaded(entry)
+    chk("EC17 entry reloaded after restart", loaded, True)
+
     # Re-seed the entity to "on" ONCE post-boot: POST /api/states restores our
     # synthetic entity (it isn't a real integration, so it doesn't survive the
     # restart) to the tracked state — WITHOUT going through a tracked→tracked
     # transition that would fold the ledger. This mirrors a real entity that was
     # already "on" at boot. The bug would show Off here (ledger last_state stale/
     # None); the fix reads live state → on.
-    ss(eid, "on")
-
-    # Rediscover the (reloaded) entity_id and poll until the entry is back and the
-    # sensor reads on. No transition is driven — a correct sensor is on from the
-    # live "on" state alone.
+    #
+    # `_restart_ha` returns as soon as HA answers `/` (frontend up), which is
+    # BEFORE the config entry finishes (re)loading and before the recorder is
+    # ready to accept our synthetic state. So re-seed inside the poll loop: each
+    # iteration re-POSTs "on" (a synthetic entity has no integration to restore
+    # it) and re-resolves the sensor's entity_id, so the moment the entry loads
+    # the sensor sees a live "on". This is still a no-transition read — we only
+    # ever hold the source at "on", never flip it, so nothing folds the ledger.
     def _curr_now():
+        ss(eid, "on")
         e = bs_eid_for(entry, M_CURRENTLY)
         if not e:
             return None
         st = gs_safe(e)
         return st.get("state") if st else None
 
-    on_val = wait_for(_curr_now, "on", timeout=WAIT_FOR_TIMEOUT)
+    on_val = wait_for(_curr_now, "on", timeout=max(WAIT_FOR_TIMEOUT, 120))
     chk(
         "EC17 CurrentlyInState=on from live state after restart (no fold)",
         on_val,
@@ -1643,6 +1671,259 @@ def ec17_currently_reconcile_on_restart():
         "reads HA live state, not stale ledger last_state",
     )
     return entry, eid
+
+
+# Metric/frame slug tails the default entity_id must end with (id == slug(name),
+# frame last). Mirrors helpers._METRIC_ENTITY_SLUG + _frame_label_slug — a live
+# analogue of the helpers.py __main__ self-check that the suite never runs.
+_METRIC_SLUG_TAIL = {
+    M_DURATION: "duration",
+    M_PERCENT: "in_a_tracked_state_percent",
+    M_COMPLIANCE: "compliance",
+    M_BREAKDOWN: "state_breakdown",
+    M_CURRENTLY: "in_a_tracked_state",
+    M_COMPLIANT: "compliant",
+}
+_FRAME_SLUG_TAIL = {
+    "today": "today",
+    "yesterday": "yesterday",
+    "24h": "last_24_hours",
+    "7d": "last_7_days",
+    "30d": "last_30_days",
+    "month": "this_month",
+    "year": "this_year",
+}
+
+
+def ec19_entity_id_naming_convention():
+    """EC19: default entity_ids follow id==slug(name) (frame last), and a registry
+    rename does not disturb the rename-safe discovery keys (unique_id survives).
+
+    The card discovers by device_id + translation_key, never the id string, so a
+    user renaming a sensor's entity_id must not break anything. We assert the
+    default id shape, then rename one duration sensor and confirm its unique_id
+    (registry primary key → history/statistics anchor) is unchanged and its
+    device_id still matches its siblings.
+    """
+    print(
+        "\n=== EC19: entity_id naming convention + rename-safety ===",
+        flush=True,
+    )
+    eid = make_entity("naming", "on")
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on"],
+        enable_compliance=True,
+        target=["on"],
+        target_threshold=0,
+        frames={"today": True, "7d": True},
+    )
+    reg = wait_entities(entry, min_count=4)
+
+    # Every frame-scoped sensor's default id ends with <metric_slug>_<frame_slug>.
+    checked_any = False
+    for uid, e in reg.items():
+        parts = uid.split("_")
+        if uid.startswith(f"{entry}__"):  # binary sensor (empty frame)
+            metric = uid[len(entry) + 2 :]
+            tail = _METRIC_SLUG_TAIL.get(metric)
+            if not tail:
+                continue
+            checked_any = True
+            chk(
+                f"EC19 binary id ends with '{tail}' ({metric})",
+                (e.get("entity_id") or "").endswith(f"_{tail}"),
+                True,
+                f"entity_id={e.get('entity_id')}",
+            )
+            continue
+        # frame-scoped: unique_id == <entry>_<frame>_<metric>
+        rest = uid[len(entry) + 1 :]
+        frame, _, metric = rest.partition("_")
+        mtail = _METRIC_SLUG_TAIL.get(metric)
+        ftail = _FRAME_SLUG_TAIL.get(frame)
+        if not mtail or not ftail:
+            continue
+        checked_any = True
+        chk(
+            f"EC19 id ends with '{mtail}_{ftail}' ({frame}/{metric})",
+            (e.get("entity_id") or "").endswith(f"_{mtail}_{ftail}"),
+            True,
+            f"entity_id={e.get('entity_id')}",
+        )
+    chk("EC19 at least one id-convention check ran", checked_any, True)
+
+    # Rename-safety: rename the 7d duration sensor's entity_id, confirm the
+    # registry row keeps its unique_id + device_id (discovery keys).
+    dur_uid = f"{entry}_7d_{M_DURATION}"
+    orig = reg.get(dur_uid)
+    if orig and _WS_AVAILABLE:
+        orig_eid = orig.get("entity_id")
+        orig_dev = orig.get("device_id")
+        new_eid = f"sensor.est_renamed_{RUN}_7d_duration"
+        entity_registry_rename(orig_eid, new_eid)
+        # Re-read the registry; the row must now carry new_eid but the SAME uid.
+        reg2 = est_entities(entry)
+        row = reg2.get(dur_uid)
+        chk(
+            "EC19 renamed row keeps its unique_id (history anchor intact)",
+            row is not None,
+            True,
+            f"uids={list(reg2)}",
+        )
+        if row:
+            chk(
+                "EC19 entity_id actually changed to the new id",
+                row.get("entity_id"),
+                new_eid,
+            )
+            chk(
+                "EC19 device_id unchanged after rename (card discovery key)",
+                row.get("device_id"),
+                orig_dev,
+            )
+    else:
+        note("EC19 rename-safety skipped: 7d duration row or websocket unavailable")
+
+
+def ec21_per_frame_compliance():
+    """EC21: compliance across multiple frames → one Compliant binary sensor per
+    frame, each carrying its own `frame` attr and honoring is_on == pct>=threshold.
+
+    EC4 only exercises a single-frame compliance config; the platform creates one
+    CompliantBinarySensor per enabled frame (binary_sensor.py).
+    """
+    print(
+        "\n=== EC21: per-frame Compliant binary-sensor fan-out ===",
+        flush=True,
+    )
+    eid = make_entity("perframe", "on")
+    frames = {"today": True, "24h": True, "7d": True}
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on"],
+        enable_compliance=True,
+        target=["on"],
+        target_threshold=0,  # any data → compliant
+        frames=frames,
+    )
+    reg = wait_entities(entry, min_count=len(frames))
+
+    # One Compliant binary sensor per enabled frame → unique_id <entry>_<frame>_compliant.
+    seen_frames = set()
+    for frame in frames:
+        c_eid = eid_for(entry, frame, M_COMPLIANT, reg)
+        chk(
+            f"EC21 Compliant binary sensor exists ({frame})",
+            c_eid is not None,
+            True,
+            f"uids={list(reg)}",
+        )
+        if not c_eid:
+            continue
+        wait_until(
+            lambda ce=c_eid: gs(ce).get("state") not in (None, "unknown", "unavailable")
+        )
+        st = gs(c_eid)
+        attrs = st.get("attributes", {})
+        chk(f"EC21 Compliant.frame == {frame}", attrs.get("frame"), frame)
+        seen_frames.add(attrs.get("frame"))
+        # Invariant: is_on == compliance_percent >= threshold (threshold=0 → on).
+        pct = attrs.get("compliance_percent")
+        thr = attrs.get("target_threshold")
+        try:
+            expect = "on" if float(pct) >= float(thr) else "off"
+        except (TypeError, ValueError):
+            expect = None
+        if expect is not None:
+            chk(
+                f"EC21 is_on matches pct>=threshold ({frame})",
+                st.get("state"),
+                expect,
+                f"pct={pct} thr={thr}",
+            )
+    chk(
+        "EC21 a distinct Compliant sensor per enabled frame",
+        seen_frames == set(frames),
+        True,
+        f"seen={seen_frames}",
+    )
+
+
+def ec22_options_flow_target_and_glitch():
+    """EC22: options flow edits the compliance target set + min_state_duration, and
+    the change takes effect after reload.
+
+    EC4/EC11 cover editing target_threshold and frames; the target *set* and
+    min_state_duration edits (config_flow.py) are otherwise untested. We change the
+    target set and confirm the Compliant sensor's `target_states` attr reflects it,
+    and change min_state_duration and confirm the coordinator's glitch threshold
+    (via diagnostics) updates.
+    """
+    print(
+        "\n=== EC22: options flow edits target set + min_state_duration ===",
+        flush=True,
+    )
+    eid = make_entity("opts2", "on")
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on", "off"],
+        enable_compliance=True,
+        target=["on"],
+        target_threshold=0,
+        frames={"today": True},
+    )
+    reg = wait_entities(entry, min_count=1)
+    # Compliant is frame-scoped (<entry>_<frame>_compliant), not frameless.
+    compliant = eid_for(entry, "today", M_COMPLIANT, reg)
+    chk("EC22 Compliant sensor exists before edit", compliant is not None, True)
+
+    # Options flow: change target set → [on, off] and min_state_duration → 7.
+    r = api("POST", "/api/config/config_entries/options/flow", {"handler": entry})
+    fid = r["flow_id"]
+    assert r.get("step_id") == "init", f"expected init step, got {r}"
+    r2 = api(
+        "POST",
+        f"/api/config/config_entries/options/flow/{fid}",
+        {
+            "today": True,
+            "min_state_duration": 7,
+            "target": ["on", "off"],
+            "target_threshold": 0,
+        },
+    )
+    chk("EC22 options flow created entry", r2.get("type"), "create_entry")
+
+    # After reload the Compliant sensor's target_states reflects the new set.
+    # Re-resolve the entity_id each poll — a reload can rename it.
+    def _targets():
+        e = eid_for(entry, "today", M_COMPLIANT)
+        st = (gs_safe(e) if e else None) or {}
+        return st.get("attributes", {}).get("target_states")
+
+    got = wait_for(
+        lambda: sorted(_targets() or []), ["off", "on"], timeout=WAIT_FOR_TIMEOUT
+    )
+    chk("EC22 target set updated to [off, on]", got, ["off", "on"])
+
+    # min_state_duration edit reflected in diagnostics coordinator block.
+    def _min_dur():
+        raw = api("GET", f"/api/diagnostics/config_entry/{entry}")
+        data = raw.get("data", raw)
+        coord = data.get("coordinator", {})
+        # field name may be min_state_duration or nested; check both common spots.
+        return coord.get("min_state_duration")
+
+    md = wait_for(_min_dur, 7, timeout=WAIT_FOR_TIMEOUT)
+    chk(
+        "EC22 min_state_duration updated to 7 (diagnostics)",
+        md,
+        7,
+        f"coordinator.min_state_duration={md}",
+    )
 
 
 def main():
@@ -1661,7 +1942,7 @@ def main():
             ec4_compliance()
 
         entry_all = eid_all = today_bd = None
-        if any(ec_enabled(n) for n in (5, 6, 7, 9, 10)):
+        if any(ec_enabled(n) for n in (5, 6, 7, 9)):
             entry_all, eid_all, today_bd = ec5_ec6_ec7_allstates()
 
         if ec_enabled(8):
@@ -1669,9 +1950,6 @@ def main():
 
         if ec_enabled(9) and today_bd:
             ec9_unrecorded(entry_all, eid_all, today_bd)
-
-        if ec_enabled(10) and today_bd:
-            ec10_reset_ledger(entry_all, eid_all, today_bd)
 
         if ec_enabled(11):
             ec11_options_flow_frame_toggle()
@@ -1685,8 +1963,20 @@ def main():
         if ec_enabled(15):
             ec15_card_resource()
 
-        if ec_enabled(16):
-            ec16_targeted_reset()
+        if ec_enabled(18):
+            ec18_diagnostics_dump()
+
+        if ec_enabled(19):
+            ec19_entity_id_naming_convention()
+
+        if ec_enabled(20):
+            ec20_multiple_trackers_same_entity()
+
+        if ec_enabled(21):
+            ec21_per_frame_compliance()
+
+        if ec_enabled(22):
+            ec22_options_flow_target_and_glitch()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

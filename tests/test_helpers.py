@@ -64,6 +64,30 @@ def test_tracker_device_name() -> None:
     assert tracker_device_name("Front Door") == ("Entity State Tracker — Front Door")
 
 
+def test_integration_prefix_not_doubled() -> None:
+    """A label already carrying the integration name must not double it.
+
+    Guards the reported bug: a title like "Entity State Tracker - Italo - All"
+    yielded "Entity State Tracker — Entity State Tracker - …" as the device name
+    and "sensor.entity_state_tracker_entity_state_tracker_…" as the entity_id.
+    """
+    label = "Entity State Tracker - Italo - All States"
+    assert tracker_device_name(label) == "Entity State Tracker — Italo - All States"
+    assert tracker_device_name("entity state tracker — Foo") == (
+        "Entity State Tracker — Foo"
+    )
+    # A bare "Entity State Tracker" label is left intact (never emptied).
+    assert tracker_device_name("Entity State Tracker") == (
+        "Entity State Tracker — Entity State Tracker"
+    )
+    eid = frame_entity_id(label, "7d", TRANSLATION_KEY_DURATION)
+    assert eid == "sensor.entity_state_tracker_italo_all_states_duration_last_7_days"
+    assert "entity_state_tracker_entity_state_tracker" not in eid
+    assert binary_entity_id(label, TRANSLATION_KEY_COMPLIANT) == (
+        "binary_sensor.entity_state_tracker_italo_all_states_compliant"
+    )
+
+
 # --------------------------------------------------------------------------- #
 # Pinned entity_ids — id == slugify(name), namespaced by the tracker NAME
 # (entry.title), never the entry_id ULID. Frame token is the frame-label slug,

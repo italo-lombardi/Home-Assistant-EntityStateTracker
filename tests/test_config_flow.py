@@ -309,7 +309,7 @@ async def test_specific_no_compliance_creates_entry(hass: HomeAssistant) -> None
         _frames_input("today", "24h", **{CONF_MIN_STATE_DURATION: 30}),
     )
     assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
-    assert result["title"] == "Entity State Tracker - Living Room - Specific States"
+    assert result["title"] == "Living Room (Specific States)"
     data = result["data"]
     assert data[CONF_ENTITY] == ENTITY
     assert data[CONF_MODE] == MODE_SPECIFIC
@@ -388,7 +388,7 @@ async def test_blank_name_falls_back_to_derived_title(hass: HomeAssistant) -> No
     )
     assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
     # Blank name stripped to empty → falls back to prettified entity + mode.
-    assert result["title"] == "Entity State Tracker - Living Room - All States"
+    assert result["title"] == "Living Room (All States)"
     assert CONF_NAME not in result["data"]
 
 
