@@ -117,6 +117,12 @@
       "duration": {
         "name": "Durată ({frame})"
       },
+      "percent": {
+        "name": "Procent ({frame})"
+      },
+      "compliance": {
+        "name": "Conformitate ({frame})"
+      },
       "breakdown": {
         "name": "Defalcare stări ({frame})"
       }

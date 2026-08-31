@@ -13,9 +13,11 @@ from .const import (
     DOMAIN,
     FRAMES,
     TRANSLATION_KEY_BREAKDOWN,
+    TRANSLATION_KEY_COMPLIANCE,
     TRANSLATION_KEY_COMPLIANT,
     TRANSLATION_KEY_CURRENTLY_IN_STATE,
     TRANSLATION_KEY_DURATION,
+    TRANSLATION_KEY_PERCENT,
 )
 
 # Human labels per frame. Plain nouns for calendar frames; the rolling frames
@@ -77,6 +79,8 @@ def unique_id(entry_id: str, frame: str, metric: str) -> str:
 # the card matches on — mirrors Entity Availability's explicit self.entity_id).
 _METRIC_ENTITY_SLUG: dict[str, str] = {
     TRANSLATION_KEY_DURATION: "duration",
+    TRANSLATION_KEY_PERCENT: "percent",
+    TRANSLATION_KEY_COMPLIANCE: "compliance",
     TRANSLATION_KEY_BREAKDOWN: "state_breakdown",
     TRANSLATION_KEY_CURRENTLY_IN_STATE: "currently_in_state",
     TRANSLATION_KEY_COMPLIANT: "compliant",

@@ -398,8 +398,8 @@ def compute_frame(
     Percent denominator is ``(end_utc − start_utc)`` in real seconds, never
     ``86400`` (§6.3, guards R1). ``dominant`` flips from ``prior_dominant`` only
     when a new leader exceeds it by more than ``DOMINANT_HYSTERESIS_PCT`` of the
-    window (§6.6, guards R10). ``avg_duration`` is ``secs // count`` (``None``
-    at ``count == 0``). ``breakdown_pct`` is 2-dp with a nonzero-slice sentinel
+    window (§6.6, guards R10). ``avg_duration`` is ``round(secs / count, 1)``
+    (``None`` at ``count == 0``). ``breakdown_pct`` is 2-dp with a nonzero-slice sentinel
     (a state holding real time never renders as ``0.0`` — see :func:`_pct`); it
     additionally carries an ``"unaccounted"`` key (the remainder as a percent,
     ``0.0`` when fully covered) and is balanced so a template looping
@@ -428,12 +428,11 @@ def compute_frame(
     breakdown_seconds = {name: row["secs"] for name, row in combined.items()}
     counts = {name: int(row["count"]) for name, row in combined.items()}
     avg_duration: dict[str, float | None] = {
-        # Floor division on purpose: avg_duration is whole seconds per visit
-        # (359s / 2 → 179, not 179.5). Sub-second precision is noise for a
-        # human-facing "average time in state" and the display layer already
-        # rounds; keeping the floor avoids a spurious .5 fanning out into the
-        # HOURS conversion. ``None`` at count 0 (a ledger continuation day).
-        name: (row["secs"] // row["count"] if row["count"] else None)
+        # Seconds per visit, 1-dp float (359s / 2 → 179.5), matching
+        # breakdown_pct's precision so the display layer sees a consistent
+        # granularity across metrics. ``None`` at count 0 (a ledger
+        # continuation day).
+        name: (round(row["secs"] / row["count"], 1) if row["count"] else None)
         for name, row in combined.items()
     }
     # Window time attributed to no state — the pre-data gap and/or a transient

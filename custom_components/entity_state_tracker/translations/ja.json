@@ -117,6 +117,12 @@
       "duration": {
         "name": "継続時間（{frame}）"
       },
+      "percent": {
+        "name": "割合 ({frame})"
+      },
+      "compliance": {
+        "name": "コンプライアンス ({frame})"
+      },
       "breakdown": {
         "name": "状態の内訳（{frame}）"
       }

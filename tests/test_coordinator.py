@@ -648,6 +648,58 @@ async def test_live_fold_no_prior_state_is_noop_fold(
     await c.async_shutdown()
 
 
+async def test_transition_stamps_last_entered_and_exited(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """A transition A→B stamps last_exited[A] and last_entered[B] at now (§7)."""
+    now = _utc(2026, 6, 10, 12, 0)
+    c = await _prime(hass, all_states_config_entry, now, patch_recorder)
+    ledger = c._ledger
+    assert ledger is not None
+    ledger.last_state = "on"
+    ledger.last_changed_ts = _utc(2026, 6, 10, 11, 0).isoformat()
+
+    changed = _utc(2026, 6, 10, 12, 0)
+    event = _state_event("binary_sensor.front_door", "off", changed)
+    with patch.object(c._debouncer, "async_call", new_callable=AsyncMock):
+        c._handle_state_change(event)
+
+    # Exit of the state we left + entry of the state we moved to, both at now.
+    assert ledger.last_exited["on"] == changed.isoformat()
+    assert ledger.last_entered["off"] == changed.isoformat()
+    # The state we entered has no exit yet; the one we left keeps its entry unset
+    # (it was seeded before these fields existed in this test).
+    assert "off" not in ledger.last_exited
+    await hass.async_block_till_done()
+    await c.async_shutdown()
+
+
+async def test_first_transition_stamps_entry_only(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """First-ever transition (no prior state) stamps last_entered, not exited."""
+    now = _utc(2026, 6, 10, 12, 0)
+    c = await _prime(hass, all_states_config_entry, now, patch_recorder)
+    ledger = c._ledger
+    assert ledger is not None
+    assert ledger.last_state is None
+
+    changed = _utc(2026, 6, 10, 12, 0)
+    event = _state_event("binary_sensor.front_door", "on", changed)
+    with patch.object(c._debouncer, "async_call", new_callable=AsyncMock):
+        c._handle_state_change(event)
+
+    assert ledger.last_entered["on"] == changed.isoformat()
+    # No prior state → nothing exited.
+    assert ledger.last_exited == {}
+    await hass.async_block_till_done()
+    await c.async_shutdown()
+
+
 async def test_live_fold_ignores_none_new_state(
     hass: HomeAssistant,
     all_states_config_entry: MockConfigEntry,

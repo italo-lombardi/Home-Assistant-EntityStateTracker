@@ -117,6 +117,12 @@
       "duration": {
         "name": "Ilgums ({frame})"
       },
+      "percent": {
+        "name": "Procenti ({frame})"
+      },
+      "compliance": {
+        "name": "Atbilstība ({frame})"
+      },
       "breakdown": {
         "name": "Stāvokļu sadalījums ({frame})"
       }

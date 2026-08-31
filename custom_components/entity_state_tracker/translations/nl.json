@@ -117,6 +117,12 @@
       "duration": {
         "name": "Duur ({frame})"
       },
+      "percent": {
+        "name": "Percentage ({frame})"
+      },
+      "compliance": {
+        "name": "Naleving ({frame})"
+      },
       "breakdown": {
         "name": "Toestandsuitsplitsing ({frame})"
       }

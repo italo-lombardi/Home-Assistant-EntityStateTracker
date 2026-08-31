@@ -117,6 +117,12 @@
       "duration": {
         "name": "Varaktighet ({frame})"
       },
+      "percent": {
+        "name": "Procent ({frame})"
+      },
+      "compliance": {
+        "name": "Efterlevnad ({frame})"
+      },
       "breakdown": {
         "name": "Tillståndsuppdelning ({frame})"
       }

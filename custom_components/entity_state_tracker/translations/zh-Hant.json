@@ -117,6 +117,12 @@
       "duration": {
         "name": "時長（{frame}）"
       },
+      "percent": {
+        "name": "百分比 ({frame})"
+      },
+      "compliance": {
+        "name": "合規性 ({frame})"
+      },
       "breakdown": {
         "name": "狀態明細（{frame}）"
       }

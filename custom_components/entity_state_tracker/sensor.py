@@ -5,7 +5,10 @@ Two shapes, chosen by ``coordinator.mode`` (§5):
 * **specific-states** — one :class:`DurationSensor` per enabled frame (tracked
   seconds, ``MEASUREMENT``). Its ``percent`` and — when a target set is
   configured — ``compliance_percent`` ride along as attributes (queryable via
-  templates); they are not re-exposed as their own sensors.
+  templates); they are ALSO promoted to their own :class:`PercentSensor` /
+  :class:`ComplianceSensor` per frame (``%``, ``MEASUREMENT``, ``DIAGNOSTIC``)
+  so ``numeric_state`` triggers, history graphs and long-term Statistics — none
+  of which can target an attribute — can bind to them.
 * **all-states** — one :class:`BreakdownSensor` per enabled frame. Its state is
   the dominant (max-duration) state; the per-state dicts live in attributes and
   are stripped from the recorder (``_unrecorded_attributes``) because they churn
@@ -25,7 +28,7 @@ from typing import Any
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import UnitOfTime
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
@@ -35,7 +38,9 @@ from .const import (
     DOMAIN,
     MODE_SPECIFIC,
     TRANSLATION_KEY_BREAKDOWN,
+    TRANSLATION_KEY_COMPLIANCE,
     TRANSLATION_KEY_DURATION,
+    TRANSLATION_KEY_PERCENT,
 )
 from .coordinator import EntityStateTrackerCoordinator
 from .helpers import frame_entity_id, frame_label, tracker_device_name, unique_id
@@ -53,9 +58,16 @@ async def async_setup_entry(
     entities: list[Entity] = []
 
     if coordinator.mode == MODE_SPECIFIC:
-        entities.extend(
-            DurationSensor(coordinator, frame) for frame in coordinator.enabled_frames
-        )
+        for frame in coordinator.enabled_frames:
+            entities.append(DurationSensor(coordinator, frame))
+            # Promote percent (and compliance, when a target set is configured)
+            # to their own sensors so numeric_state triggers, long-term
+            # Statistics and history graphs can bind to them — they exist only as
+            # attributes on the duration sensor otherwise (§5.1). Specific mode
+            # only: all-states has no single percent.
+            entities.append(PercentSensor(coordinator, frame))
+            if coordinator.target_states:
+                entities.append(ComplianceSensor(coordinator, frame))
     else:
         entities.extend(
             BreakdownSensor(coordinator, frame) for frame in coordinator.enabled_frames
@@ -139,14 +151,21 @@ def _transition_metrics(
     coordinator: EntityStateTrackerCoordinator,
     states: list[str] | None,
 ) -> dict[str, Any]:
-    """Return the §7 transition metrics for ``states`` (all rows when ``None``)."""
+    """Return the §7 transition metrics for ``states`` (all rows when ``None``).
+
+    ``last_entered`` / ``last_exited`` are tracker-global (frame-independent),
+    so they are emitted whole from the coordinator data rather than sliced to
+    ``states`` — consistent with the flat ``{state: iso_ts}`` shape the plan
+    specifies.
+    """
     keys = states if states is not None else list(result.counts)
+    data = coordinator.data
     return {
         "counts": {s: result.counts.get(s, 0) for s in keys},
         "avg_duration_seconds": {s: result.avg_duration.get(s) for s in keys},
-        "previous_state": coordinator.data.previous_state
-        if coordinator.data is not None
-        else None,
+        "previous_state": data.previous_state if data is not None else None,
+        "last_entered": dict(data.last_entered) if data is not None else {},
+        "last_exited": dict(data.last_exited) if data is not None else {},
     }
 
 
@@ -177,6 +196,8 @@ class DurationSensor(_FrameSensor):
             "counts",
             "avg_duration_seconds",
             "previous_state",
+            "last_entered",
+            "last_exited",
             "percent",
             "compliance_percent",
             "duration_seconds",
@@ -229,6 +250,68 @@ class DurationSensor(_FrameSensor):
         return attrs
 
 
+class _PercentFrameSensor(_FrameSensor):
+    """Base for the standalone percent-scale sensors (§5.1).
+
+    Percent and compliance share one descriptor contract — a ``%`` measurement
+    on the 0–100 scale. They are marked ``DIAGNOSTIC`` (fleet convention — the
+    siblings' secondary percent sensors are diagnostic) rather than
+    disabled-by-default: a disabled ``MEASUREMENT`` sensor accrues no long-term
+    Statistics until manually enabled, defeating the reason to promote these off
+    the duration sensor's attributes. There is deliberately no
+    ``SensorDeviceClass.PERCENTAGE`` (HA has none) and no borrowed
+    BATTERY/HUMIDITY class — a bare ``%`` unit + MEASUREMENT is the HA-correct
+    shape. The single per-state percent lives ONLY on the duration sensor's
+    attributes still (unchanged); these promote the WINDOW percent to a bindable
+    entity. Subclasses provide the ``FrameResult`` field they read.
+    """
+
+    _attr_native_unit_of_measurement = PERCENTAGE
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_device_class = None
+    _attr_suggested_display_precision = 1
+    _attr_entity_category = EntityCategory.DIAGNOSTIC
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the frame's percent (0–100, 1 dp), ``None`` before first data.
+
+        Rounded to 1 dp so idle coordinator ticks hash-dedup and don't spam the
+        recorder as a growing-denominator frame drifts the ratio each tick (§5).
+        """
+        result = self._result
+        if result is None:
+            return None
+        value = self._percent_value(result)
+        return round(value, 1) if value is not None else None
+
+
+class PercentSensor(_PercentFrameSensor):
+    """Share of one frame spent in the tracked states, as a % entity (§5.1)."""
+
+    _metric = TRANSLATION_KEY_PERCENT
+    _translation_key = TRANSLATION_KEY_PERCENT
+    _attr_icon = "mdi:percent-outline"
+
+    def _percent_value(self, result: FrameResult) -> float | None:
+        return result.percent
+
+
+class ComplianceSensor(_PercentFrameSensor):
+    """Share of one frame spent in the target set, as a % entity (§5.1).
+
+    Created only when a target set is configured (same gate as the duration
+    sensor's ``compliance_percent`` attribute).
+    """
+
+    _metric = TRANSLATION_KEY_COMPLIANCE
+    _translation_key = TRANSLATION_KEY_COMPLIANCE
+    _attr_icon = "mdi:shield-check-outline"
+
+    def _percent_value(self, result: FrameResult) -> float | None:
+        return result.compliance_percent
+
+
 class BreakdownSensor(_FrameSensor):
     """Per-state breakdown for one frame (all-states mode, §5.2).
 
@@ -251,6 +334,8 @@ class BreakdownSensor(_FrameSensor):
             "counts",
             "avg_duration_seconds",
             "previous_state",
+            "last_entered",
+            "last_exited",
             "window_seconds",
             "data_start",
             "window_coverage",
@@ -292,6 +377,13 @@ class BreakdownSensor(_FrameSensor):
             "previous_state": self.coordinator.data.previous_state
             if self.coordinator.data is not None
             else None,
+            # Tracker-global {state: iso_ts} — same on every frame's sensor (§7).
+            "last_entered": dict(self.coordinator.data.last_entered)
+            if self.coordinator.data is not None
+            else {},
+            "last_exited": dict(self.coordinator.data.last_exited)
+            if self.coordinator.data is not None
+            else {},
             "window_seconds": result.window_seconds,
             "data_start": result.data_start,
             "window_coverage": result.window_coverage,

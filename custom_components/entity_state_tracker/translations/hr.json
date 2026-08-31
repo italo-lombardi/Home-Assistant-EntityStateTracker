@@ -117,6 +117,12 @@
       "duration": {
         "name": "Trajanje ({frame})"
       },
+      "percent": {
+        "name": "Postotak ({frame})"
+      },
+      "compliance": {
+        "name": "Usklađenost ({frame})"
+      },
       "breakdown": {
         "name": "Raščlamba stanja ({frame})"
       }

@@ -117,6 +117,12 @@
       "duration": {
         "name": "Durada ({frame})"
       },
+      "percent": {
+        "name": "Percentatge ({frame})"
+      },
+      "compliance": {
+        "name": "Compliment ({frame})"
+      },
       "breakdown": {
         "name": "Desglossament d'estats ({frame})"
       }

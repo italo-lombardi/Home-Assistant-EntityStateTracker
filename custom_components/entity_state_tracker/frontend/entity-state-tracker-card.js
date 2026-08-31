@@ -807,7 +807,7 @@ class EntityStateTrackerCard extends LitElement {
 
   // ---------------------------------------------------------------------------
   // Bars: one row per frame. % fill + "6.2 h · 26%"; compliance second bar when
-  // a target is set; transition line from counts/avg_duration.
+  // a target is set; transition line from counts/avg_duration_seconds.
   // ---------------------------------------------------------------------------
   _renderBars(sensors) {
     return sensors.map((s) => {
@@ -882,7 +882,7 @@ class EntityStateTrackerCard extends LitElement {
   // (specific mode with no tracked_states) so it never dangles a bare count.
   _transitionLine(attrs, stateKey) {
     const counts = attrs.counts || {};
-    const avg = attrs.avg_duration || {};
+    const avg = attrs.avg_duration_seconds || {};
     let count;
     let avgSecs;
     let label;

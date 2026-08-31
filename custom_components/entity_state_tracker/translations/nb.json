@@ -117,6 +117,12 @@
       "duration": {
         "name": "Varighet ({frame})"
       },
+      "percent": {
+        "name": "Prosent ({frame})"
+      },
+      "compliance": {
+        "name": "Samsvar ({frame})"
+      },
       "breakdown": {
         "name": "Tilstandsfordeling ({frame})"
       }

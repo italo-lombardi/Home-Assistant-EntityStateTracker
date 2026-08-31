@@ -117,6 +117,12 @@
       "duration": {
         "name": "Süre ({frame})"
       },
+      "percent": {
+        "name": "Yüzde ({frame})"
+      },
+      "compliance": {
+        "name": "Uyumluluk ({frame})"
+      },
       "breakdown": {
         "name": "Durum dökümü ({frame})"
       }

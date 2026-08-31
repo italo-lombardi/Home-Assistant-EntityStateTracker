@@ -117,6 +117,12 @@
       "duration": {
         "name": "Doba trvání ({frame})"
       },
+      "percent": {
+        "name": "Procento ({frame})"
+      },
+      "compliance": {
+        "name": "Shoda ({frame})"
+      },
       "breakdown": {
         "name": "Rozpad stavů ({frame})"
       }

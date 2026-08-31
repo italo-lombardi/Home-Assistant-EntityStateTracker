@@ -17,6 +17,18 @@ from dataclasses import dataclass, field
 from typing import Any
 
 
+def _str_map(raw: Any) -> dict[str, str]:
+    """Coerce a raw value into a ``{str: str}`` dict, dropping non-string rows.
+
+    Used for the persisted ``last_entered``/``last_exited`` maps: a legacy store
+    (written before these fields) or a corrupt row yields an empty/clean dict
+    rather than raising, matching the defensive daily-bucket load contract.
+    """
+    if not isinstance(raw, dict):
+        return {}
+    return {str(k): str(v) for k, v in raw.items() if isinstance(v, str)}
+
+
 @dataclass(frozen=True, slots=True)
 class FrameResult:
     """Computed metrics for a single frame (window) of one tracker.
@@ -52,11 +64,16 @@ class TrackerData:
 
     ``frames`` maps each enabled frame key to its :class:`FrameResult`.
     ``last_state`` / ``previous_state`` are the live transition context.
+    ``last_entered`` / ``last_exited`` are the tracker-global per-state
+    transition timestamps (§7), surfaced from the ledger as flat
+    ``{state: iso_ts}`` dicts (same value on every frame's sensor).
     """
 
     frames: dict[str, FrameResult] = field(default_factory=dict)
     last_state: str | None = None
     previous_state: str | None = None
+    last_entered: dict[str, str] = field(default_factory=dict)
+    last_exited: dict[str, str] = field(default_factory=dict)
 
 
 @dataclass
@@ -76,6 +93,13 @@ class TrackerLedger:
     last_state: str | None = None
     last_changed_ts: str | None = None
     last_updated_day: str | None = None
+    # Per-state timestamps of the most recent transition INTO (``last_entered``)
+    # and OUT OF (``last_exited``) each state, as ISO strings (§7). Tracker-
+    # global (frame-independent): the live fold stamps both on every transition.
+    # Persisted so they survive a restart, defaulting empty on legacy stores
+    # without the keys (no STORAGE_VERSION bump).
+    last_entered: dict[str, str] = field(default_factory=dict)
+    last_exited: dict[str, str] = field(default_factory=dict)
     # The min_state_duration (glitch threshold) the closed-day daily buckets were
     # LAST built with. Persisted so an options edit that changes the threshold can
     # detect stale buckets across a restart and re-backfill them with the new
@@ -111,6 +135,11 @@ class TrackerLedger:
             built_min_state_duration = float(built) if built is not None else None
         except (TypeError, ValueError):
             built_min_state_duration = None
+        # ``.get(..., {})`` so a legacy store written before these fields loads
+        # clean with empty dicts — no STORAGE_VERSION bump (§8). Coerce to
+        # {str: str}, dropping malformed rows (mirrors the daily-bucket contract).
+        last_entered = _str_map(d.get("last_entered"))
+        last_exited = _str_map(d.get("last_exited"))
         return cls(
             entity_id=str(d.get("entity_id", "")),
             mode=str(d.get("mode", "")),
@@ -124,6 +153,8 @@ class TrackerLedger:
             last_state=d.get("last_state"),
             last_changed_ts=d.get("last_changed_ts"),
             last_updated_day=d.get("last_updated_day"),
+            last_entered=last_entered,
+            last_exited=last_exited,
             built_min_state_duration=built_min_state_duration,
         )
 
@@ -140,6 +171,8 @@ class TrackerLedger:
             "last_state": self.last_state,
             "last_changed_ts": self.last_changed_ts,
             "last_updated_day": self.last_updated_day,
+            "last_entered": dict(self.last_entered),
+            "last_exited": dict(self.last_exited),
             "built_min_state_duration": self.built_min_state_duration,
         }
 

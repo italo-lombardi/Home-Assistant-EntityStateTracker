@@ -36,10 +36,31 @@ def test_tracker_ledger_roundtrip() -> None:
         last_state="heat",
         last_changed_ts="2026-08-29T10:00:00+00:00",
         last_updated_day="2026-08-29",
+        last_entered={"heat": "2026-08-29T10:00:00+00:00"},
+        last_exited={"auto": "2026-08-29T10:00:00+00:00"},
         built_min_state_duration=5.0,
     )
     restored = TrackerLedger.from_dict(ledger.to_dict())
     assert restored == ledger
+    # The per-state transition stamps survive the restart round-trip intact.
+    assert restored.last_entered == {"heat": "2026-08-29T10:00:00+00:00"}
+    assert restored.last_exited == {"auto": "2026-08-29T10:00:00+00:00"}
+
+
+def test_tracker_ledger_from_dict_last_seen_maps_default_and_clean() -> None:
+    """Legacy store (no entered/exited) loads empty; malformed rows are dropped."""
+    # Absent → empty dicts, no STORAGE_VERSION bump (§8).
+    assert TrackerLedger.from_dict({}).last_entered == {}
+    assert TrackerLedger.from_dict({}).last_exited == {}
+    # Non-string values dropped, keys stringified (mirrors daily-bucket contract).
+    ledger = TrackerLedger.from_dict(
+        {
+            "last_entered": {"heat": "2026-08-29T10:00:00+00:00", "bad": 123},
+            "last_exited": "not-a-dict",
+        }
+    )
+    assert ledger.last_entered == {"heat": "2026-08-29T10:00:00+00:00"}
+    assert ledger.last_exited == {}
 
 
 def test_tracker_ledger_from_dict_built_min_state_duration_bad_value() -> None:

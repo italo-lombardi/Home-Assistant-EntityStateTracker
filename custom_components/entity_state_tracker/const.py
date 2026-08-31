@@ -67,6 +67,8 @@ SERVICE_RESET_LEDGER = "reset_ledger"
 
 # Translation keys per metric (§5, §11) — one per emitted entity kind.
 TRANSLATION_KEY_DURATION = "duration"
+TRANSLATION_KEY_PERCENT = "percent"
+TRANSLATION_KEY_COMPLIANCE = "compliance"
 TRANSLATION_KEY_BREAKDOWN = "breakdown"
 TRANSLATION_KEY_CURRENTLY_IN_STATE = "currently_in_state"
 TRANSLATION_KEY_COMPLIANT = "compliant"

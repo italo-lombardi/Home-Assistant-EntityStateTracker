@@ -454,6 +454,13 @@ def bs_eid_for(entry_id: str, metric: str, reg: dict[str, dict] | None = None):
     return entry.get("entity_id") if entry else None
 
 
+def category_for(entry_id: str, frame: str, metric: str, reg: dict[str, dict] | None = None):
+    """entity_category (e.g. 'diagnostic') for a frame-scoped sensor, or None."""
+    reg = reg if reg is not None else est_entities(entry_id)
+    entry = reg.get(f"{entry_id}_{frame}_{metric}")
+    return entry.get("entity_category") if entry else None
+
+
 def wait_entities(entry_id: str, min_count: int = 1, timeout=30) -> dict[str, dict]:
     """Poll the registry until at least ``min_count`` EST entities exist."""
     deadline = time.time() + timeout
@@ -484,6 +491,8 @@ def make_entity(suffix: str, initial: str = "on") -> str:
 # Frame sensor metric keys (translation keys — see const.py)
 # ---------------------------------------------------------------------------
 M_DURATION = "duration"
+M_PERCENT = "percent"
+M_COMPLIANCE = "compliance"
 M_BREAKDOWN = "breakdown"
 M_CURRENTLY = "currently_in_state"
 M_COMPLIANT = "compliant"
@@ -506,7 +515,8 @@ def ec1_specific_duration_sensors():
     entry = create_tracker(
         eid, "specific_states", states=["on", "off"], frames=FRAMES_ON
     )
-    reg = wait_entities(entry, min_count=4)
+    # Per frame: DurationSensor + PercentSensor (both enabled by default) → 8 total.
+    reg = wait_entities(entry, min_count=8)
     for frame in ("today", "yesterday", "24h", "7d"):
         dur_eid = eid_for(entry, frame, M_DURATION, reg)
         chk(
@@ -531,6 +541,43 @@ def ec1_specific_duration_sensors():
             chk(
                 f"EC1 duration state numeric ({frame})", numeric, True, f"state={val!r}"
             )
+        # PercentSensor: enabled-by-default, DIAGNOSTIC, numeric 0-100.
+        pct_eid = eid_for(entry, frame, M_PERCENT, reg)
+        chk(
+            f"EC1 percent sensor exists ({frame})",
+            pct_eid is not None,
+            True,
+            f"reg_uids={list(reg)}",
+        )
+        chk(
+            f"EC1 percent sensor is DIAGNOSTIC ({frame})",
+            category_for(entry, frame, M_PERCENT, reg),
+            "diagnostic",
+        )
+        if pct_eid:
+            wait_until(
+                lambda pe=pct_eid: (
+                    gs(pe).get("state") not in (None, "unknown", "unavailable")
+                )
+            )
+            pv = gs(pct_eid).get("state")
+            in_range = False
+            try:
+                in_range = 0.0 <= float(pv) <= 100.0
+            except (TypeError, ValueError):
+                in_range = False
+            chk(
+                f"EC1 percent state in [0,100] ({frame})",
+                in_range,
+                True,
+                f"state={pv!r}",
+            )
+            pattrs = gs(pct_eid).get("attributes", {})
+            chk(
+                f"EC1 percent unit is % ({frame})",
+                pattrs.get("unit_of_measurement"),
+                "%",
+            )
     # Duration sensor carries the full config-context + bounds attribute set.
     today_dur = eid_for(entry, "today", M_DURATION, reg)
     if today_dur:
@@ -546,6 +593,8 @@ def ec1_specific_duration_sensors():
             "data_start",
             "window_coverage",
             "has_gap",
+            "last_entered",
+            "last_exited",
         ):
             chk(
                 f"EC1 duration attr '{key}' present",
@@ -553,12 +602,15 @@ def ec1_specific_duration_sensors():
                 True,
                 f"keys={list(attrs)}",
             )
-        chk(
-            "EC1 duration source_entity = tracked entity",
-            attrs.get("source_entity"),
-            eid,
-        )
+        chk("EC1 duration source_entity = tracked entity", attrs.get("source_entity"), eid)
         chk("EC1 duration frame = today", attrs.get("frame"), "today")
+    # No compliance configured → NO compliance percent sensor for any frame.
+    chk(
+        "EC1 no compliance sensor without target (specific, no compliance)",
+        eid_for(entry, "today", M_COMPLIANCE, reg) is None,
+        True,
+        f"reg_uids={list(reg)}",
+    )
     return entry, eid
 
 
@@ -704,6 +756,37 @@ def ec4_compliance():
         True,
         f"uids={list(reg)}",
     )
+    # ComplianceSensor (numeric %) is created per frame only when compliance is on.
+    comp_pct_eid = eid_for(entry, "today", M_COMPLIANCE, reg)
+    chk(
+        "EC4 compliance percent sensor exists (compliance enabled)",
+        comp_pct_eid is not None,
+        True,
+        f"uids={list(reg)}",
+    )
+    chk(
+        "EC4 compliance percent sensor is DIAGNOSTIC",
+        category_for(entry, "today", M_COMPLIANCE, reg),
+        "diagnostic",
+    )
+    if comp_pct_eid:
+        wait_until(
+            lambda ce=comp_pct_eid: (
+                gs(ce).get("state") not in (None, "unknown", "unavailable")
+            )
+        )
+        cpv = gs(comp_pct_eid).get("state")
+        cin = False
+        try:
+            cin = 0.0 <= float(cpv) <= 100.0
+        except (TypeError, ValueError):
+            cin = False
+        chk(
+            "EC4 compliance percent state in [0,100]",
+            cin,
+            True,
+            f"state={cpv!r}",
+        )
 
     # Accrue some target time, then fold it so compliance_percent > 0.
     ss(eid, "on")
@@ -956,6 +1039,8 @@ def ec9_unrecorded(entry_allstates, eid_allstates, today_bd):
         "counts",
         "avg_duration_seconds",
         "previous_state",
+        "last_entered",
+        "last_exited",
         "window_seconds",
         "unaccounted_seconds",
         "window_coverage",
