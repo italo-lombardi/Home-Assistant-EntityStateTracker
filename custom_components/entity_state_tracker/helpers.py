@@ -149,6 +149,20 @@ def binary_entity_id(name: str, metric: str) -> str:
     return f"binary_sensor.{DOMAIN}_{slugify(name)}_{_METRIC_ENTITY_SLUG[metric]}"
 
 
+def binary_frame_entity_id(name: str, frame: str, metric: str) -> str:
+    """Default entity_id for a PER-FRAME binary sensor: ``id == slugify(name)``.
+
+    ``binary_sensor.entity_state_tracker_<name_slug>_<metric_slug>_<frame_label_slug>``
+    — the ``frame_entity_id`` shape on the ``binary_sensor`` domain, used by the
+    per-frame Compliant sensors (one per enabled frame). frame last, so the id
+    reads as "Compliant (This month)" → ``compliant_this_month``.
+    """
+    return (
+        f"binary_sensor.{DOMAIN}_{slugify(name)}_"
+        f"{_METRIC_ENTITY_SLUG[metric]}_{_frame_label_slug(frame)}"
+    )
+
+
 if __name__ == "__main__":  # pragma: no cover
     # Self-check: normalization, device name, and every canonical frame labels.
     assert normalize_state("  Heat ") == "heat"
@@ -194,5 +208,9 @@ if __name__ == "__main__":  # pragma: no cover
     assert (
         binary_entity_id("Front Door", TRANSLATION_KEY_CURRENTLY_IN_STATE)
         == "binary_sensor.entity_state_tracker_front_door_in_a_tracked_state"
+    )
+    assert (
+        binary_frame_entity_id("Front Door", "month", TRANSLATION_KEY_COMPLIANT)
+        == "binary_sensor.entity_state_tracker_front_door_compliant_this_month"
     )
     print("helpers self-check OK")

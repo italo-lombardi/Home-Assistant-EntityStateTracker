@@ -1,6 +1,6 @@
 """Binary sensor platform for Entity State Tracker.
 
-Two binary sensors, both conditional (§5.1):
+Conditional binary sensors (§5.1):
 
 * **Currently in state** — specific mode only. ``on`` while the entity's live
   state is one of the tracked states. Read straight off HA's state machine
@@ -8,8 +8,9 @@ Two binary sensors, both conditional (§5.1):
   across a restart with no transition — and repaints on the debounce a state
   change schedules. (It deliberately does NOT read the coordinator ledger's
   ``last_state``, which lags the real entity on boot until the next fold.)
-* **Compliant** — only when a compliance ``target_threshold`` is configured.
-  ``on`` when today's compliance percentage meets or exceeds that threshold.
+* **Compliant** — one per enabled frame, only when a compliance
+  ``target_threshold`` is configured. Each is ``on`` when its frame's compliance
+  percentage meets or exceeds that threshold.
 
 Both ride :class:`~.write_dedup.DedupCoordinatorBinarySensor`, so an idle 5-min
 coordinator tick that recomputes an unchanged value writes no recorder row.
@@ -32,14 +33,14 @@ from .const import (
     TRANSLATION_KEY_CURRENTLY_IN_STATE,
 )
 from .coordinator import EntityStateTrackerCoordinator
-from .helpers import binary_entity_id, tracker_device_name, unique_id
+from .helpers import (
+    binary_entity_id,
+    binary_frame_entity_id,
+    frame_label,
+    tracker_device_name,
+    unique_id,
+)
 from .write_dedup import DedupCoordinatorBinarySensor
-
-# The compliant sensor keys today's frame — the only window whose compliance is
-# "now" rather than a historical span. "today" is a default-on frame, but a user
-# may disable it; the sensor then falls back to the first enabled frame so it
-# never references a frame the coordinator isn't computing.
-_TODAY = "today"
 
 
 async def async_setup_entry(
@@ -54,9 +55,12 @@ async def async_setup_entry(
     # Currently-in-state only makes sense when we know which states count.
     if coordinator.mode == MODE_SPECIFIC and coordinator.tracked_states:
         entities.append(CurrentlyInStateBinarySensor(coordinator))
-    # Compliant only exists when a pass/fail threshold was declared.
+    # One Compliant per enabled frame — only when a pass/fail threshold exists.
     if coordinator.target_threshold is not None:
-        entities.append(CompliantBinarySensor(coordinator))
+        entities.extend(
+            CompliantBinarySensor(coordinator, frame)
+            for frame in coordinator.enabled_frames
+        )
 
     async_add_entities(entities)
 
@@ -169,17 +173,12 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
 
 
 class CompliantBinarySensor(DedupCoordinatorBinarySensor):
-    """ON when today's compliance percentage meets the configured threshold.
+    """ON when ONE frame's compliance percentage meets the configured threshold.
 
-    Frame note: this sensor scores the ``today`` frame — the only window whose
-    compliance is "now" rather than a historical span. ``today`` is default-on,
-    but a user MAY disable it; when it is off, the sensor falls back to the FIRST
-    enabled frame (``enabled_frames[0]``, canonical order today→…→year). So with
-    ``today`` disabled, "compliant" can silently mean e.g. year-compliance —
-    whichever enabled frame comes first in canonical order. The active frame is
-    always surfaced in the ``frame`` extra-state attribute so the user can see
-    which window is being scored. Keep ``today`` enabled if you want the sensor
-    to track live/day compliance.
+    One instance per enabled frame (setup loops ``coordinator.enabled_frames``),
+    so a tracker with a threshold exposes e.g. "Compliant (Today)", "Compliant
+    (This month)", … each scoring its own window against the same threshold.
+    The scored frame is surfaced in the ``frame`` extra-state attribute.
     """
 
     _attr_has_entity_name = True
@@ -195,37 +194,34 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
         {"compliance_percent", "data_start", "window_coverage", "has_gap"}
     )
 
-    def __init__(self, coordinator: EntityStateTrackerCoordinator) -> None:
-        """Initialize the compliant binary sensor."""
+    def __init__(
+        self, coordinator: EntityStateTrackerCoordinator, frame: str
+    ) -> None:
+        """Initialize the compliant binary sensor for one frame."""
         super().__init__(coordinator)
+        self._frame_key = frame
         self._attr_unique_id = unique_id(
-            coordinator.entry.entry_id, "", TRANSLATION_KEY_COMPLIANT
+            coordinator.entry.entry_id, frame, TRANSLATION_KEY_COMPLIANT
         )
         # Pin entity_id to the id==slugify(name) default, namespaced by the tracker
         # NAME (entry.title), never the entry_id ULID (see sensor.py _FrameSensor
         # for the full rationale + v0.1.0 tradeoff). The card discovers by device_id
         # + translation_key, not this id, so it's renameable.
-        self.entity_id = binary_entity_id(
-            coordinator.entry.title or coordinator.entity_id, TRANSLATION_KEY_COMPLIANT
+        self.entity_id = binary_frame_entity_id(
+            coordinator.entry.title or coordinator.entity_id,
+            frame,
+            TRANSLATION_KEY_COMPLIANT,
         )
+        self._attr_translation_placeholders = {"frame": frame_label(frame)}
         self._attr_device_info = _device_info(coordinator)
-        # Prefer today's frame; fall back to whichever frame is first enabled so
-        # the sensor always reads a frame the coordinator actually computes.
-        self._frame_key = (
-            _TODAY
-            if _TODAY in coordinator.enabled_frames
-            else (
-                coordinator.enabled_frames[0] if coordinator.enabled_frames else _TODAY
-            )
-        )
 
     @property
     def is_on(self) -> bool | None:
-        """Return True when compliance meets the threshold, None when unknown.
+        """Return True when this frame's compliance meets the threshold, else None.
 
-        Scores ``self._frame_key`` — ``today`` when enabled, else the first
-        enabled frame (see the class docstring): with ``today`` off this may be a
-        long window, so the score is that frame's compliance, not the live day.
+        ``None`` when the threshold is cleared, there is no data yet, the frame is
+        absent from the computed output, or its ``compliance_percent`` is ``None``
+        (N/A window).
         """
         threshold = self.coordinator.target_threshold
         data = self.coordinator.data
