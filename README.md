@@ -25,7 +25,7 @@ Point Entity State Tracker at one entity, pick a mode, and it produces a bundle 
 - **Survives recorder purge** — a self-managed daily-bucket ledger (via HA `Store`) accumulates closed days, so long windows keep working past the recorder's default ~10-day retention. Data-since-date and gap flags mean a partial window is never silently wrong.
 - **Compliance** (specific mode) — declare a *target* set of desired states (`heat` **or** `auto`), and the percentage becomes a compliance score with an optional threshold that spawns a `compliant` binary sensor.
 - **Transitions** — per-state entry count, average visit duration, last-seen, and previous-state — riding the same event stream, near-zero extra machinery.
-- **Auto-discovered breakdown** — all-states mode emits one breakdown sensor per frame whose attributes hold `breakdown_seconds`, `breakdown_pct`, `counts`, and `avg_duration` per state. A brand-new state at runtime just becomes a new key — no restart, no config change — and fires an `entity_state_tracker_new_state` event.
+- **Auto-discovered breakdown** — all-states mode emits one breakdown sensor per frame whose attributes hold `breakdown_seconds`, `breakdown_pct`, `counts`, and `avg_duration_seconds` per state. A brand-new state at runtime just becomes a new key — no restart, no config change — and fires an `entity_state_tracker_new_state` event.
 - **DST-correct** — every percentage uses the real elapsed seconds of the window as its denominator, so a 23-hour or 25-hour DST day still reads 100%.
 - **Recorder-friendly** — the churny breakdown dicts are marked unrecorded; only sensor *states* record, and displayed values are rounded so idle ticks don't create history rows. Budgeted at ~250–400 KB/yr per tracker.
 - **Custom Lovelace card** — bars, pie/donut, or table view; deterministic per-state colours; auto-installed as a Lovelace resource.
@@ -140,7 +140,7 @@ Per **enabled frame**, one **duration sensor**:
 |--------|-------|
 | State | Seconds spent in the tracked states during the frame (`device_class: duration`, unit seconds, suggested display in hours, 1 dp) |
 | `state_class` | `measurement` |
-| Key attributes | `source_entity`, `frame`, `percent`, `compliance_percent` and `target_threshold` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`count`, `avg_duration`, `previous_state`) |
+| Key attributes | `source_entity`, `frame`, `percent`, `compliance_percent` and `target_threshold` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`count`, `avg_duration_seconds`, `previous_state`) |
 
 The frame's **percent** and **compliance percent** (when a target is set) ride along as attributes on the duration sensor — read them in templates or with a template trigger. For pass/fail automation, a `compliant` binary sensor is created when a threshold is set:
 
@@ -161,7 +161,7 @@ The `compliant` binary sensor also exposes `source_entity`, `compliance_percent`
 
 | Entity | State | Attributes |
 |--------|-------|------------|
-| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `frame`, `breakdown_seconds` `{state: int}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
+| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `frame`, `breakdown_seconds` `{state: int}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration_seconds` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
 
 - **Every state literal gets its own row** — `unavailable`, `unknown`, and `none` are counted as ordinary state names against a single wall-clock denominator, so the rows sum to ~100% of the covered window.
 - **A new state seen at runtime becomes a new key**, accumulating from first-seen. No entity is created, no restart is needed. One INFO log line is written and an `entity_state_tracker_new_state` event always fires — automations can react to it with no extra configuration.
@@ -238,7 +238,7 @@ data:
 
 ## Automation examples
 
-See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `currently_in_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration` off a breakdown sensor, guarding on `has_gap` / `window_coverage`, and calling `reset_ledger` — plus Telegram/TTS channels and cooldown patterns.
+See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `currently_in_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration_seconds` off a breakdown sensor, guarding on `has_gap` / `window_coverage`, and calling `reset_ledger` — plus Telegram/TTS channels and cooldown patterns.
 
 ---
 

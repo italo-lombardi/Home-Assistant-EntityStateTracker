@@ -954,7 +954,7 @@ def ec9_unrecorded(entry_allstates, eid_allstates, today_bd):
         "breakdown_seconds",
         "breakdown_pct",
         "counts",
-        "avg_duration",
+        "avg_duration_seconds",
         "previous_state",
         "window_seconds",
         "unaccounted_seconds",
@@ -1281,9 +1281,9 @@ def ec16_targeted_reset():
     wait_entities(entry_a, min_count=1)
     wait_entities(entry_b, min_count=1)
 
-    # Accrue on BOTH so each ledger has data to clear.
+    # Accrue on BOTH so each ledger has data to clear. Entities start "on"
+    # (make_entity above), so a single off→on cycle is enough to record a visit.
     for e in (eid_a, eid_b):
-        ss(e, "on")
         time.sleep(3)
         ss(e, "off")
         ss(e, "on")
@@ -1311,12 +1311,15 @@ def ec16_targeted_reset():
 
     dca = wait_for(lambda: _day_count(entry_a), 0, timeout=WAIT_FOR_TIMEOUT)
     chk("EC16 targeted tracker A ledger cleared (day_count=0)", dca, 0)
-    # B must be untouched (still holds ≥1 day).
+    # B must be untouched (still holds ≥1 day). Read once so a transient
+    # diagnostics error fails this check rather than aborting the test on the
+    # message-arg call.
+    b_after = _day_count(entry_b) or 0
     chk(
         "EC16 non-targeted tracker B ledger untouched (day_count≥1)",
-        (_day_count(entry_b) or 0) >= 1,
+        b_after >= 1,
         True,
-        f"B_day_count={_day_count(entry_b)}",
+        f"B_day_count={b_after}",
     )
 
     # A target matching no tracker → reset_no_match (HTTP >=400), nothing cleared.
@@ -1331,11 +1334,12 @@ def ec16_targeted_reset():
         True,
         f"status={status_nm} body={body_nm}",
     )
+    b_final = _day_count(entry_b) or 0
     chk(
         "EC16 tracker B still untouched after unmatched reset",
-        (_day_count(entry_b) or 0) >= 1,
+        b_final >= 1,
         True,
-        f"B_day_count={_day_count(entry_b)}",
+        f"B_day_count={b_final}",
     )
 
 

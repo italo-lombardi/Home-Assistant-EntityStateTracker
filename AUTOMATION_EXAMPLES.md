@@ -187,7 +187,7 @@ automation:
 
 ## Breakdown attributes (all-states mode)
 
-Each `sensor..._state_breakdown_<frame>` carries the full per-state breakdown in its attributes. `breakdown_pct` is a `{state: percent}` dict, `breakdown_seconds` is `{state: seconds}`, `counts` is `{state: entries}`, and `avg_duration` is `{state: seconds}`. The sensor's own state is the dominant (longest-duration) state for that frame.
+Each `sensor..._state_breakdown_<frame>` carries the full per-state breakdown in its attributes. `breakdown_pct` is a `{state: percent}` dict, `breakdown_seconds` is `{state: seconds}`, `counts` is `{state: entries}`, and `avg_duration_seconds` is `{state: seconds}`. The sensor's own state is the dominant (longest-duration) state for that frame.
 
 > **Note:** breakdown attributes are unrecorded (they change roughly every minute), so they don't bloat the recorder — but templates and `template` triggers read them live just fine.
 
@@ -265,7 +265,7 @@ automation:
                         'counts')['open'] }} times today
           (avg open
           {{ (state_attr('sensor.entity_state_tracker_front_door_state_breakdown_today',
-                         'avg_duration')['open'] | float(0) / 60) | round(1) }} min).
+                         'avg_duration_seconds')['open'] | float(0) / 60) | round(1) }} min).
 ```
 
 ---

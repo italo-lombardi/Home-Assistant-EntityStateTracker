@@ -143,7 +143,7 @@ def _transition_metrics(
     keys = states if states is not None else list(result.counts)
     return {
         "counts": {s: result.counts.get(s, 0) for s in keys},
-        "avg_duration": {s: result.avg_duration.get(s) for s in keys},
+        "avg_duration_seconds": {s: result.avg_duration.get(s) for s in keys},
         "previous_state": coordinator.data.previous_state
         if coordinator.data is not None
         else None,
@@ -175,7 +175,7 @@ class DurationSensor(_FrameSensor):
     _unrecorded_attributes = frozenset(
         {
             "counts",
-            "avg_duration",
+            "avg_duration_seconds",
             "previous_state",
             "percent",
             "compliance_percent",
@@ -249,7 +249,7 @@ class BreakdownSensor(_FrameSensor):
             "breakdown_seconds",
             "breakdown_pct",
             "counts",
-            "avg_duration",
+            "avg_duration_seconds",
             "previous_state",
             "window_seconds",
             "data_start",
@@ -288,7 +288,7 @@ class BreakdownSensor(_FrameSensor):
             "breakdown_seconds": {s: int(result.breakdown_seconds[s]) for s in order},
             "breakdown_pct": breakdown_pct,
             "counts": {s: result.counts.get(s, 0) for s in order},
-            "avg_duration": {s: result.avg_duration.get(s) for s in order},
+            "avg_duration_seconds": {s: result.avg_duration.get(s) for s in order},
             "previous_state": self.coordinator.data.previous_state
             if self.coordinator.data is not None
             else None,
