@@ -1017,7 +1017,11 @@ class EntityStateTrackerCard extends LitElement {
         });
       }
     }
-    slices = slices.filter((s) => s.secs > 0);
+    // Drop sub-second slices: the engine counts the current open state up to
+    // `now`, so a fully-covered window leaves only floating-point residue in
+    // unaccounted/other (e.g. 0.4s) — a dust slice that rounds to "0 s" and
+    // clutters the legend. >=1s is the smallest slice worth drawing here.
+    slices = slices.filter((s) => s.secs >= 1);
     const total = slices.reduce((n, s) => n + s.secs, 0) || 1;
 
     // Build a donut with stacked conic-gradient-free SVG arcs.
