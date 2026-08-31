@@ -334,17 +334,8 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             self._fold_visit(ledger, prev_state, prev_ts, now)
             # The state we just left is now the "previous" state.
             self._previous_state = prev_state
-            # Stamp the exit of A (§7). Entry of B is stamped unconditionally
-            # below — the very first observed state has no prior A, so only its
-            # entry is recorded.
-            # ponytail: no recorder-backfill for last_entered/exited — these are
-            # best-effort from the first post-start transition, same class as the
-            # §8 carry-forward heuristic. Days before the first live transition
-            # carry no per-state entry/exit stamp.
-            ledger.last_exited[prev_state] = now_iso
 
         new_name = new_state.state
-        ledger.last_entered[new_name] = now_iso
         first_seen = new_name not in self._seen
         # Cap _seen so a unique-state-per-transition entity can't grow it (and
         # spam notifications) without bound — past the cap, stop tracking and
@@ -361,6 +352,20 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             first_seen = False
         else:
             self._seen.add(new_name)
+        # Stamp entry of B and exit of A (§7) — but only for states the cap still
+        # tracks (present in _seen). Stamping unconditionally would let the same
+        # unique-state-per-transition entity _SEEN_CAP guards against grow these
+        # persisted dicts without bound, defeating the cap. A state past the cap
+        # is untracked here too; the very first observed state has no prior A, so
+        # only its entry is recorded.
+        # ponytail: no recorder-backfill for last_entered/exited — these are
+        # best-effort from the first post-start transition, same class as the
+        # §8 carry-forward heuristic. Days before the first live transition
+        # carry no per-state entry/exit stamp.
+        if new_name in self._seen:
+            ledger.last_entered[new_name] = now_iso
+        if prev_state is not None and prev_ts is not None and prev_state in self._seen:
+            ledger.last_exited[prev_state] = now_iso
         ledger.last_state = new_name
         ledger.last_changed_ts = now_iso
         self._dirty = True

@@ -118,7 +118,7 @@
         "name": "Duration ({frame})"
       },
       "percent": {
-        "name": "Percent ({frame})"
+        "name": "In a Tracked State % ({frame})"
       },
       "compliance": {
         "name": "Compliance ({frame})"

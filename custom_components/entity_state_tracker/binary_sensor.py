@@ -3,8 +3,11 @@
 Two binary sensors, both conditional (§5.1):
 
 * **Currently in state** — specific mode only. ``on`` while the entity's live
-  state is one of the tracked states. Read straight off the coordinator's
-  ``last_state`` so it flips the moment a transition folds into the ledger.
+  state is one of the tracked states. Read straight off HA's state machine
+  (``hass.states.get``), so it is correct the instant the entry loads — even
+  across a restart with no transition — and repaints on the debounce a state
+  change schedules. (It deliberately does NOT read the coordinator ledger's
+  ``last_state``, which lags the real entity on boot until the next fold.)
 * **Compliant** — only when a compliance ``target_threshold`` is configured.
   ``on`` when today's compliance percentage meets or exceeds that threshold.
 
@@ -17,9 +20,10 @@ from __future__ import annotations
 from typing import Any
 
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.core import HomeAssistant
+from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.event import async_track_state_change_event
 
 from .const import (
     DOMAIN,
@@ -95,28 +99,72 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
         self._attr_unique_id = unique_id(
             coordinator.entry.entry_id, "", TRANSLATION_KEY_CURRENTLY_IN_STATE
         )
-        # Pin entity_id so it shares the tracker's card-discoverable stem (see
-        # sensor.py _FrameSensor.__init__ for the rationale + v0.1.0 tradeoff).
+        # Pin entity_id to the id==slugify(name) default, namespaced by the tracker
+        # NAME (entry.title), never the entry_id ULID (see sensor.py _FrameSensor
+        # for the full rationale + v0.1.0 tradeoff). The card discovers by device_id
+        # + translation_key, not this id, so it's renameable.
         self.entity_id = binary_entity_id(
-            coordinator.entry.entry_id, TRANSLATION_KEY_CURRENTLY_IN_STATE
+            coordinator.entry.title or coordinator.entity_id,
+            TRANSLATION_KEY_CURRENTLY_IN_STATE,
         )
         self._attr_device_info = _device_info(coordinator)
 
+    async def async_added_to_hass(self) -> None:
+        """Repaint immediately on every source-entity state change.
+
+        ``is_on``/``current_state`` read the source's LIVE state, but the base
+        class only writes on coordinator ticks (~5 min) — so between the source
+        changing and the next tick the published state lags, and right after a
+        restart the sensor can publish before the source entity has been
+        restored (reading it as unavailable). Subscribing to the source's
+        ``state_changed`` and writing on each edge closes both windows: the
+        sensor tracks the live state the instant it moves, and refires as soon
+        as the source appears post-boot.
+        """
+        await super().async_added_to_hass()
+
+        @callback
+        def _source_changed(_event: Event[EventStateChangedData]) -> None:
+            self.async_write_ha_state()
+
+        self.async_on_remove(
+            async_track_state_change_event(
+                self.hass, [self.coordinator.entity_id], _source_changed
+            )
+        )
+        # Publish once now so a source that is already settled at add-time (e.g.
+        # unchanged across a restart, so no post-add edge fires) is reflected
+        # without waiting for the first coordinator tick.
+        self.async_write_ha_state()
+
+    @property
+    def _live_state(self) -> str | None:
+        """Return the tracked entity's live state, or None if unavailable.
+
+        Reads HA's state machine directly rather than the coordinator's ledger
+        ``last_state``. The ledger anchor only advances on a folded transition
+        (or the HA-start seed), so on boot — or after a reset that left it
+        ``None`` — it lags the real entity until the next transition, which
+        surfaced as the sensor showing the wrong Off/On until the entity next
+        changed. The live state machine is always current, matching this
+        sensor's "live state" contract (class docstring).
+        """
+        state = self.coordinator.hass.states.get(self.coordinator.entity_id)
+        return state.state if state is not None else None
+
     @property
     def is_on(self) -> bool:
-        """Return True when the current state is one of the tracked states."""
-        data = self.coordinator.data
+        """Return True when the live state is one of the tracked states."""
         tracked = self.coordinator.tracked_states or ()
-        return data is not None and data.last_state in tracked
+        return self._live_state in tracked
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Return the source entity, tracked states, and the live current state."""
-        data = self.coordinator.data
         return {
             "source_entity": self.coordinator.entity_id,
             "tracked_states": self.coordinator.tracked_states,
-            "current_state": data.last_state if data is not None else None,
+            "current_state": self._live_state,
         }
 
 
@@ -153,10 +201,12 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
         self._attr_unique_id = unique_id(
             coordinator.entry.entry_id, "", TRANSLATION_KEY_COMPLIANT
         )
-        # Pin entity_id so it shares the tracker's card-discoverable stem (see
-        # sensor.py _FrameSensor.__init__ for the rationale + v0.1.0 tradeoff).
+        # Pin entity_id to the id==slugify(name) default, namespaced by the tracker
+        # NAME (entry.title), never the entry_id ULID (see sensor.py _FrameSensor
+        # for the full rationale + v0.1.0 tradeoff). The card discovers by device_id
+        # + translation_key, not this id, so it's renameable.
         self.entity_id = binary_entity_id(
-            coordinator.entry.entry_id, TRANSLATION_KEY_COMPLIANT
+            coordinator.entry.title or coordinator.entity_id, TRANSLATION_KEY_COMPLIANT
         )
         self._attr_device_info = _device_info(coordinator)
         # Prefer today's frame; fall back to whichever frame is first enabled so

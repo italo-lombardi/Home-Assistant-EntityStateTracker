@@ -111,6 +111,7 @@ ECs cannot run.
 | EC14 | Dominant hysteresis: a sub-margin near-tie does not flip the dominant state |
 | EC15 | Card JS served (200) and registered as a Lovelace resource |
 | EC16 | `reset_ledger` with an `entity_id` target clears only the matching tracker's ledger (others untouched); an unmatched target raises `reset_no_match` |
+| EC17 | Currently-in-state reflects the LIVE entity state right after a restart with **no** transition (reads HA's state machine, not the stale ledger `last_state`) — needs `EST_SMOKE_HA_DIR` like EC12, else skips |
 
 ## Notes on semantics that shape the tests
 

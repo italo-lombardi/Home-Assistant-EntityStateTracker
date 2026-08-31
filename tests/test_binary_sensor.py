@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 
 from homeassistant.core import HomeAssistant
 from homeassistant.util import slugify
@@ -111,11 +111,12 @@ async def test_currently_in_state_attributes(
     assert sensor.unique_id == (
         f"{specific_config_entry.entry_id}__{TRANSLATION_KEY_CURRENTLY_IN_STATE}"
     )
-    # entity_id PINNED to the card-discoverable stem (shares the tracker's
-    # device prefix; no frame token since binary sensors are frameless).
+    # entity_id PINNED to the id==slugify(name) default, namespaced by the tracker
+    # NAME (entry.title) — never the entry_id ULID — with the metric name slug
+    # ("In a Tracked State" → in_a_tracked_state). No frame token (frameless).
     assert sensor.entity_id == (
         "binary_sensor.entity_state_tracker_"
-        f"{slugify(specific_config_entry.entry_id)}_currently_in_state"
+        f"{slugify(specific_config_entry.title)}_in_a_tracked_state"
     )
     assert sensor.device_info["identifiers"] == {
         (DOMAIN, specific_config_entry.entry_id)
@@ -125,9 +126,9 @@ async def test_currently_in_state_attributes(
 async def test_currently_in_state_on_when_tracked(
     hass: HomeAssistant, specific_config_entry: MockConfigEntry
 ) -> None:
-    """is_on True when last_state is one of the tracked states."""
+    """is_on True when the source's LIVE state is one of the tracked states."""
     coordinator = _make_coordinator(hass, specific_config_entry)
-    coordinator.data = TrackerData(frames={}, last_state="heat")
+    hass.states.async_set(coordinator.entity_id, "heat")
     sensor = CurrentlyInStateBinarySensor(coordinator)
 
     assert sensor.is_on is True
@@ -136,9 +137,9 @@ async def test_currently_in_state_on_when_tracked(
 async def test_currently_in_state_off_when_not_tracked(
     hass: HomeAssistant, specific_config_entry: MockConfigEntry
 ) -> None:
-    """is_on False when last_state is outside the tracked set."""
+    """is_on False when the source's live state is outside the tracked set."""
     coordinator = _make_coordinator(hass, specific_config_entry)
-    coordinator.data = TrackerData(frames={}, last_state="off")
+    hass.states.async_set(coordinator.entity_id, "off")
     sensor = CurrentlyInStateBinarySensor(coordinator)
 
     assert sensor.is_on is False
@@ -147,9 +148,8 @@ async def test_currently_in_state_off_when_not_tracked(
 async def test_currently_in_state_off_when_no_data(
     hass: HomeAssistant, specific_config_entry: MockConfigEntry
 ) -> None:
-    """is_on False when the coordinator has no data yet."""
+    """is_on False when the source entity is absent from the state machine."""
     coordinator = _make_coordinator(hass, specific_config_entry)
-    coordinator.data = None
     sensor = CurrentlyInStateBinarySensor(coordinator)
 
     assert sensor.is_on is False
@@ -161,7 +161,7 @@ async def test_currently_in_state_off_when_tracked_none(
     """is_on False when tracked_states is None (the ``or ()`` fallback)."""
     coordinator = _make_coordinator(hass, specific_config_entry)
     coordinator.tracked_states = None
-    coordinator.data = TrackerData(frames={}, last_state="heat")
+    hass.states.async_set(coordinator.entity_id, "heat")
     sensor = CurrentlyInStateBinarySensor(coordinator)
 
     assert sensor.is_on is False
@@ -172,7 +172,7 @@ async def test_currently_in_state_extra_attributes(
 ) -> None:
     """Attributes expose source entity, tracked states, and the live state."""
     coordinator = _make_coordinator(hass, specific_config_entry)
-    coordinator.data = TrackerData(frames={}, last_state="heat")
+    hass.states.async_set(coordinator.entity_id, "heat")
     sensor = CurrentlyInStateBinarySensor(coordinator)
 
     assert sensor.extra_state_attributes == {
@@ -185,12 +185,37 @@ async def test_currently_in_state_extra_attributes(
 async def test_currently_in_state_current_state_none_when_no_data(
     hass: HomeAssistant, specific_config_entry: MockConfigEntry
 ) -> None:
-    """current_state is None before the coordinator has any data."""
+    """current_state is None when the source entity is absent."""
     coordinator = _make_coordinator(hass, specific_config_entry)
-    coordinator.data = None
     sensor = CurrentlyInStateBinarySensor(coordinator)
 
     assert sensor.extra_state_attributes["current_state"] is None
+
+
+async def test_currently_in_state_repaints_on_source_change(
+    hass: HomeAssistant, specific_config_entry: MockConfigEntry
+) -> None:
+    """A source state change writes state immediately, not just on the tick."""
+    coordinator = _make_coordinator(hass, specific_config_entry)
+    hass.data.setdefault(DOMAIN, {})[specific_config_entry.entry_id] = coordinator
+
+    added: list = []
+    await async_setup_entry(hass, specific_config_entry, added.extend)
+    sensor = added[0]
+    sensor.hass = hass
+    sensor.async_write_ha_state = Mock()  # type: ignore[method-assign]
+    # No-op the coordinator listener registration so CoordinatorEntity's
+    # async_added_to_hass doesn't arm a refresh-interval timer (which would
+    # linger past the test); we only exercise the source subscription here.
+    coordinator.async_add_listener = Mock(return_value=lambda: None)  # type: ignore[method-assign]
+    await sensor.async_added_to_hass()
+    sensor.async_write_ha_state.reset_mock()
+
+    # A source edge fires the subscription → an immediate write (line 128).
+    hass.states.async_set(coordinator.entity_id, "heat")
+    await hass.async_block_till_done()
+
+    sensor.async_write_ha_state.assert_called()
 
 
 async def test_currently_in_state_unrecorded_attributes(
@@ -221,7 +246,7 @@ async def test_compliant_attributes(
     )
     assert sensor.entity_id == (
         "binary_sensor.entity_state_tracker_"
-        f"{slugify(compliance_config_entry.entry_id)}_compliant"
+        f"{slugify(compliance_config_entry.title)}_compliant"
     )
     assert sensor.device_info["identifiers"] == {
         (DOMAIN, compliance_config_entry.entry_id)

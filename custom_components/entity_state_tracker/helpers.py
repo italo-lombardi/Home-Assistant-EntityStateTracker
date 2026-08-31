@@ -68,58 +68,85 @@ def unique_id(entry_id: str, frame: str, metric: str) -> str:
     return f"{entry_id}_{frame}_{metric}"
 
 
-# Metric token → the slug the CARD discovers on. The card (frontend
-# entity-state-tracker-card.js) keys its DOMAIN_PREFIX discovery on the slugified
-# English ENTITY NAME ("Duration"→"duration", "State Breakdown"→"state_breakdown",
-# …), NOT on the backend metric KEY (TRANSLATION_KEY_BREAKDOWN is "breakdown").
-# We pin entity_id to reproduce those exact tokens so the card's stemOf /
-# _matchFrame / prettifyStem discover + label every tracker whatever custom name
-# the user gave the device (with has_entity_name=True HA would otherwise slugify
-# the device name into the object_id, dropping the "entity_state_tracker_" prefix
-# the card matches on — mirrors Entity Availability's explicit self.entity_id).
+# Metric token → the English ENTITY NAME (base, without the "({frame})" suffix),
+# mirroring translations/en.json. This is the SINGLE SOURCE for the entity_id
+# slug: the default entity_id tail is slugify(name), so id == slugify(friendly
+# name), every word, same order (see _METRIC_ENTITY_SLUG below). Keep these in
+# lockstep with en.json — the __main__ self-check pins the expected slugs so a
+# name edit that breaks the convention fails CI.
+_METRIC_NAME_EN: dict[str, str] = {
+    TRANSLATION_KEY_DURATION: "Duration",
+    TRANSLATION_KEY_PERCENT: "In a Tracked State %",
+    TRANSLATION_KEY_COMPLIANCE: "Compliance",
+    TRANSLATION_KEY_BREAKDOWN: "State Breakdown",
+    TRANSLATION_KEY_CURRENTLY_IN_STATE: "In a Tracked State",
+    TRANSLATION_KEY_COMPLIANT: "Compliant",
+}
+
+
+# Metric token → the default entity_id slug, DERIVED from the English name so it
+# can never silently drift from it (id == slugify(name), every word, same order).
+# One transform rule: map "%" → "percent" first (HA slugify would otherwise DROP
+# "%" entirely, losing the word), then slugify (lowercase, non-alphanumerics → "_",
+# collapse runs). So "In a Tracked State %" → "in_a_tracked_state_percent". The
+# entity_id is only the DEFAULT — a user may rename it freely; the card discovers
+# by device_id + translation_key (frontend), never by this id string, so renames
+# don't break the card. The __main__ self-check pins the expected slugs so a name
+# edit that breaks the convention fails CI.
+def _metric_slug(name: str) -> str:
+    """Slug of an entity name for the default entity_id (id == slugify(name)).
+
+    Maps "%" → "percent" before slugify so the percent sensor's id spells the
+    word rather than dropping the glyph (HA ``slugify`` discards "%").
+    """
+    return slugify(name.replace("%", "percent"))
+
+
 _METRIC_ENTITY_SLUG: dict[str, str] = {
-    TRANSLATION_KEY_DURATION: "duration",
-    TRANSLATION_KEY_PERCENT: "percent",
-    TRANSLATION_KEY_COMPLIANCE: "compliance",
-    TRANSLATION_KEY_BREAKDOWN: "state_breakdown",
-    TRANSLATION_KEY_CURRENTLY_IN_STATE: "currently_in_state",
-    TRANSLATION_KEY_COMPLIANT: "compliant",
+    key: _metric_slug(name) for key, name in _METRIC_NAME_EN.items()
 }
 
 
 def _frame_label_slug(frame: str) -> str:
-    """Slug of a frame's English label — the card matches on this, not the key.
+    """Slug of a frame's English label, for the default entity_id frame token.
 
-    e.g. ``7d`` → ``last_7_days`` (slug of "Last 7 days"). Must equal the card's
-    ``_slugify(FRAME_LABELS[frame])``; HA ``slugify`` and the card's slugify agree
-    (lowercase, non-alphanumerics → "_", collapse, trim).
+    e.g. ``7d`` → ``last_7_days`` (slug of "Last 7 days"), so the id reads like the
+    friendly name ("… (Last 7 days)" → ``…_last_7_days``). slugify: lowercase,
+    non-alphanumerics → "_", collapse, trim.
     """
     return slugify(frame_label(frame))
 
 
-def frame_entity_id(entry_id: str, frame: str, metric: str) -> str:
-    """Pinned entity_id for a per-frame sensor the card can discover.
+def frame_entity_id(name: str, frame: str, metric: str) -> str:
+    """Default entity_id for a per-frame sensor: ``id == slugify(name)``.
 
-    ``sensor.entity_state_tracker_<entry_slug>_<metric_slug>_<frame_label_slug>``
-    — the EXACT shape the card expects (DOMAIN_PREFIX + metric label slug + frame
-    label slug). ``entry_id`` is slugified so multiple trackers get distinct stems
-    (mirrors ``unique_id``, which already namespaces by entry_id). See
-    ``_METRIC_ENTITY_SLUG``.
+    ``sensor.entity_state_tracker_<name_slug>_<metric_slug>_<frame_label_slug>``
+    — ``name`` is the tracker's user-visible name (``entry.title``), NOT the
+    entry_id: an internal ULID must never leak into a public entity_id. metric_slug
+    is slugify(English name) (see ``_METRIC_ENTITY_SLUG``) and the frame token is
+    the frame LABEL slug ("Last 7 days" → ``last_7_days``), so the whole id reads
+    as the slugified friendly name ("Duration (Last 7 days)" → ``duration_last_7_days``),
+    every word, same order, frame last. This is only the DEFAULT — users may rename
+    it; the card discovers by device_id + translation_key, not this id string.
+
+    ponytail: two trackers sharing a title collide here; HA's registry auto-suffixes
+    ``_2`` on insert, so a colliding pin is deduped safely — no guard needed.
     """
     return (
-        f"sensor.{DOMAIN}_{slugify(entry_id)}_"
+        f"sensor.{DOMAIN}_{slugify(name)}_"
         f"{_METRIC_ENTITY_SLUG[metric]}_{_frame_label_slug(frame)}"
     )
 
 
-def binary_entity_id(entry_id: str, metric: str) -> str:
-    """Pinned entity_id for a (frameless) binary sensor.
+def binary_entity_id(name: str, metric: str) -> str:
+    """Default entity_id for a (frameless) binary sensor: ``id == slugify(name)``.
 
-    ``binary_sensor.entity_state_tracker_<entry_slug>_<metric_slug>`` — same
+    ``binary_sensor.entity_state_tracker_<name_slug>_<metric_slug>`` — same
     namespacing as ``frame_entity_id`` minus the frame token (the binary sensors
-    are not per-frame). Kept prefixed so it shares the tracker's device stem.
+    are not per-frame). ``name`` is ``entry.title`` (never the entry_id ULID). Only
+    the DEFAULT; renameable, not depended on by the card.
     """
-    return f"binary_sensor.{DOMAIN}_{slugify(entry_id)}_{_METRIC_ENTITY_SLUG[metric]}"
+    return f"binary_sensor.{DOMAIN}_{slugify(name)}_{_METRIC_ENTITY_SLUG[metric]}"
 
 
 if __name__ == "__main__":  # pragma: no cover
@@ -131,17 +158,41 @@ if __name__ == "__main__":  # pragma: no cover
     assert frame_label("mystery") == "mystery"
     assert unique_id("abc", "today", "duration") == "abc_today_duration"
     assert set(_FRAME_LABELS) == set(FRAMES)
-    # Pinned entity_ids reproduce EXACTLY the card's expected slug shape.
+    # Convention: the DEFAULT entity_id tail == slugify(name) (with "%"→"percent"),
+    # every word, same order. Pin the expected slug per metric so a name edit that
+    # breaks id==slug(name) fails here. _METRIC_NAME_EN must mirror en.json.
+    assert set(_METRIC_NAME_EN) == set(_METRIC_ENTITY_SLUG)
+    assert _METRIC_ENTITY_SLUG == {
+        TRANSLATION_KEY_DURATION: "duration",
+        TRANSLATION_KEY_PERCENT: "in_a_tracked_state_percent",
+        TRANSLATION_KEY_COMPLIANCE: "compliance",
+        TRANSLATION_KEY_BREAKDOWN: "state_breakdown",
+        TRANSLATION_KEY_CURRENTLY_IN_STATE: "in_a_tracked_state",
+        TRANSLATION_KEY_COMPLIANT: "compliant",
+    }
+    # Every slug is exactly slugify(name-with-%→percent) — the drift guard.
+    for _k, _name in _METRIC_NAME_EN.items():
+        assert _METRIC_ENTITY_SLUG[_k] == _metric_slug(_name)
+    # Pinned entity_ids reproduce EXACTLY the id==slug(name) shape, namespaced by
+    # the tracker NAME (entry.title) — never the entry_id ULID.
     assert (
-        frame_entity_id("01ABC", "7d", TRANSLATION_KEY_DURATION)
-        == "sensor.entity_state_tracker_01abc_duration_last_7_days"
+        frame_entity_id("Front Door", "7d", TRANSLATION_KEY_DURATION)
+        == "sensor.entity_state_tracker_front_door_duration_last_7_days"
     )
     assert (
-        frame_entity_id("01ABC", "month", TRANSLATION_KEY_BREAKDOWN)
-        == "sensor.entity_state_tracker_01abc_state_breakdown_this_month"
+        frame_entity_id("Front Door", "today", TRANSLATION_KEY_PERCENT)
+        == "sensor.entity_state_tracker_front_door_in_a_tracked_state_percent_today"
     )
     assert (
-        binary_entity_id("01ABC", TRANSLATION_KEY_COMPLIANT)
-        == "binary_sensor.entity_state_tracker_01abc_compliant"
+        frame_entity_id("Front Door", "month", TRANSLATION_KEY_BREAKDOWN)
+        == "sensor.entity_state_tracker_front_door_state_breakdown_this_month"
+    )
+    assert (
+        binary_entity_id("Front Door", TRANSLATION_KEY_COMPLIANT)
+        == "binary_sensor.entity_state_tracker_front_door_compliant"
+    )
+    assert (
+        binary_entity_id("Front Door", TRANSLATION_KEY_CURRENTLY_IN_STATE)
+        == "binary_sensor.entity_state_tracker_front_door_in_a_tracked_state"
     )
     print("helpers self-check OK")

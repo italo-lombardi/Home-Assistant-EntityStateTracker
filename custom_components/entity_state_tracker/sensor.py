@@ -106,16 +106,19 @@ class _FrameSensor(DedupCoordinatorSensor):
         self._attr_unique_id = unique_id(
             coordinator.entry.entry_id, frame, self._metric
         )
-        # Pin entity_id so the card's DOMAIN_PREFIX discovery always finds us.
-        # With has_entity_name=True, HA would otherwise slugify the (custom)
-        # device name into the object_id and drop the "entity_state_tracker_"
-        # prefix the card matches on — a custom-named tracker would vanish from
-        # the card. Mirrors Entity Availability, which pins self.entity_id too.
-        # TRADEOFF: this changes existing installs' entity_ids (history survives
-        # via unique_id in the registry; hardcoded dashboard/template refs to the
-        # OLD slugified ids break). Accepted at v0.1.0 (see CHANGELOG).
+        # Pin entity_id to the id==slugify(name) default (helpers.frame_entity_id),
+        # namespaced by the tracker NAME (entry.title), never the entry_id ULID —
+        # an internal id must not leak into a public entity_id.
+        # With has_entity_name=True, HA would otherwise slugify the (custom) DEVICE
+        # name into the object_id, so a custom-named tracker would get an
+        # unpredictable id. Pinning gives a stable, convention-matching default that
+        # does not drift when the device is renamed. The card discovers by device_id
+        # + translation_key (not this id string), so a user is free to rename it.
+        # TRADEOFF: on existing installs this sets the entity_id once (history
+        # survives via unique_id in the registry; hardcoded dashboard/template refs
+        # to any OLD slugified id break). Accepted at v0.1.0 (see CHANGELOG).
         self.entity_id = frame_entity_id(
-            coordinator.entry.entry_id, frame, self._metric
+            coordinator.entry.title or coordinator.entity_id, frame, self._metric
         )
         self._attr_translation_key = self._translation_key
         self._attr_translation_placeholders = {"frame": frame_label(frame)}

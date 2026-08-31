@@ -303,11 +303,14 @@ def test_duration_entity_descriptors() -> None:
     assert sensor.suggested_display_precision == 1
     assert sensor.state_class == SensorStateClass.MEASUREMENT
     assert sensor.unique_id == "est_entry_today_duration"
-    # entity_id is PINNED to the card-discoverable slug (§card parity): metric
-    # LABEL slug ("duration") + frame LABEL slug ("today"), NOT the metric/frame
-    # keys — so the card's DOMAIN_PREFIX discovery always finds a custom-named
-    # tracker.
-    assert sensor.entity_id == "sensor.entity_state_tracker_est_entry_duration_today"
+    # entity_id is PINNED to id==slug(name), namespaced by the tracker NAME
+    # (entry.title "Living Room — heat/auto"), NEVER the entry_id ULID: metric
+    # slug ("duration") + frame LABEL slug ("today"). The card discovers by
+    # device_id + translation_key, so it finds a custom-named tracker regardless.
+    assert (
+        sensor.entity_id
+        == "sensor.entity_state_tracker_living_room_heat_auto_duration_today"
+    )
 
 
 def test_frame_sensor_entity_id_pinned_frame_label_slug() -> None:
@@ -320,20 +323,24 @@ def test_frame_sensor_entity_id_pinned_frame_label_slug() -> None:
         tracked_states=["heat"],
         target_states=None,
         data=data,
-        entry_id="e_multi",
+        title="Front Door",
     )
     sensor = DurationSensor(coord, "24h")
     assert (
-        sensor.entity_id == "sensor.entity_state_tracker_e_multi_duration_last_24_hours"
+        sensor.entity_id
+        == "sensor.entity_state_tracker_front_door_duration_last_24_hours"
     )
 
 
 def test_breakdown_sensor_entity_id_uses_state_breakdown_metric_slug() -> None:
     """Breakdown sensor pins the "state_breakdown" metric slug (not "breakdown")."""
     coord = _breakdown_coord()
-    coord.entry.entry_id = "e_bd"
+    coord.entry.title = "Front Door"
     sensor = BreakdownSensor(coord, "today")
-    assert sensor.entity_id == "sensor.entity_state_tracker_e_bd_state_breakdown_today"
+    assert (
+        sensor.entity_id
+        == "sensor.entity_state_tracker_front_door_state_breakdown_today"
+    )
 
 
 def test_duration_attributes_without_target() -> None:
@@ -740,15 +747,15 @@ def test_percent_and_compliance_unique_ids() -> None:
 
 
 def test_percent_and_compliance_entity_ids_pinned() -> None:
-    """Pinned entity_ids carry the 'percent'/'compliance' metric label slug."""
+    """Pinned entity_ids carry the percent/compliance metric name slug."""
     coord = _duration_coord(tracked=("heat",), target=("heat",))
-    assert (
-        PercentSensor(coord, "today").entity_id
-        == "sensor.entity_state_tracker_est_entry_percent_today"
+    assert PercentSensor(coord, "today").entity_id == (
+        "sensor.entity_state_tracker_living_room_heat_auto"
+        "_in_a_tracked_state_percent_today"
     )
     assert (
         ComplianceSensor(coord, "today").entity_id
-        == "sensor.entity_state_tracker_est_entry_compliance_today"
+        == "sensor.entity_state_tracker_living_room_heat_auto_compliance_today"
     )
 
 
