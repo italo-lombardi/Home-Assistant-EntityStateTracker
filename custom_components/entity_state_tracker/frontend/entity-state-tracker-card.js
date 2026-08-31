@@ -90,7 +90,20 @@ const DOMAIN = "entity_state_tracker";
 // per-frame metrics; the rest (percent/compliance/binary) aren't charted.
 const TK_DURATION = "duration";
 const TK_BREAKDOWN = "breakdown";
+const TK_COMPLIANT = "compliant";
 const CHART_METRICS = [TK_DURATION, TK_BREAKDOWN];
+
+// Sort state names alphabetically, but keep the two "no reading" states
+// (unavailable/unknown) at the end — they're noise, not a state you tracked on
+// purpose. Mirrors the config-flow prefill sort so display and setup agree.
+const _STATE_TAIL = { unavailable: 1, unknown: 1 };
+function sortStates(states) {
+  return [...states].sort((a, b) => {
+    const ta = _STATE_TAIL[a] ? 1 : 0;
+    const tb = _STATE_TAIL[b] ? 1 : 0;
+    return ta - tb || String(a).localeCompare(String(b));
+  });
+}
 
 // -----------------------------------------------------------------------------
 // Deterministic per-state color (§5.3).
@@ -368,8 +381,33 @@ const cardStyles = css`
   }
 
   /* Bars */
+  .bars-note {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--est-text-primary);
+    margin-bottom: 8px;
+  }
+
   .bar-row {
     margin: 12px 0;
+  }
+
+  .clickable {
+    cursor: pointer;
+    border-radius: 6px;
+  }
+
+  .clickable:hover {
+    background: var(--est-bar-bg);
+  }
+
+  .clickable:focus-visible {
+    outline: 2px solid var(--est-accent);
+    outline-offset: 2px;
+  }
+
+  .bar-compliance-status.clickable:hover {
+    background: var(--est-bar-bg);
   }
 
   .bar-label {
@@ -687,7 +725,7 @@ class EntityStateTrackerCard extends LitElement {
     }
     const changed = fmtLastChanged(st.last_changed);
     return html`<div class="source-context">
-      Tracking: ${name} ·
+      Tracking: ${name} · now
       <span class="current">${st.state}</span>${changed
         ? html` · ${changed}`
         : nothing}
@@ -708,6 +746,23 @@ class EntityStateTrackerCard extends LitElement {
         composed: true,
       })
     );
+  }
+
+  // The frame's Compliant binary sensor id (same device, translation_key
+  // "compliant", matching frame), or null. Keyed off the bar sensor's OWN
+  // device_id so it works no matter how the tracker was configured, and never
+  // parses an entity_id string (rename-safe).
+  _frameCompliantId(s) {
+    const devId = this.hass?.entities?.[s.entity_id]?.device_id;
+    if (!devId) return null;
+    const entities = this.hass.entities || {};
+    for (const id of Object.keys(entities)) {
+      if (!id.startsWith("binary_sensor.")) continue;
+      if (entities[id].device_id !== devId) continue;
+      if (translationKeyOf(this.hass, id) !== TK_COMPLIANT) continue;
+      if (frameOf(this.hass, id) === s.frame) return id;
+    }
+    return null;
   }
 
   _deriveTitle(sensors) {
@@ -738,7 +793,22 @@ class EntityStateTrackerCard extends LitElement {
   // (✓/✗ + score) when a target is set; transition line from counts/avg_duration_seconds.
   // ---------------------------------------------------------------------------
   _renderBars(sensors) {
-    return sensors.map((s) => {
+    // Header rows above the bars: the tracked state(s) and the compliance target
+    // (stated once, instead of repeating "(target ≥ N%)" on every row's chip).
+    const a0 = sensors[0]?.attrs || {};
+    const tracked = a0.tracked_states;
+    const threshold = a0.target_threshold;
+    const trackedLine =
+      Array.isArray(tracked) && tracked.length
+        ? html`<div class="bars-note">
+            Tracked ${tracked.length > 1 ? "states" : "state"}:
+            ${sortStates(tracked).join(", ")}
+          </div>`
+        : nothing;
+    const header = html`${trackedLine}${threshold != null
+      ? html`<div class="bars-note">Compliance target ≥ ${threshold}%</div>`
+      : nothing}`;
+    const rows = sensors.map((s) => {
       const a = s.attrs || {};
       let pct;
       let durSecs;
@@ -757,7 +827,21 @@ class EntityStateTrackerCard extends LitElement {
       const pctNum = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
       const incomplete = this._incomplete(a);
       const label = this._isBreakdown(s) ? `${s.state}` : "";
-      return html`<div class="bar-row">
+      const compliantId = this._frameCompliantId(s);
+      // Row opens its own duration/breakdown sensor; the compliance chip opens
+      // that frame's Compliant binary sensor instead (its click stops bubbling).
+      return html`<div
+        class="bar-row clickable"
+        role="button"
+        tabindex="0"
+        @click=${(e) => this._handleEntityClick(e, s.entity_id)}
+        @keydown=${(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            this._handleEntityClick(e, s.entity_id);
+          }
+        }}
+      >
         <div class="bar-label">
           <span class="frame"
             >${FRAME_LABELS[s.frame] || s.frame}${label
@@ -781,25 +865,55 @@ class EntityStateTrackerCard extends LitElement {
           ></div>
         </div>
         ${a.compliance_percent != null
-          ? this._complianceStatus(a)
+          ? this._complianceStatus(a, compliantId)
           : nothing}
         ${this._transitionLine(a, this._isBreakdown(s) ? s.state : null)}
       </div>`;
     });
+    return html`${header}${rows}`;
   }
 
   // Compliance status chip: pass/fail mark + score, replacing the old second
   // bar. Met = score ≥ threshold (or no threshold → always met, just informational).
   // ✓ green when met, ✗ red when a threshold exists and is missed. Plain unicode
-  // marks (no icon dep). Caller already gated on compliance_percent != null.
-  _complianceStatus(a) {
+  // marks (no icon dep). The target itself is stated once in the bars header, not
+  // repeated per row. Caller gated on compliance_percent. When compliantId is set
+  // the chip opens that frame's Compliant binary sensor (click stops bubbling so
+  // it doesn't also trigger the row's duration more-info).
+  _complianceStatus(a, compliantId) {
     const pct = Number(a.compliance_percent);
     const hasTarget = a.target_threshold != null;
     const met = !hasTarget || pct >= Number(a.target_threshold);
     const text = hasTarget
-      ? `${met ? "Compliant" : "Not compliant"} · ${fmtPct(a.compliance_percent)} (target ≥ ${a.target_threshold}%)`
+      ? `${met ? "Compliant" : "Not compliant"} · ${fmtPct(a.compliance_percent)}`
       : `compliance ${fmtPct(a.compliance_percent)}`;
-    return html`<div class="bar-compliance-status ${met ? "met" : "unmet"}">
+    const clickable = compliantId
+      ? {
+          class: `bar-compliance-status clickable ${met ? "met" : "unmet"}`,
+          role: "button",
+          tabindex: "0",
+          click: (e) => this._handleEntityClick(e, compliantId),
+          keydown: (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              this._handleEntityClick(e, compliantId);
+            }
+          },
+        }
+      : null;
+    if (!clickable) {
+      return html`<div class="bar-compliance-status ${met ? "met" : "unmet"}">
+        <span class="mark">${met ? "✓" : "✗"}</span>
+        <span class="text">${text}</span>
+      </div>`;
+    }
+    return html`<div
+      class=${clickable.class}
+      role="button"
+      tabindex="0"
+      @click=${clickable.click}
+      @keydown=${clickable.keydown}
+    >
       <span class="mark">${met ? "✓" : "✗"}</span>
       <span class="text">${text}</span>
     </div>`;

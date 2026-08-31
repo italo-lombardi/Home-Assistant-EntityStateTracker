@@ -69,9 +69,9 @@ async def test_seen_states_current_plus_recorder(hass: HomeAssistant) -> None:
         mock_get_instance.return_value.async_add_executor_job = _run_sync
         seen = await _async_seen_states(hass, ENTITY)
 
-    # Current "Heat" first, then recorder states; deduped + lowercased. The list
-    # ALWAYS ends with "unavailable" then "unknown" (in that order).
-    assert seen == ["heat", "auto", "off", "unavailable", "unknown"]
+    # Real states sorted alphabetically (live folded in), deduped + lowercased.
+    # The list ALWAYS ends with "unavailable" then "unknown" (in that order).
+    assert seen == ["auto", "heat", "off", "unavailable", "unknown"]
 
 
 async def test_seen_states_skips_unavailable_current(hass: HomeAssistant) -> None:
@@ -138,8 +138,8 @@ async def test_seen_states_dedups_unavailable_unknown_from_recorder(
         mock_get_instance.return_value.async_add_executor_job = _run_sync
         seen = await _async_seen_states(hass, ENTITY)
 
-    # No duplicates; unavailable/unknown forced to the tail in the fixed order.
-    assert seen == ["on", "off", "unavailable", "unknown"]
+    # No duplicates; real states sorted; unavailable/unknown forced to the tail.
+    assert seen == ["off", "on", "unavailable", "unknown"]
 
 
 async def test_seen_states_caps_recorder_derived_at_50(hass: HomeAssistant) -> None:
@@ -168,20 +168,19 @@ async def test_seen_states_caps_recorder_derived_at_50(hass: HomeAssistant) -> N
 
     # cap recorder states + unavailable + unknown.
     assert len(seen) == _SEEN_PREFILL_CAP + 2
-    # Most-recent kept: the last _SEEN_PREFILL_CAP distinct values, in order.
-    assert seen[:_SEEN_PREFILL_CAP] == distinct[-_SEEN_PREFILL_CAP:]
+    # Most-recent kept (last cap distinct), THEN sorted alphabetically for display.
+    assert seen[:_SEEN_PREFILL_CAP] == sorted(distinct[-_SEEN_PREFILL_CAP:])
     assert seen[-2:] == ["unavailable", "unknown"]
 
 
 async def test_seen_states_cap_keeps_live_state(hass: HomeAssistant) -> None:
     """A live state survives the cap even with >cap distinct recorder states.
 
-    The live state is pulled out BEFORE the cap and re-prepended after, so the
-    ``[current live state, ...]`` contract holds even when the recorder-derived
-    set alone exceeds ``_SEEN_PREFILL_CAP`` (the front-trim must never drop the
-    index-0 live state). The live value here is NOT among the recorder states, so
-    the cap keeps a full ``_SEEN_PREFILL_CAP`` recorder states on top of it →
-    cap + live + unavailable + unknown.
+    The live state is pulled out BEFORE the cap so the front-trim can't drop it,
+    then folded into the alphabetical display sort (it is NOT forced first). The
+    live value here is NOT among the recorder states, so the cap keeps a full
+    ``_SEEN_PREFILL_CAP`` recorder states alongside it → cap + live + unavailable
+    + unknown.
     """
     hass.states.async_set("sensor.numeric", "live_now")
     distinct = [f"{float(i)}" for i in range(120)]  # 120 distinct numeric states
@@ -199,21 +198,21 @@ async def test_seen_states_cap_keeps_live_state(hass: HomeAssistant) -> None:
         mock_get_instance.return_value.async_add_executor_job = _run_sync
         seen = await _async_seen_states(hass, "sensor.numeric")
 
-    # Live state is first and PRESENT despite >cap recorder states.
-    assert seen[0] == "live_now"
+    # Live state PRESENT despite >cap recorder states (survives the pre-sort cap).
     assert "live_now" in seen
     # live + cap recorder states + unavailable + unknown.
     assert len(seen) == _SEEN_PREFILL_CAP + 3
-    assert seen[1 : _SEEN_PREFILL_CAP + 1] == distinct[-_SEEN_PREFILL_CAP:]
+    # Real states = live folded into the most-recent cap survivors, sorted.
+    assert seen[:-2] == sorted(["live_now", *distinct[-_SEEN_PREFILL_CAP:]])
     assert seen[-2:] == ["unavailable", "unknown"]
 
 
 async def test_seen_states_cap_dedups_live_from_recorder(hass: HomeAssistant) -> None:
-    """When the live state is also in the recorder set, it appears once (first).
+    """When the live state is also in the recorder set, it appears once.
 
     Excluding the live value from the recorder-derived ``distinct`` before the
     cap means the cap keeps ``_SEEN_PREFILL_CAP`` OTHER states, and the live
-    state is not duplicated when re-prepended.
+    state is not duplicated when folded back into the sort.
     """
     # Live "5.0" is also one of the recorder states → must not double-count.
     hass.states.async_set("sensor.numeric", "5.0")
@@ -232,8 +231,8 @@ async def test_seen_states_cap_dedups_live_from_recorder(hass: HomeAssistant) ->
         mock_get_instance.return_value.async_add_executor_job = _run_sync
         seen = await _async_seen_states(hass, "sensor.numeric")
 
-    assert seen[0] == "5.0"
     assert seen.count("5.0") == 1
+    assert seen[-2:] == ["unavailable", "unknown"]
     # live + cap recorder states + unavailable + unknown.
     assert len(seen) == _SEEN_PREFILL_CAP + 3
 
