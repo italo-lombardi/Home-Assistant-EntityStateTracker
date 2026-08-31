@@ -267,36 +267,6 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         """Flush the ledger to disk on Home Assistant stop (§8)."""
         await self._async_flush()
 
-    async def async_reset_ledger(self) -> None:
-        """Clear this tracker's ledger and rebuild the in-memory reference (§9).
-
-        The store drops the persisted ledger, but the coordinator holds a live
-        reference to the old :class:`TrackerLedger` object that the fold path and
-        frame computation read directly. Resetting only the store would leave the
-        coordinator recomputing from the stale in-memory ledger until the next
-        reload — so we re-create an empty tracker, re-seed the held reference, and
-        refresh so the sensors recompute from the now-empty history in one tick.
-        """
-        await self.store.reset(self._entry_id)
-        self._ledger = await self.store.get_or_create_tracker(
-            self._entry_id,
-            self.entity_id,
-            self.mode,
-            self.tracked_states,
-            self.target_states,
-        )
-        # Re-read from the freshly loaded document (a cold load inside
-        # get_or_create may replace the cache object).
-        data = await self.store.load()
-        self._ledger = data.trackers.get(self._entry_id, self._ledger)
-        self._previous_state = None
-        # Reset clears history, so the seen-set must forget too — the next
-        # occurrence of any state legitimately re-announces after a reset (§9).
-        self._seen = self._ledger_seen_states(self._ledger)
-        self._last_fold = None
-        self._dirty = False
-        await self.async_request_refresh()
-
     async def _async_flush(self) -> None:
         """Persist the in-memory ledger if it has unsaved mutations."""
         if not self._dirty:

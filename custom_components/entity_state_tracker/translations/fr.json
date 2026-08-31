@@ -144,34 +144,10 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Réinitialiser l'historique",
-      "description": "Efface l'historique quotidien persistant d'Entity State Tracker. Les longues périodes sont reconstruites à partir des données du recorder lorsqu'elles sont encore disponibles. Cette action est irréversible.",
-      "fields": {
-        "confirm": {
-          "name": "Confirmer",
-          "description": "Doit être activé pour effectuer la réinitialisation. Protège contre une perte accidentelle de l'historique."
-        },
-        "entity_id": {
-          "name": "Entité suivie",
-          "description": "Limite la réinitialisation aux trackers surveillant cette entité suivie. Laissez vide pour réinitialiser tous les Entity State Tracker. Il s'agit de l'entité qu'un tracker surveille, pas du capteur du tracker lui-même."
-        }
-      }
-    }
-  },
   "issues": {
     "recorder_off": {
       "title": "Le recorder est indisponible",
       "description": "Entity State Tracker s'appuie sur le recorder pour calculer les durées d'état. Le recorder n'est pas disponible, le suivi bascule donc désormais sur une accumulation en direct uniquement et ne peut pas reconstituer l'historique passé. Activez l'intégration recorder pour restaurer l'historique complet des périodes."
-    }
-  },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Définissez « confirm » sur true pour réinitialiser l'historique. Cela efface l'historique persistant et est irréversible."
-    },
-    "reset_no_match": {
-      "message": "Aucun Entity State Tracker ne suit {entity_id}. Vérifiez l'ID de l'entité, ou laissez vide pour réinitialiser tous les trackers."
     }
   }
 }

@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Hvilke tilstander teller som samsvarende?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Samsvar scores som prosentandelen av hvert tidsrom entiteten var i en av tilstandene du velger her. Disse tilstandene er uavhengige av de sporede tilstandene — du kan score samsvar på en tilstand du ellers ikke sporer (spor for eksempel hvor lenge en diffusor er „on“, men merk „off“ som samsvarende/ønsket tilstand). Forhåndsutfylt med de sporede tilstandene dine for enkelhets skyld; endre fritt. Du kan også skrive inn en egendefinert tilstand som ikke er oppført.",
         "data": {
           "target": "Samsvarende tilstand(er)",
           "target_threshold": "Samsvarsterskel (%, valgfritt)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Tilstandene som teller som samsvarende/ønsket. Tid brukt i en av dem scores. Uavhengige av de sporede tilstandene — velg en hvilken som helst tilstand entiteten kan være i.",
           "target_threshold": "Hvis satt, slås en binærsensor «Samsvarende» på når samsvarsprosenten når eller overstiger denne verdien. La stå tom for å hoppe over terskelen."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "De siste 30 hele lokale dagene.",
           "month": "Siden den 1. i denne måneden.",
           "year": "Siden 1. januar.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Settet med tilstander som regnes som samsvarende. Å være i en av dem teller. Uavhengige av de sporede tilstandene — velg en hvilken som helst tilstand entiteten kan være i. Brukes bare når scoring av samsvar er aktivert.",
           "target_threshold": "Hvis satt, slås en binærsensor «Samsvarende» på når samsvarsprosenten når eller overstiger denne verdien. La stå tom for å hoppe over terskelen.",
           "min_state_duration": "Hvis den sporede enheten går inn i en tilstand og ut igjen raskere enn dette antallet sekunder, ignoreres dette korte øyeblikket — tiden legges i stedet til den forrige tilstanden, og det teller ikke som en separat endring. Bruk det til å filtrere flimrende eller sprettende sensorer. Sett til 0 for å telle hver endring, uansett hvor kort."
         }
@@ -144,34 +144,10 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Nullstill hovedbok",
-      "description": "Tømmer den lagrede daglig-bøtte-historikken for en sporer. Lange tidsrom bygges opp igjen fra recorder-data der de fortsatt er tilgjengelige. Dette kan ikke angres.",
-      "fields": {
-        "confirm": {
-          "name": "Bekreft",
-          "description": "Må være aktivert for å gjennomføre nullstillingen. Beskytter mot utilsiktet tap av historikk."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
   "issues": {
     "recorder_off": {
       "title": "Recorder er utilgjengelig",
       "description": "Entity State Tracker er avhengig av recorder for å beregne tilstandsvarigheter. Recorder er ikke tilgjengelig, så sporingen faller fra nå av tilbake på ren sanntidsakkumulering og kan ikke fylle inn tidligere historikk. Aktiver recorder-integrasjonen for å gjenopprette full tidsromshistorikk."
-    }
-  },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Sett confirm til true for å nullstille hovedboken. Dette tømmer lagret historikk og kan ikke angres."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

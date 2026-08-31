@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Mitkä tilat lasketaan vaatimusten mukaisiksi?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Vaatimustenmukaisuus pisteytetään prosenttiosuutena kustakin ajanjaksosta, jonka entiteetti vietti jossakin tässä valitsemistasi tiloista. Nämä tilat ovat riippumattomia seuratuista tiloista — voit pisteyttää vaatimustenmukaisuuden tilan mukaan, jota et muuten seuraa (seuraa esimerkiksi kuinka kauan diffuusori on „on“, mutta merkitse „off“ vaatimukset täyttäväksi/toivotuksi tilaksi). Esitäytetty seuraamillasi tiloilla mukavuuden vuoksi; muuta vapaasti. Voit myös kirjoittaa mukautetun tilan, jota ei ole luettelossa.",
         "data": {
           "target": "Vaatimusten mukainen tila (mukaiset tilat)",
           "target_threshold": "Vaatimustenmukaisuuskynnys (%, valinnainen)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Tilat, jotka lasketaan vaatimukset täyttäviksi/toivotuiksi. Missä tahansa niistä vietetty aika pisteytetään. Riippumattomia seuratuista tiloista — valitse mikä tahansa tila, jossa entiteetti voi olla.",
           "target_threshold": "Jos asetettu, binäärianturi «Vaatimusten mukainen» kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Viimeiset 30 kokonaista paikallista päivää.",
           "month": "Tämän kuun 1. päivästä.",
           "year": "1. tammikuuta alkaen.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Vaatimukset täyttäviksi katsottujen tilojen joukko. Missä tahansa niistä oleminen lasketaan. Riippumattomia seuratuista tiloista — valitse mikä tahansa tila, jossa entiteetti voi olla. Käytetään vain, kun vaatimustenmukaisuuden pisteytys on käytössä.",
           "target_threshold": "Jos asetettu, binäärianturi «Vaatimusten mukainen» kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen.",
           "min_state_duration": "Jos seurattu entiteetti siirtyy tilaan ja pois siitä nopeammin kuin tämä sekuntimäärä, tämä lyhyt hetki ohitetaan — sen aika lisätään sen sijaan edelliseen tilaan, eikä sitä lasketa erilliseksi muutokseksi. Käytä tätä välkkyvien tai pomppivien antureiden suodattamiseen. Aseta arvoksi 0 laskeaksesi jokaisen muutoksen, olipa se kuinka lyhyt tahansa."
         }
@@ -144,34 +144,10 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Nollaa kirjanpito",
-      "description": "Tyhjentää seuraajan tallennetun päiväkohtaisen historian. Pitkät aikajaksot rakennetaan uudelleen tallentimen tiedoista, jos ne ovat vielä saatavilla. Tätä ei voi kumota.",
-      "fields": {
-        "confirm": {
-          "name": "Vahvista",
-          "description": "On oltava käytössä nollauksen suorittamiseksi. Suojaa vahingossa tapahtuvalta historian menetykseltä."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
   "issues": {
     "recorder_off": {
       "title": "Tallennin ei ole käytettävissä",
       "description": "Entity State Tracker luottaa tallentimeen tilojen kestojen laskennassa. Tallennin ei ole käytettävissä, joten seuranta siirtyy tästä lähtien pelkkään reaaliaikaiseen kertymiseen eikä voi täydentää mennyttä historiaa. Ota tallennin-integraatio käyttöön palauttaaksesi täyden aikajaksohistorian."
-    }
-  },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Aseta confirm arvoon true nollataksesi kirjanpidon. Tämä tyhjentää tallennetun historian eikä sitä voi kumota."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

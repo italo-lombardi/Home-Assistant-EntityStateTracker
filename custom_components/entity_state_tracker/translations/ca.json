@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Quins estats compten com a conformes?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "El compliment es puntua com el percentatge de cada interval de temps que l'entitat ha passat en qualsevol dels estats que trieu aquí. Aquests estats són independents dels estats seguits: podeu puntuar el compliment en un estat que, altrament, no seguiu (per exemple, seguiu quant de temps un difusor està «on», però marqueu «off» com a estat conforme/desitjat). Preemplenat amb els estats seguits per comoditat; canvieu-lo lliurement. També podeu escriure un estat personalitzat que no aparegui a la llista.",
         "data": {
           "target": "Estat(s) conforme(s)",
           "target_threshold": "Llindar de compliment (%, opcional)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Els estats que compten com a conformes/desitjats. El temps passat en qualsevol d'ells es puntua. Independents dels estats seguits: trieu qualsevol estat en què pugui estar l'entitat.",
           "target_threshold": "Si s'estableix, un sensor binari «Conforme» s'activa quan el percentatge de compliment assoleix o supera aquest valor. Deixeu-ho buit per ometre el llindar."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Els últims 30 dies locals sencers.",
           "month": "Des de l'1 d'aquest mes.",
           "year": "Des de l'1 de gener.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "El conjunt d'estats considerats conformes. Estar en qualsevol d'ells compta. Independents dels estats seguits: trieu qualsevol estat en què pugui estar l'entitat. Només s'utilitza quan la puntuació de compliment està activada.",
           "target_threshold": "Si s'estableix, un sensor binari «Conforme» s'activa quan el percentatge de compliment assoleix o supera aquest valor. Deixeu-ho buit per ometre el llindar.",
           "min_state_duration": "Si l'entitat seguida canvia a un estat i en surt més ràpid que aquest nombre de segons, aquest breu moment s'ignora — el seu temps s'afegeix a l'estat anterior i no compta com a canvi separat. Utilitzeu-ho per filtrar sensors que parpellegen o reboten. Poseu 0 per comptar cada canvi, per breu que sigui."
         }
@@ -144,34 +144,10 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Restableix el registre",
-      "description": "Esborra l'historial persistent de compartiments diaris d'un seguidor. Els períodes llargs es reconstrueixen a partir de les dades del gravador on encara estiguin disponibles. Això no es pot desfer.",
-      "fields": {
-        "confirm": {
-          "name": "Confirma",
-          "description": "S'ha d'activar per dur a terme el restabliment. Protegeix contra la pèrdua accidental de l'historial."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
   "issues": {
     "recorder_off": {
       "title": "El gravador no està disponible",
       "description": "Entity State Tracker es basa en el gravador per calcular les durades d'estat. El gravador no està disponible, així que el seguiment recorre d'ara endavant només a l'acumulació en directe i no pot reomplir l'historial passat. Activeu la integració del gravador per restaurar l'historial complet de períodes de temps."
-    }
-  },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Establiu confirm a true per restablir el registre. Això esborra l'historial persistent i no es pot desfer."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

@@ -64,7 +64,6 @@ async def test_full_setup_entry(
     coordinator = hass.data[DOMAIN][specific_config_entry.entry_id]
     assert coordinator.entity_id == "climate.living_room"
     mock_forward.assert_called_once_with(specific_config_entry, PLATFORMS)
-    assert hass.services.has_service(DOMAIN, "reset_ledger")
 
 
 async def test_async_update_options_reloads(
@@ -81,10 +80,10 @@ async def test_async_update_options_reloads(
     mock_reload.assert_awaited_once_with(specific_config_entry.entry_id)
 
 
-async def test_unload_last_entry_removes_services_and_card_key(
+async def test_unload_last_entry_removes_card_key(
     hass: HomeAssistant, specific_config_entry: MockConfigEntry
 ) -> None:
-    """Unloading the only entry removes services and the card-installed key."""
+    """Unloading the only entry removes the card-installed key."""
     specific_config_entry.add_to_hass(hass)
 
     with (
@@ -111,15 +110,14 @@ async def test_unload_last_entry_removes_services_and_card_key(
     assert result is True
     assert specific_config_entry.entry_id not in hass.data[DOMAIN]
     assert _CARD_INSTALLED_KEY not in hass.data[DOMAIN]
-    assert not hass.services.has_service(DOMAIN, "reset_ledger")
 
 
-async def test_unload_with_second_loaded_entry_keeps_services(
+async def test_unload_with_second_loaded_entry_keeps_card_key(
     hass: HomeAssistant,
     specific_config_entry: MockConfigEntry,
     all_states_config_entry: MockConfigEntry,
 ) -> None:
-    """A second LOADED entry keeps services registered after one unloads."""
+    """A second LOADED entry keeps the card key after one unloads."""
     specific_config_entry.add_to_hass(hass)
     all_states_config_entry.add_to_hass(hass)
 
@@ -148,8 +146,7 @@ async def test_unload_with_second_loaded_entry_keeps_services(
         result = await async_unload_entry(hass, specific_config_entry)
 
     assert result is True
-    # The other entry is still LOADED, so services + card key survive.
-    assert hass.services.has_service(DOMAIN, "reset_ledger")
+    # The other entry is still LOADED, so the card key survives.
     assert _CARD_INSTALLED_KEY in hass.data[DOMAIN]
 
 

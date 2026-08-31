@@ -140,18 +140,25 @@ Per **enabled frame**, one **duration sensor**:
 |--------|-------|
 | State | Seconds spent in the tracked states during the frame (`device_class: duration`, unit seconds, suggested display in hours, 1 dp) |
 | `state_class` | `measurement` |
-| Key attributes | `source_entity`, `frame`, `percent`, `compliance_percent` and `target_threshold` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`count`, `avg_duration_seconds`, `previous_state`) |
+| Key attributes | `source_entity`, `frame`, `percent`, `compliance_percent` and `target_threshold` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`counts`, `avg_duration_seconds`, `previous_state`, `last_entered`, `last_exited`), and `duration_seconds`, `window_seconds`, `unaccounted_seconds` |
 
-The frame's **percent** and **compliance percent** (when a target is set) ride along as attributes on the duration sensor — read them in templates or with a template trigger. For pass/fail automation, a `compliant` binary sensor is created when a threshold is set:
+Per enabled frame, the **percent** — and, when a target set is configured, the **compliance percent** — also get their own standalone `%` sensors, so `numeric_state` triggers, history graphs, and long-term Statistics can bind to them directly (they also ride along as attributes on the duration sensor):
 
 | Entity | Type | Notes |
 |--------|------|-------|
-| `binary_sensor..._compliant` | Binary Sensor | `on` while today's compliance ≥ the target threshold (only when a threshold is set; uses the `today` frame, or the first enabled frame if `today` is off). |
-| `binary_sensor..._currently_in_state` | Binary Sensor | `on` while the entity is currently in one of the tracked states. Exposes `source_entity`, `tracked_states`, and `current_state` (the live matched state). |
+| `sensor..._in_a_tracked_state_percent_<frame>` | Sensor | "In a Tracked State % (`<frame>`)". Share of the frame spent in the tracked states, `%`, `state_class: measurement`, diagnostic. One per enabled frame. |
+| `sensor..._compliance_<frame>` | Sensor | "Compliance (`<frame>`)". Share of the frame spent in the **target** set, `%`, `state_class: measurement`, diagnostic. One per enabled frame, **only when a target set is configured**. |
 
-The `compliant` binary sensor also exposes `source_entity`, `compliance_percent`, `tracked_states`, `target_states`, `target_threshold`, `frame`, `data_start`, `window_coverage`, and `has_gap` as attributes, so you can see *why* it is on or off at a glance.
+For pass/fail automation, a **`compliant` binary sensor is created per enabled frame** when a threshold is set:
 
-> **Frame note:** the `compliant` sensor scores the `today` frame — the only window whose compliance is "now". `today` is enabled by default, but if you disable it the sensor falls back to the **first enabled frame** in canonical order (`today` → `yesterday` → `24h` → `7d` → `30d` → `month` → `year`). With `today` off, "compliant" can therefore mean e.g. year-compliance rather than the live day. The active window is always shown in the sensor's `frame` attribute — keep `today` enabled if you want live/day compliance.
+| Entity | Type | Notes |
+|--------|------|-------|
+| `binary_sensor..._compliant_<frame>` | Binary Sensor | `on` while **that frame's** compliance ≥ the target threshold (only when a threshold is set). One per enabled frame — e.g. `..._compliant_today`, `..._compliant_this_month` — each scoring its own window. |
+| `binary_sensor..._in_a_tracked_state` | Binary Sensor | `on` while the entity is currently in one of the tracked states. Exposes `source_entity`, `tracked_states`, and `current_state` (the live matched state). |
+
+Each `compliant` binary sensor also exposes `source_entity`, `compliance_percent`, `tracked_states`, `target_states`, `target_threshold`, `frame`, `data_start`, `window_coverage`, and `has_gap` as attributes, so you can see *why* it is on or off at a glance.
+
+> **Frame note:** there is **one `compliant` sensor per enabled frame**, each scoring its own window against the same threshold — so a tracker with a threshold and `today`/`month` enabled exposes both "Compliant (Today)" (live-day compliance) and "Compliant (This month)" simultaneously. Pick the frame-suffixed entity for the window you care about; the window is also shown in each sensor's `frame` attribute.
 
 ![Specific-states sensors](assets/06_specific_sensors.png)
 
@@ -215,32 +222,9 @@ The `tracker_id` is the tracker's config-entry id. You normally never type it by
 
 ---
 
-## Services
-
-### `entity_state_tracker.reset_ledger`
-
-Clears the persisted daily-bucket ledger for a tracker and starts accumulating fresh. Useful after you deliberately changed how an entity behaves and want its long-window history to start over.
-
-```yaml
-service: entity_state_tracker.reset_ledger
-data:
-  confirm: true
-```
-
-`confirm: true` is required — resetting the ledger discards accumulated long-window history that cannot be rebuilt beyond the recorder's retention. With no `entity_id`, the reset applies to **every** tracker (each config entry owns its own store). Pass an optional `entity_id` (the *tracked* entity, not the tracker's own sensor) to reset only the tracker(s) watching that entity — a multi-tracker setup can wipe one tracker's history without touching the rest:
-
-```yaml
-service: entity_state_tracker.reset_ledger
-data:
-  confirm: true
-  entity_id: climate.living_room
-```
-
----
-
 ## Automation examples
 
-See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `currently_in_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration_seconds` off a breakdown sensor, guarding on `has_gap` / `window_coverage`, and calling `reset_ledger` — plus Telegram/TTS channels and cooldown patterns.
+See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `in_a_tracked_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration_seconds` off a breakdown sensor, and guarding on `has_gap` / `window_coverage` — plus Telegram/TTS channels and cooldown patterns.
 
 ---
 

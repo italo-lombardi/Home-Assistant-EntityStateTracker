@@ -1463,6 +1463,12 @@ class EntityStateTrackerCard extends LitElement {
 
     return html`
       ${this._metaHeader(a)}
+      <div class="frame-picker">
+        ${FRAME_LABELS[pick.frame] || pick.frame}${this._incomplete(a) &&
+        a.data_start
+          ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
+          : nothing}
+      </div>
       <table>
         <thead>
           <tr>
@@ -1576,15 +1582,26 @@ class EntityStateTrackerCardEditor extends LitElement {
     );
   }
 
+  // True when the selected tracker is all-states mode (breakdown sensors carry
+  // breakdown_seconds). The table frame picker only makes sense here: the
+  // all-states table shows ONE frame's states at a time, so it needs the picker;
+  // the specific-mode table renders every frame as its own row already.
+  _isAllStates() {
+    return trackerFrameSensors(this.hass, this._config?.tracker_id).some(
+      (s) => this.hass?.states?.[s.entity_id]?.attributes?.breakdown_seconds != null
+    );
+  }
+
   render() {
     if (!this._config) return html``;
 
     const chart = this._config.chart || "bars";
-    // The single `frame` picker only affects pie (which charts ONE frame).
-    // Bars and table render every frame (rows / columns), so the picker is
-    // meaningless there — hide it. Multi-frame selection for bars/table is the
-    // separate `frames` filter (see _framesToShow), not this picker.
-    const showFrame = chart === "pie";
+    // The `frame` picker charts ONE frame. Pie always breaks down one frame, so
+    // it always shows. The table is mode-aware: the all-states table lists one
+    // frame's states (needs the picker), but the specific-mode table renders
+    // every frame as a row (picker meaningless — hidden). Bars render every
+    // frame too, so no picker there either.
+    const showFrame = chart === "pie" || (chart === "table" && this._isAllStates());
     const options = trackerOptions(this.hass);
 
     return html`

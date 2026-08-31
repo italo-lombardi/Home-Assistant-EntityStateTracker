@@ -62,9 +62,6 @@ DOMINANT_HYSTERESIS_PCT = 1.0
 # Bus event fired when an all-states tracker sees a previously unseen state (§5.2).
 EVENT_NEW_STATE = "entity_state_tracker_new_state"
 
-# Service (§9)
-SERVICE_RESET_LEDGER = "reset_ledger"
-
 # Translation keys per metric (§5, §11) — one per emitted entity kind.
 TRANSLATION_KEY_DURATION = "duration"
 TRANSLATION_KEY_PERCENT = "percent"

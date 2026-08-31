@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Ποιες καταστάσεις μετρούν ως συμμορφούμενες;",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Η συμμόρφωση βαθμολογείται ως το ποσοστό κάθε χρονικού πλαισίου που η οντότητα πέρασε σε οποιαδήποτε από τις καταστάσεις που επιλέγετε εδώ. Αυτές οι καταστάσεις είναι ανεξάρτητες από τις παρακολουθούμενες καταστάσεις — μπορείτε να βαθμολογήσετε τη συμμόρφωση σε μια κατάσταση που κατά τα άλλα δεν παρακολουθείτε (για παράδειγμα, παρακολουθήστε πόσο διάστημα ένας διαχύτης είναι «on», αλλά ορίστε το «off» ως τη συμμορφούμενη/επιθυμητή κατάσταση). Προσυμπληρωμένο με τις παρακολουθούμενες καταστάσεις σας για ευκολία· αλλάξτε το ελεύθερα. Μπορείτε επίσης να πληκτρολογήσετε μια προσαρμοσμένη κατάσταση που δεν εμφανίζεται.",
         "data": {
           "target": "Συμμορφούμενη/-ες κατάσταση/-εις",
           "target_threshold": "Κατώφλι συμμόρφωσης (%, προαιρετικό)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Οι καταστάσεις που μετρούν ως συμμορφούμενες/επιθυμητές. Ο χρόνος σε οποιαδήποτε από αυτές βαθμολογείται. Ανεξάρτητες από τις παρακολουθούμενες καταστάσεις — επιλέξτε οποιαδήποτε κατάσταση μπορεί να έχει η οντότητα.",
           "target_threshold": "Αν οριστεί, ένας δυαδικός αισθητήρας «Συμμορφούμενο» ενεργοποιείται όταν το ποσοστό συμμόρφωσης φτάσει ή υπερβεί αυτήν την τιμή. Αφήστε κενό για παράλειψη του κατωφλίου."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Οι τελευταίες 30 ολόκληρες τοπικές ημέρες.",
           "month": "Από την 1η αυτού του μήνα.",
           "year": "Από την 1η Ιανουαρίου.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Το σύνολο των καταστάσεων που θεωρούνται συμμορφούμενες. Η παραμονή σε οποιαδήποτε από αυτές μετράει. Ανεξάρτητες από τις παρακολουθούμενες καταστάσεις — επιλέξτε οποιαδήποτε κατάσταση μπορεί να έχει η οντότητα. Χρησιμοποιείται μόνο όταν είναι ενεργή η βαθμολόγηση συμμόρφωσης.",
           "target_threshold": "Αν οριστεί, ένας δυαδικός αισθητήρας «Συμμορφούμενο» ενεργοποιείται όταν το ποσοστό συμμόρφωσης φτάσει ή υπερβεί αυτήν την τιμή. Αφήστε κενό για παράλειψη του κατωφλίου.",
           "min_state_duration": "Αν η παρακολουθούμενη οντότητα μεταβεί σε μια κατάσταση και βγει ξανά γρηγορότερα από αυτόν τον αριθμό δευτερολέπτων, αυτή η σύντομη στιγμή αγνοείται — ο χρόνος της προστίθεται στην προηγούμενη κατάσταση και δεν μετρά ως ξεχωριστή αλλαγή. Χρησιμοποιήστε το για να φιλτράρετε αισθητήρες που τρεμοπαίζουν ή αναπηδούν. Ορίστε 0 για να μετράται κάθε αλλαγή, όσο σύντομη κι αν είναι."
         }
@@ -144,34 +144,10 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Επαναφορά καθολικού",
-      "description": "Διαγράφει το αποθηκευμένο ιστορικό ημερήσιων τμημάτων μιας παρακολούθησης. Τα μεγάλα χρονικά πλαίσια ανακατασκευάζονται από δεδομένα του recorder όπου είναι ακόμη διαθέσιμα. Αυτό δεν μπορεί να αναιρεθεί.",
-      "fields": {
-        "confirm": {
-          "name": "Επιβεβαίωση",
-          "description": "Πρέπει να είναι ενεργοποιημένο για την εκτέλεση της επαναφοράς. Προστατεύει από τυχαία απώλεια ιστορικού."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
   "issues": {
     "recorder_off": {
       "title": "Ο recorder δεν είναι διαθέσιμος",
       "description": "Το Entity State Tracker βασίζεται στον recorder για τον υπολογισμό των διαρκειών κατάστασης. Ο recorder δεν είναι διαθέσιμος, οπότε η παρακολούθηση επιστρέφει από τώρα σε συσσώρευση μόνο σε πραγματικό χρόνο και δεν μπορεί να αναπληρώσει το παρελθόν ιστορικό. Ενεργοποιήστε την ενσωμάτωση recorder για να αποκαταστήσετε το πλήρες ιστορικό χρονικών πλαισίων."
-    }
-  },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Ορίστε το confirm σε true για επαναφορά του καθολικού. Αυτό διαγράφει το αποθηκευμένο ιστορικό και δεν μπορεί να αναιρεθεί."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

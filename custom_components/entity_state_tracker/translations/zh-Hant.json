@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "哪些狀態算作合規？",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "合規性按實體在你此處所選任一狀態中度過的每個時間範圍的百分比計分。這些狀態獨立於被追蹤的狀態——你可以對平時並不追蹤的狀態計分（例如：追蹤擴香器處於「on」的時長，但把「off」標記為合規/期望狀態）。為方便起見已預填你的被追蹤狀態；可自由更改。也可以輸入清單中沒有的自訂狀態。",
         "data": {
           "target": "合規狀態",
           "target_threshold": "合規門檻（%，選填）"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "被視為合規/期望的狀態。在其中任一狀態中度過的時間都會計分。獨立於被追蹤的狀態——可選擇實體可能處於的任意狀態。",
           "target_threshold": "若設定，當合規百分比達到或超過此值時，「合規」二元感測器將開啟。留空以略過門檻。"
         }
       },
@@ -101,7 +101,7 @@
           "30d": "過去 30 個完整的本地日。",
           "month": "自本月 1 日起。",
           "year": "自 1 月 1 日起。",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "被視為合規的狀態集合。處於其中任一狀態即計入。獨立於被追蹤的狀態——可選擇實體可能處於的任意狀態。僅在啟用合規計分時使用。",
           "target_threshold": "若設定，當合規百分比達到或超過此值時，「合規」二元感測器將開啟。留空以略過門檻。",
           "min_state_duration": "如果被追蹤的實體進入某個狀態後，在少於此秒數內又退出，則忽略這一短暫時刻——其時間會計入前一個狀態，且不算作單獨的一次變化。用它來過濾閃爍或抖動的感測器。設為 0 則計入每一次變化，無論多短。"
         }
@@ -144,34 +144,10 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "重設帳本",
-      "description": "清除追蹤器持久化的每日分桶歷史。長時間範圍會在記錄器資料仍可用處從中重建。此操作無法復原。",
-      "fields": {
-        "confirm": {
-          "name": "確認",
-          "description": "必須啟用才能執行重設。防止意外遺失歷史。"
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
   "issues": {
     "recorder_off": {
       "title": "記錄器無法使用",
       "description": "Entity State Tracker 依賴記錄器來計算狀態時長。記錄器無法使用，因此追蹤從現在起回退為僅即時累積，無法回填過去的歷史。啟用記錄器整合以還原完整的時間範圍歷史。"
-    }
-  },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "將 confirm 設定為 true 以重設帳本。此操作會清除持久化歷史，且無法復原。"
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

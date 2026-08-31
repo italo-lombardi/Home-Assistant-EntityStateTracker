@@ -11,7 +11,7 @@ Ready-to-adapt automations for every feature. The examples use placeholder entit
 | Duration (Today) | `sensor.entity_state_tracker_garage_light_duration_today` |
 | Duration (Last 7 days) | `sensor.entity_state_tracker_garage_light_duration_last_7_days` |
 | State Breakdown (Last 24 hours) | `sensor.entity_state_tracker_garage_light_state_breakdown_last_24_hours` |
-| Currently in State | `binary_sensor.entity_state_tracker_garage_light_currently_in_state` |
+| Currently in State | `binary_sensor.entity_state_tracker_garage_light_in_a_tracked_state` |
 | Compliant | `binary_sensor.entity_state_tracker_garage_light_compliant` |
 
 > **Tip:** the tracked-state **percent** and **compliance percent** are attributes on each duration sensor (not their own entities). Watch them with a `template` trigger — e.g. `state_attr('sensor..._duration_today', 'percent')` — or read them in templates.
@@ -25,7 +25,7 @@ Ready-to-adapt automations for every feature. The examples use placeholder entit
 | Today's percentage (specific mode) | `template` | `state_attr('sensor..._duration_today', 'percent')` |
 | Today's compliance (specific mode, target set) | `template` | `state_attr('sensor..._duration_today', 'compliance_percent')` |
 | Compliant / not compliant (target threshold set) | `state` | `binary_sensor..._compliant`, `on`/`off` |
-| Currently in a tracked state (specific mode) | `state` | `binary_sensor..._currently_in_state`, `on`/`off` |
+| Currently in a tracked state (specific mode) | `state` | `binary_sensor..._in_a_tracked_state`, `on`/`off` |
 | A brand-new state appeared (all-states mode) | `event` | `entity_state_tracker_new_state` |
 | A per-state breakdown value (all-states mode) | `template` | Reads `breakdown_pct` / `counts` attributes off the breakdown sensor |
 
@@ -113,14 +113,14 @@ automation:
 
 ### Automation 4 — Currently-in-state binary sensor
 
-`currently_in_state` is `on` while the entity is in one of the tracked states right now — useful for "is it in a tracked state, and has it been for a while" logic. It has no device class, so it simply reads `on`/`off`.
+The `in_a_tracked_state` binary sensor is `on` while the entity is in one of the tracked states right now — useful for "is it in a tracked state, and has it been for a while" logic. It has no device class, so it simply reads `on`/`off`.
 
 ```yaml
 automation:
   alias: EST — pump on notice
   trigger:
     - platform: state
-      entity_id: binary_sensor.entity_state_tracker_well_pump_currently_in_state
+      entity_id: binary_sensor.entity_state_tracker_well_pump_in_a_tracked_state
       to: "on"
       for: "01:00:00"
   action:
@@ -351,53 +351,6 @@ automation:
           Boiler ran
           {{ (states('sensor.entity_state_tracker_boiler_duration_this_month') | float(0)
               / 3600) | round(1) }} h this month so far.
-```
-
----
-
-## Services
-
-### `entity_state_tracker.reset_ledger`
-
-Clears the persisted daily-bucket ledger and starts long-window accumulation fresh. Use it after you deliberately changed how an entity behaves and don't want the old history dragging the long frames. `confirm: true` is **required** — without it the call raises a validation error rather than silently wiping history, because history beyond recorder retention cannot be rebuilt.
-
-> With no `entity_id`, the reset applies to **every** Entity State Tracker config entry (each entry owns its own store, and all loaded trackers are reset together). Pass an optional `entity_id` — the *tracked* entity, not the tracker's own sensor — to reset only the tracker(s) watching that entity. One tracked entity can have several trackers (specific vs all-states, different names); all of them reset. A target that matches no loaded tracker raises a validation error.
-
-```yaml
-service: entity_state_tracker.reset_ledger
-data:
-  confirm: true
-```
-
-Reset just one tracked entity's trackers:
-
-```yaml
-service: entity_state_tracker.reset_ledger
-data:
-  confirm: true
-  entity_id: climate.living_room
-```
-
----
-
-### Automation 13 — Reset the ledger after a hardware swap
-
-Triggered by a helper toggle you flip when you replace the tracked device.
-
-```yaml
-automation:
-  alias: EST — reset ledger on device swap
-  trigger:
-    - platform: state
-      entity_id: input_boolean.device_replaced
-      to: "on"
-  action:
-    - service: entity_state_tracker.reset_ledger
-      data:
-        confirm: true
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.device_replaced
 ```
 
 ---

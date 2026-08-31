@@ -144,34 +144,10 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Geschiedenis wissen",
-      "description": "Wist de opgeslagen dagelijkse geschiedenis voor Entity State Tracker. Lange tijdvensters worden opnieuw opgebouwd uit recorder-gegevens waar nog beschikbaar. Dit kan niet ongedaan worden gemaakt.",
-      "fields": {
-        "confirm": {
-          "name": "Bevestigen",
-          "description": "Moet ingeschakeld zijn om het wissen uit te voeren. Beschermt tegen onbedoeld verlies van geschiedenis."
-        },
-        "entity_id": {
-          "name": "Gevolgde entiteit",
-          "description": "Beperkt het wissen tot de tracker(s) die deze gevolgde entiteit bewaken. Laat leeg om elke Entity State Tracker te wissen. Dit is de entiteit die een tracker bewaakt, niet de sensor van de tracker zelf."
-        }
-      }
-    }
-  },
   "issues": {
     "recorder_off": {
       "title": "Recorder is niet beschikbaar",
       "description": "Entity State Tracker vertrouwt op de recorder om toestandsduren te berekenen. De recorder is niet beschikbaar, dus het volgen valt vanaf nu terug op alleen live-accumulatie en kan geen verleden geschiedenis aanvullen. Schakel de recorder-integratie in om de volledige tijdvakgeschiedenis te herstellen."
-    }
-  },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Stel „confirm” in op true om de geschiedenis te wissen. Dit wist de opgeslagen geschiedenis en kan niet ongedaan worden gemaakt."
-    },
-    "reset_no_match": {
-      "message": "Geen enkele Entity State Tracker volgt {entity_id}. Controleer de entiteits-ID, of laat leeg om alle trackers te wissen."
     }
   }
 }

@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Какие состояния считаются соответствующими?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Соответствие оценивается как процент каждого временного интервала, в течение которого объект находился в любом из выбранных здесь состояний. Эти состояния не зависят от отслеживаемых — соответствие можно оценивать по состоянию, которое вы иначе не отслеживаете (например, отслеживайте, как долго диффузор находится в «on», но пометьте «off» как соответствующее/желаемое состояние). Для удобства предзаполнено вашими отслеживаемыми состояниями; меняйте свободно. Можно также ввести произвольное состояние, которого нет в списке.",
         "data": {
           "target": "Соответствующее(ие) состояние(я)",
           "target_threshold": "Порог соответствия (%, необязательно)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Состояния, считающиеся соответствующими/желаемыми. Оценивается время, проведённое в любом из них. Не зависят от отслеживаемых состояний — выберите любое состояние, в котором может находиться объект.",
           "target_threshold": "Если задано, бинарный сенсор «Соответствует» включается, когда процент соответствия достигает или превышает это значение. Оставьте пустым, чтобы пропустить порог."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Последние 30 полных местных дней.",
           "month": "С 1-го числа этого месяца.",
           "year": "С 1 января.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Набор состояний, считающихся соответствующими. Пребывание в любом из них учитывается. Не зависят от отслеживаемых состояний — выберите любое состояние, в котором может находиться объект. Используется только при включённой оценке соответствия.",
           "target_threshold": "Если задано, бинарный сенсор «Соответствует» включается, когда процент соответствия достигает или превышает это значение. Оставьте пустым, чтобы пропустить порог.",
           "min_state_duration": "Если отслеживаемая сущность переходит в состояние и выходит из него быстрее этого количества секунд, этот краткий момент игнорируется — его время добавляется к предыдущему состоянию и не считается отдельным изменением. Используйте это для фильтрации мерцающих или дребезжащих датчиков. Установите 0, чтобы учитывать каждое изменение, каким бы кратким оно ни было."
         }
@@ -144,34 +144,10 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Сбросить журнал",
-      "description": "Очищает сохранённую историю дневных сегментов трекера. Длинные интервалы перестраиваются из данных рекордера там, где они ещё доступны. Это действие нельзя отменить.",
-      "fields": {
-        "confirm": {
-          "name": "Подтвердить",
-          "description": "Должно быть включено для выполнения сброса. Защищает от случайной потери истории."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
   "issues": {
     "recorder_off": {
       "title": "Рекордер недоступен",
       "description": "Entity State Tracker полагается на рекордер для вычисления длительностей состояний. Рекордер недоступен, поэтому отслеживание теперь переходит только на накопление в реальном времени и не может восполнить прошлую историю. Включите интеграцию рекордера, чтобы восстановить полную историю по интервалам."
-    }
-  },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Установите confirm в true, чтобы сбросить журнал. Это очищает сохранённую историю и не может быть отменено."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }

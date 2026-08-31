@@ -35,13 +35,13 @@
       },
       "compliance": {
         "title": "Ce stări contează ca fiind conforme?",
-        "description": "Compliance is scored as the percentage of each time frame the entity spent in any of the states you choose here. These states are independent of the tracked states — you can score compliance on a state you don't otherwise track (for example, track how long a diffuser is 'on', but mark 'off' as the compliant/desired state). Prefilled with your tracked states as a convenience; change it freely. You can also type a custom state that isn't listed.",
+        "description": "Conformitatea este punctată ca procentul din fiecare interval de timp în care entitatea s-a aflat în oricare dintre stările pe care le alegeți aici. Aceste stări sunt independente de stările urmărite — puteți puncta conformitatea pe o stare pe care altfel nu o urmăriți (de exemplu, urmăriți cât timp un difuzor este „on“, dar marcați „off“ ca stare conformă/dorită). Precompletat cu stările urmărite pentru comoditate; modificați liber. Puteți introduce și o stare personalizată care nu este în listă.",
         "data": {
           "target": "Stare (stări) conformă(e)",
           "target_threshold": "Prag de conformitate (%, opțional)"
         },
         "data_description": {
-          "target": "The states that count as compliant/desired. Time spent in any of them is scored. Independent of the tracked states — pick any state the entity can be in.",
+          "target": "Stările care contează drept conforme/dorite. Timpul petrecut în oricare dintre ele este punctat. Independente de stările urmărite — alegeți orice stare în care poate fi entitatea.",
           "target_threshold": "Dacă este setat, un senzor binar „Conform” se activează atunci când procentul de conformitate atinge sau depășește această valoare. Lasă gol pentru a omite pragul."
         }
       },
@@ -101,7 +101,7 @@
           "30d": "Ultimele 30 de zile locale întregi.",
           "month": "De la data de 1 a acestei luni.",
           "year": "De la 1 ianuarie.",
-          "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
+          "target": "Setul de stări considerate conforme. Aflarea în oricare dintre ele contează. Independente de stările urmărite — alegeți orice stare în care poate fi entitatea. Folosit doar când punctarea conformității este activată.",
           "target_threshold": "Dacă este setat, un senzor binar „Conform” se activează atunci când procentul de conformitate atinge sau depășește această valoare. Lasă gol pentru a omite pragul.",
           "min_state_duration": "Dacă entitatea urmărită intră într-o stare și iese din ea mai repede decât acest număr de secunde, acel moment scurt este ignorat — timpul său este adăugat în schimb la starea anterioară și nu contează ca o schimbare separată. Folosește-l pentru a filtra senzorii care pâlpâie sau ricoșează. Setează la 0 pentru a număra fiecare schimbare, oricât de scurtă."
         }
@@ -144,34 +144,10 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Resetează registrul",
-      "description": "Șterge istoricul persistent al segmentelor zilnice pentru un urmăritor. Intervalele lungi se reconstruiesc din datele recorderului acolo unde sunt încă disponibile. Această acțiune nu poate fi anulată.",
-      "fields": {
-        "confirm": {
-          "name": "Confirmă",
-          "description": "Trebuie activat pentru a efectua resetarea. Protejează împotriva pierderii accidentale a istoricului."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
   "issues": {
     "recorder_off": {
       "title": "Recorderul este indisponibil",
       "description": "Entity State Tracker se bazează pe recorder pentru a calcula duratele stărilor. Recorderul nu este disponibil, așa că urmărirea revine de acum înainte doar la acumularea în timp real și nu poate completa istoricul trecut. Activează integrarea recorder pentru a restabili istoricul complet al intervalelor de timp."
-    }
-  },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Setează confirm pe true pentru a reseta registrul. Aceasta șterge istoricul persistent și nu poate fi anulată."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
     }
   }
 }
