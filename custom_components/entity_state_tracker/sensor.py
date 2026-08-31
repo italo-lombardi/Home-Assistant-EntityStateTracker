@@ -208,6 +208,8 @@ class DurationSensor(_FrameSensor):
             "data_start",
             "window_coverage",
             "has_gap",
+            "window_seconds",
+            "unaccounted_seconds",
         }
     )
 
@@ -241,6 +243,14 @@ class DurationSensor(_FrameSensor):
             "data_start": result.data_start,
             "window_coverage": result.window_coverage,
             "has_gap": result.has_gap,
+            # Total frame span + the slice no recorded state covers (partial
+            # window / in-progress today). The card needs both to build the
+            # specific-mode pie as three real-seconds slices — in-state / other /
+            # no-data — identical to all-states breakdown, instead of deriving a
+            # "rest" from percent (which collapses to a blank ring at 0% and
+            # mislabels no-data time as time in a non-tracked state, §5.1/§5.2).
+            "window_seconds": result.window_seconds,
+            "unaccounted_seconds": result.unaccounted_seconds,
         }
         if self.coordinator.target_states:
             attrs["compliance_percent"] = result.compliance_percent

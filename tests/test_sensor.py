@@ -367,6 +367,11 @@ def test_duration_attributes_without_target() -> None:
     # field from data_start — regression guard for the wiring fix.
     assert attrs["window_start"] == "2026-08-29T00:00:00-07:00"
     assert attrs["window_start"] != attrs["data_start"]
+    # window_seconds (frame span) + unaccounted_seconds (no-recorded-state slice)
+    # ride along so the card can build the specific-mode pie as three real-seconds
+    # slices (in-state / other / no-data), mirroring the breakdown sensor.
+    assert attrs["window_seconds"] == 3600.0
+    assert attrs["unaccounted_seconds"] == 360.0
     assert "compliance_percent" not in attrs
     # target_threshold rides along only with a target set — absent here.
     assert "target_threshold" not in attrs
@@ -488,6 +493,8 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
         "data_start",
         "window_coverage",
         "has_gap",
+        "window_seconds",
+        "unaccounted_seconds",
     } <= unrecorded
     # Config attributes stay recorded — they don't churn.
     assert "tracked_states" not in unrecorded
