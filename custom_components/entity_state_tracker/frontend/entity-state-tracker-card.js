@@ -748,6 +748,8 @@ class EntityStateTrackerCard extends LitElement {
     const devId = this.hass?.entities?.[s.entity_id]?.device_id;
     if (!devId) return null;
     const entities = this.hass.entities || {};
+    // ponytail: O(rows×entities) scan per render; index by device_id if the card
+    // ever renders on huge installs. Repaints are user-scale, so it's free today.
     for (const id of Object.keys(entities)) {
       if (!id.startsWith("binary_sensor.")) continue;
       if (entities[id].device_id !== devId) continue;
