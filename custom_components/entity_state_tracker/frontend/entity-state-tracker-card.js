@@ -505,6 +505,13 @@ const cardStyles = css`
     gap: 8px;
   }
 
+  /* A solo (beside) chart left-aligns its column: when the row-legend wraps
+     under the donut on a narrow viewport it hugs the left edge instead of
+     centering awkwardly beneath. Stacked (two-chart) columns stay centered. */
+  .pie-chart:has(.pie-body.beside) {
+    align-items: flex-start;
+  }
+
   /* Donut + legend. Default stacks (legend below); .beside is a solo chart
      with the legend to the right of the donut. */
   .pie-body {
@@ -519,6 +526,7 @@ const cardStyles = css`
     align-items: center;
     gap: 16px;
     flex-wrap: wrap;
+    justify-content: flex-start;
   }
 
   .pie-svg {
