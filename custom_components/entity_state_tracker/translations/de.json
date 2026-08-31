@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Die Entität, deren Zustandsdauern gemessen werden. Eine Entität pro Tracker — verweise auf einen Gruppen-Helfer, um mehrere zusammenzufassen.",
-          "name": "Ein sprechender Name für diesen Tracker. Leer lassen, um ihn nach der Entität und dem Modus zu benennen (z. B. „Living Room (Specific States)“). Dies legt den Geräte-/Konfigurationsnamen fest; die Sensor-Entitäts-IDs folgen weiterhin der Standardbenennung. Sie können mehrere Tracker für dieselbe Entität erstellen."
+          "name": "Ein aussagekräftiger Name für diesen Tracker. Leer lassen, um ihn nach der Entität und dem Modus zu benennen (z. B. „Living Room (Specific States)“). Dies legt den Geräte-/Konfigurationsnamen fest; die Sensor-Entitäts-IDs folgen weiterhin der Standardbenennung. Du kannst mehrere Tracker für dieselbe Entität erstellen."
         }
       },
       "mode": {
@@ -30,28 +30,29 @@
         },
         "data_description": {
           "states": "Die Entitätszustände, deren Dauer und Prozentsatz gemessen werden (z. B. on, heat, home). Vorausgefüllt mit kürzlich beobachteten Zuständen.",
-          "enable_compliance": "Aktivieren, um zu bewerten, wie viel jedes Zeitfensters die Entität in einem gewünschten Zielzustand verbracht hat, mit einem optionalen Bestanden/Nicht-bestanden-Schwellenwert."
+          "enable_compliance": "Aktivieren, um zu bewerten, welchen Anteil jedes Zeitraums die Entität in einem gewünschten Zielzustand verbracht hat, mit einem optionalen Bestanden/Nicht-bestanden-Schwellenwert."
         }
       },
       "compliance": {
         "title": "Welche Zustände gelten als konform?",
-        "description": "Die Konformität wird als Prozentsatz jedes Zeitraums bewertet, den die Entität in einem der hier gewählten Zustände verbracht hat. Diese Zustände sind unabhängig von den erfassten Zuständen – du kannst die Konformität auf einen Zustand beziehen, den du sonst nicht erfasst (zum Beispiel erfassen, wie lange ein Diffusor 'on' ist, aber 'off' als konformen/gewünschten Zustand markieren). Zur Erleichterung mit deinen erfassten Zuständen vorbelegt; frei änderbar. Du kannst auch einen nicht gelisteten Zustand eintippen.",
+        "description": "Die Konformität wird als Prozentsatz jedes Zeitraums bewertet, den die Entität in einem der hier gewählten Zustände verbracht hat. Diese Zustände sind unabhängig von den verfolgten Zuständen – du kannst die Konformität auf einen Zustand beziehen, den du sonst nicht verfolgst (zum Beispiel verfolgen, wie lange ein Diffusor 'on' ist, aber 'off' als konformen/gewünschten Zustand markieren). Zur Erleichterung mit deinen verfolgten Zuständen vorbelegt; frei änderbar. Du kannst auch einen nicht gelisteten Zustand eintippen.",
         "data": {
           "target": "Konforme(r) Zustand/Zustände",
           "target_threshold": "Konformitätsschwelle (%, optional)"
         },
         "data_description": {
-          "target": "Die Zustände, die als konform/gewünscht zählen. Die in einem davon verbrachte Zeit wird gewertet. Unabhängig von den erfassten Zuständen – wähle einen beliebigen Zustand, den die Entität annehmen kann.",
+          "target": "Die Zustände, die als konform/gewünscht zählen. Die in einem davon verbrachte Zeit wird gewertet. Unabhängig von den verfolgten Zuständen – wähle einen beliebigen Zustand, den die Entität annehmen kann.",
           "target_threshold": "Wenn gesetzt, schaltet sich ein Binärsensor „Konform“ ein, wenn der Konformitätsprozentsatz diesen Wert erreicht oder überschreitet. Leer lassen, um den Schwellenwert zu überspringen."
         }
       },
       "frames": {
         "title": "Zeiträume",
-        "description": "Wähle, welche Zeiträume verfolgt werden. Zeiträume, die länger sind als die Recorder-Aufbewahrung, füllen sich mit der Zeit.",
+        "description": "Wähle, welche Zeiträume verfolgt werden. Lange Zeiträume (30 Tage, Monat, Jahr) sind nicht sofort vollständig: Der Recorder von Home Assistant behält nur wenige Tage Verlauf, daher beginnen diese Fenster unvollständig und füllen sich Tag für Tag, während der Tracker seine eigenen Daten aufzeichnet. Kurze Zeiträume sind sofort korrekt.",
         "data": {
           "today": "Heute",
           "yesterday": "Gestern",
           "24h": "Letzte 24 Stunden",
+          "week": "Diese Woche",
           "7d": "Letzte 7 Tage",
           "30d": "Letzte 30 Tage",
           "month": "Dieser Monat",
@@ -62,6 +63,7 @@
           "today": "Seit lokaler Mitternacht.",
           "yesterday": "Der vorherige ganze Tag.",
           "24h": "Rollierendes 24-Stunden-Fenster bis jetzt.",
+          "week": "Seit Montag 00:00 Uhr (bisher diese Woche).",
           "7d": "Rollierendes 7-Tage-Fenster bis jetzt.",
           "30d": "Die letzten 30 ganzen lokalen Tage.",
           "month": "Seit dem 1. dieses Monats.",
@@ -85,6 +87,7 @@
           "today": "Heute",
           "yesterday": "Gestern",
           "24h": "Letzte 24 Stunden",
+          "week": "Diese Woche",
           "7d": "Letzte 7 Tage",
           "30d": "Letzte 30 Tage",
           "month": "Dieser Monat",
@@ -97,11 +100,12 @@
           "today": "Seit lokaler Mitternacht.",
           "yesterday": "Der vorherige ganze Tag.",
           "24h": "Rollierendes 24-Stunden-Fenster bis jetzt.",
+          "week": "Seit Montag 00:00 Uhr (bisher diese Woche).",
           "7d": "Rollierendes 7-Tage-Fenster bis jetzt.",
           "30d": "Die letzten 30 ganzen lokalen Tage.",
           "month": "Seit dem 1. dieses Monats.",
           "year": "Seit dem 1. Januar.",
-          "target": "Die Menge der als konform geltenden Zustände. Sich in einem davon zu befinden zählt. Unabhängig von den erfassten Zuständen – wähle einen beliebigen Zustand, den die Entität annehmen kann. Wird nur verwendet, wenn die Konformitätsbewertung aktiviert ist.",
+          "target": "Die Menge der als konform geltenden Zustände. Sich in einem davon zu befinden zählt. Unabhängig von den verfolgten Zuständen – wähle einen beliebigen Zustand, den die Entität annehmen kann. Wird nur verwendet, wenn die Konformitätsbewertung aktiviert ist.",
           "target_threshold": "Wenn gesetzt, schaltet sich ein Binärsensor „Konform“ ein, wenn der Konformitätsprozentsatz diesen Wert erreicht oder überschreitet. Leer lassen, um den Schwellenwert zu überspringen.",
           "min_state_duration": "Wenn die verfolgte Entität schneller als diese Anzahl von Sekunden in einen Zustand und wieder heraus wechselt, wird dieser kurze Moment ignoriert — seine Zeit wird stattdessen zum vorherigen Zustand addiert und zählt nicht als separate Änderung. Verwende dies, um flackernde oder prellende Sensoren zu filtern. Auf 0 setzen, um jede Änderung zu zählen, egal wie kurz."
         }
@@ -118,7 +122,7 @@
         "name": "Dauer ({frame})"
       },
       "percent": {
-        "name": "Prozent ({frame})"
+        "name": "In erfasstem Zustand % ({frame})"
       },
       "compliance": {
         "name": "Konformität ({frame})"
@@ -132,7 +136,7 @@
         "name": "In einem erfassten Zustand"
       },
       "compliant": {
-        "name": "Konform"
+        "name": "Konform ({frame})"
       }
     }
   },

@@ -5,7 +5,7 @@
         "title": "Stebėti objektą",
         "description": "Pasirinkite objektą, kad stebėtumėte, kiek laiko jis praleidžia savo būsenose per kelis laiko tarpsnius.",
         "data": {
-          "entity": "Stebimas objektas",
+          "entity": "Sekamas objektas",
           "name": "Pavadinimas (neprivaloma)"
         },
         "data_description": {
@@ -22,15 +22,15 @@
         }
       },
       "specific": {
-        "title": "Stebimos būsenos",
+        "title": "Sekamos būsenos",
         "description": "Pasirinkite matuojamas būsenas. Galite įvesti pasirinktinę būseną, kurios nėra sąraše.",
         "data": {
-          "states": "Stebimos būsenos",
+          "states": "Sekamos būsenos",
           "enable_compliance": "Įjungti atitikties vertinimą"
         },
         "data_description": {
           "states": "Objekto būsenos, kurių trukmė ir procentas matuojami (pvz., on, heat, home). Iš anksto užpildyta neseniai matytomis būsenomis.",
-          "enable_compliance": "Įjunkite, kad įvertintumėte, kiek kiekvieno lango objektas praleido pageidaujamoje tikslinėje būsenoje, su neprivalomu išlaikymo/neišlaikymo slenksčiu."
+          "enable_compliance": "Įjunkite, kad įvertintumėte, kokią kiekvieno tarpsnio dalį objektas praleido pageidaujamoje tikslinėje būsenoje, su neprivalomu išlaikymo/neišlaikymo slenksčiu."
         }
       },
       "compliance": {
@@ -47,11 +47,12 @@
       },
       "frames": {
         "title": "Laiko tarpsniai",
-        "description": "Pasirinkite, kuriuos laiko tarpsnius stebėti. Už įrašymo įrenginio saugojimą ilgesni tarpsniai užsipildo laikui bėgant.",
+        "description": "Pasirinkite, kuriuos laiko tarpsnius stebėti. Ilgi tarpsniai (30 dienų, mėnuo, metai) nebus iš karto pilni: „Home Assistant“ įrašymo įrenginys saugo tik kelių dienų istoriją, todėl šie langai iš pradžių būna daliniai ir palaipsniui, diena po dienos, užsipildo, sekikliui kaupiant savo duomenis. Trumpi tarpsniai tikslūs iš karto.",
         "data": {
           "today": "Šiandien",
           "yesterday": "Vakar",
           "24h": "Paskutinės 24 valandos",
+          "week": "Ši savaitė",
           "7d": "Paskutinės 7 dienos",
           "30d": "Paskutinės 30 dienų",
           "month": "Šį mėnesį",
@@ -62,6 +63,7 @@
           "today": "Nuo vietinio vidurnakčio.",
           "yesterday": "Ankstesnė visa diena.",
           "24h": "Slankusis 24 valandų langas, pasibaigiantis dabar.",
+          "week": "Nuo pirmadienio 00:00 (ši savaitė iki šiol).",
           "7d": "Slankusis 7 dienų langas, pasibaigiantis dabar.",
           "30d": "Paskutinės 30 visų vietinių dienų.",
           "month": "Nuo šio mėnesio 1 dienos.",
@@ -85,6 +87,7 @@
           "today": "Šiandien",
           "yesterday": "Vakar",
           "24h": "Paskutinės 24 valandos",
+          "week": "Ši savaitė",
           "7d": "Paskutinės 7 dienos",
           "30d": "Paskutinės 30 dienų",
           "month": "Šį mėnesį",
@@ -97,6 +100,7 @@
           "today": "Nuo vietinio vidurnakčio.",
           "yesterday": "Ankstesnė visa diena.",
           "24h": "Slankusis 24 valandų langas, pasibaigiantis dabar.",
+          "week": "Nuo pirmadienio 00:00 (ši savaitė iki šiol).",
           "7d": "Slankusis 7 dienų langas, pasibaigiantis dabar.",
           "30d": "Paskutinės 30 visų vietinių dienų.",
           "month": "Nuo šio mėnesio 1 dienos.",
@@ -118,7 +122,7 @@
         "name": "Trukmė ({frame})"
       },
       "percent": {
-        "name": "Procentai ({frame})"
+        "name": "Stebimoje būsenoje % ({frame})"
       },
       "compliance": {
         "name": "Atitiktis ({frame})"
@@ -132,7 +136,7 @@
         "name": "Šiuo metu būsenoje"
       },
       "compliant": {
-        "name": "Atitinka"
+        "name": "Atitinka ({frame})"
       }
     }
   },

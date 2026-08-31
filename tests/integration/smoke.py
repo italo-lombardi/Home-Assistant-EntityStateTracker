@@ -34,6 +34,7 @@ Edge cases covered (EC1-EC16, plus sub-checks). See tests/integration/README.md.
 from __future__ import annotations
 
 import argparse
+import datetime as dt
 import json
 import os
 import sys
@@ -41,6 +42,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
+from zoneinfo import ZoneInfo
 
 # ---------------------------------------------------------------------------
 # Config from env
@@ -293,7 +295,6 @@ def capture_events(event_type: str, trigger_fn, timeout: int = 30) -> list[dict]
         return []
 
     captured: list[dict] = []
-    done = threading.Event()
     msg_id = 7
 
     def on_message(ws, raw):
@@ -311,7 +312,9 @@ def capture_events(event_type: str, trigger_fn, timeout: int = 30) -> list[dict]
                 )
             )
         elif mtype == "result" and msg.get("id") == msg_id and msg.get("success"):
-            trigger_fn()
+            # Dispatch off-thread: a trigger that sleeps (EC6) must not block the
+            # WS receive loop, or event frames arriving mid-trigger are dropped.
+            threading.Thread(target=trigger_fn, daemon=True).start()
         elif mtype == "event":
             captured.append(msg.get("event", {}).get("data", {}))
 
@@ -323,7 +326,6 @@ def capture_events(event_type: str, trigger_fn, timeout: int = 30) -> list[dict]
         ws.close()
     except Exception:
         pass
-    done.set()
     return captured
 
 
@@ -686,10 +688,11 @@ def ec2_ec3_duration_rises_and_currently(entry, eid):
         chk("EC2 currently current_state = on", cattrs.get("current_state"), "on")
     d0 = float(gs(today_dur).get("state") or 0)
     # The duration sensor state is minute-rounded (recorder-row reduction), so a
-    # sub-minute dwell floors to 0 and wouldn't register. Stay in-state for just
-    # over a minute so at least one whole minute accrues.
-    note(f"today duration baseline={d0}s; dwelling ~65s in tracked state")
-    time.sleep(65)
+    # sub-minute dwell floors to 0 and wouldn't register. A single 65s dwell sits
+    # on the 1-minute boundary — clock skew / rounding could floor it back to 0.
+    # Dwell ~130s so a full 2 minutes accrues with margin either side.
+    note(f"today duration baseline={d0}s; dwelling ~130s in tracked state")
+    time.sleep(130)
     # Fold the 'on' visit by transitioning away (the fold happens on the NEXT
     # change), then force a coordinator recompute so the closed block is
     # reflected without waiting for the 5-min base-class poll.
@@ -917,14 +920,16 @@ def ec5_ec6_ec7_allstates():
             f"uids={list(reg)}",
         )
     today_bd = eid_for(entry, "today", M_BREAKDOWN, reg)
-    # dominant should be the current state after some accrual + a fold.
+    # Dominant = the state with the MAX accrued duration (not "current"). stateA
+    # gets an ~8s visit; stateB only a fold-sized blip. So stateA wins on total
+    # dwell, which here also happens to be the current state.
     ss(eid, "stateA")
     time.sleep(8)
     ss(eid, "stateB")  # fold stateA visit
     ss(eid, "stateA")  # back to A, fold tiny B
     dom = wait_for(lambda: gs(today_bd).get("state"), "stateA")
     chk(
-        "EC5 today dominant = current state",
+        "EC5 today dominant = max-duration state",
         dom,
         "stateA",
         f"state={gs(today_bd).get('state')!r}",
@@ -1105,22 +1110,30 @@ def ec9_unrecorded(entry_allstates, eid_allstates, today_bd):
         True,
         f"breakdown_pct={pct}",
     )
-    # Best-effort: confirm the churny attr is NOT in recorder history.
-    try:
-        hist = api(
-            "GET", f"/api/history/period?filter_entity_id={today_bd}&minimal_response"
-        )
-        # /api/history returns list-of-lists of state dicts. Attributes only appear on the first entry.
-        first = hist[0][0] if hist and hist[0] else {}
-        recorded_attrs = first.get("attributes", {})
-        chk(
-            "EC9 breakdown_seconds excluded from recorder history",
-            "breakdown_seconds" not in recorded_attrs,
-            True,
-            f"recorded_attr_keys={list(recorded_attrs)}",
-        )
-    except Exception as e:
-        note(f"EC9 recorder-history check skipped: {e}")
+    # Confirm the churny attr is NOT in recorder history. Use the path-form
+    # timestamp (`/period/<ISO>`) that current HA expects; the legacy
+    # `?filter_entity_id` query-only form 400s and would silently no-op.
+    start_iso = (dt.datetime.now(dt.UTC) - dt.timedelta(minutes=5)).isoformat()
+    hist = api(
+        "GET",
+        f"/api/history/period/{start_iso}"
+        f"?filter_entity_id={today_bd}&minimal_response&no_attributes=false",
+    )
+    # /api/history returns list-of-lists of state dicts. Attributes only appear on the first entry.
+    chk(
+        "EC9 recorder-history query returned data",
+        bool(hist and hist[0]),
+        True,
+        f"rows={len(hist[0]) if hist else 0}",
+    )
+    first = hist[0][0] if hist and hist[0] else {}
+    recorded_attrs = first.get("attributes", {})
+    chk(
+        "EC9 breakdown_seconds excluded from recorder history",
+        "breakdown_seconds" not in recorded_attrs,
+        True,
+        f"recorded_attr_keys={list(recorded_attrs)}",
+    )
 
 
 def ec18_diagnostics_dump():
@@ -1276,8 +1289,10 @@ def ec13_coverage_gap():
     )
     chk("EC13 has_gap is boolean", isinstance(gap, bool), True, f"has_gap={gap!r}")
     # Consistency: a gap is flagged iff we know a data_start inside the window
-    # (coverage < 1). No gap ⟺ coverage == 1.0 for a fresh (empty-ledger) tracker.
-    consistent = bool(gap) == (ds is not None and float(cov) < 1.0)
+    # (coverage < 1). No gap ⟺ coverage ≈ 1.0 for a fresh (empty-ledger) tracker.
+    # Use a 0.9999 epsilon, not exact `< 1.0`: float coverage can land at
+    # 0.99998 from division rounding and would spuriously read as a gap.
+    consistent = bool(gap) == (ds is not None and float(cov) < 0.9999)
     chk(
         "EC13 has_gap ⟺ (data_start known AND coverage<1)",
         consistent,
@@ -1929,6 +1944,73 @@ def ec22_options_flow_target_and_glitch():
     )
 
 
+def ec23_week_frame_starts_monday():
+    """EC23: the `week` (week-to-date) frame's window_start is local Monday 00:00.
+
+    `week` is off by default, so this is the only EC that enables it. It is the
+    calendar sibling of the rolling `7d`: its window_start must land on the most
+    recent local Monday at midnight (ISO weekday 1), not "7 days ago". We read
+    the `week` duration sensor's window_start attr (UTC-aware datetime → ISO) and
+    convert it into HA's OWN configured tz (from /api/config) — NOT the host's
+    local tz, which may differ from the container — then assert weekday()==0
+    (Monday) and time 00:00:00. Then confirm accrual behaves like any frame.
+    """
+    print(
+        "\n=== EC23: week frame window_start == local Monday 00:00 ===",
+        flush=True,
+    )
+    # HA computes the boundary in its configured tz; resolve it so the wall-time
+    # comparison is done in the same frame of reference (host tz ≠ container tz).
+    ha_tz = ZoneInfo(api("GET", "/api/config")["time_zone"])
+    eid = make_entity("week", "on")
+    entry = create_tracker(
+        eid, "specific_states", states=["on", "off"], frames={"week": True}
+    )
+    reg = wait_entities(entry, min_count=1)
+    week_dur = eid_for(entry, "week", M_DURATION, reg)
+    chk(
+        "EC23 week duration sensor exists",
+        week_dur is not None,
+        True,
+        f"uids={list(reg)}",
+    )
+    attrs = gs(week_dur).get("attributes", {})
+    chk("EC23 week frame attr == week", attrs.get("frame"), "week")
+    ws_raw = attrs.get("window_start")
+    chk("EC23 window_start present", ws_raw is not None, True, f"keys={list(attrs)}")
+    # window_start is a UTC-aware ISO string; convert into HA's tz and check it is
+    # exactly Monday 00:00 in that tz (the tz HA computes the frame boundary in).
+    ws_local = dt.datetime.fromisoformat(ws_raw).astimezone(ha_tz)
+    note(f"week window_start (HA tz {ha_tz})={ws_local.isoformat()}")
+    chk(
+        "EC23 window_start is a Monday",
+        ws_local.weekday(),
+        0,
+        f"weekday={ws_local.weekday()} ({ws_local:%A})",
+    )
+    chk(
+        "EC23 window_start is midnight 00:00:00",
+        (ws_local.hour, ws_local.minute, ws_local.second),
+        (0, 0, 0),
+        f"time={ws_local:%H:%M:%S}",
+    )
+    # Accrual: dwell in a tracked state ~130s (minute-rounded, so >1min) → rises.
+    d0 = float(gs(week_dur).get("state") or 0)
+    note(f"week duration baseline={d0}s; dwelling ~130s in tracked state")
+    ss(eid, "on")
+    time.sleep(130)
+    ss(eid, "off")  # fold the visit
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": week_dur})
+    d1 = wait_for_gt(lambda: gs(week_dur).get("state"), d0)
+    chk(
+        "EC23 week duration rose after time in tracked state",
+        (d1 or 0) > d0,
+        True,
+        f"before={d0} after={d1}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -1980,6 +2062,9 @@ def main():
 
         if ec_enabled(22):
             ec22_options_flow_target_and_glitch()
+
+        if ec_enabled(23):
+            ec23_week_frame_starts_monday()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

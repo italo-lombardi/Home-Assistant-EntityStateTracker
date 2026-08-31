@@ -35,7 +35,7 @@
       },
       "compliance": {
         "title": "Które stany liczą się jako zgodne?",
-        "description": "Zgodność jest punktowana jako procent każdego przedziału czasu, przez który encja pozostawała w którymkolwiek ze stanów wybranych tutaj. Te stany są niezależne od stanów śledzonych — zgodność można punktować względem stanu, którego w innym przypadku nie śledzisz (na przykład śledź, jak długo dyfuzor jest „on“, ale oznacz „off“ jako stan zgodny/pożądany). Dla wygody wstępnie wypełnione śledzonymi stanami; zmień dowolnie. Możesz też wpisać niestandardowy stan, którego nie ma na liście.",
+        "description": "Zgodność jest punktowana jako procent każdego przedziału czasu, przez który encja pozostawała w którymkolwiek ze stanów wybranych tutaj. Te stany są niezależne od stanów śledzonych — zgodność można punktować względem stanu, którego w innym przypadku nie śledzisz (na przykład śledź, jak długo dyfuzor jest „on”, ale oznacz „off” jako stan zgodny/pożądany). Dla wygody wstępnie wypełnione śledzonymi stanami; zmień dowolnie. Możesz też wpisać niestandardowy stan, którego nie ma na liście.",
         "data": {
           "target": "Stan(y) zgodny(e)",
           "target_threshold": "Próg zgodności (%, opcjonalnie)"
@@ -47,11 +47,12 @@
       },
       "frames": {
         "title": "Przedziały czasowe",
-        "description": "Wybierz, które przedziały czasowe śledzić. Przedziały dłuższe niż okres przechowywania rejestratora wypełniają się z czasem.",
+        "description": "Wybierz, które przedziały czasowe śledzić. Długie przedziały (30 dni, miesiąc, rok) nie będą od razu kompletne: rejestrator Home Assistant przechowuje tylko kilka dni historii, więc te okna zaczynają jako częściowe i wypełniają się dzień po dniu, w miarę jak tracker gromadzi własne dane. Krótkie przedziały są dokładne od razu.",
         "data": {
           "today": "Dzisiaj",
           "yesterday": "Wczoraj",
           "24h": "Ostatnie 24 godziny",
+          "week": "W tym tygodniu",
           "7d": "Ostatnie 7 dni",
           "30d": "Ostatnie 30 dni",
           "month": "Ten miesiąc",
@@ -62,6 +63,7 @@
           "today": "Od lokalnej północy.",
           "yesterday": "Poprzedni pełny dzień.",
           "24h": "Ruchome okno 24-godzinne kończące się teraz.",
+          "week": "Od poniedziałku 00:00 (ten tydzień jak dotąd).",
           "7d": "Ruchome okno 7-dniowe kończące się teraz.",
           "30d": "Ostatnie 30 pełnych lokalnych dni.",
           "month": "Od 1. dnia tego miesiąca.",
@@ -85,6 +87,7 @@
           "today": "Dzisiaj",
           "yesterday": "Wczoraj",
           "24h": "Ostatnie 24 godziny",
+          "week": "W tym tygodniu",
           "7d": "Ostatnie 7 dni",
           "30d": "Ostatnie 30 dni",
           "month": "Ten miesiąc",
@@ -97,6 +100,7 @@
           "today": "Od lokalnej północy.",
           "yesterday": "Poprzedni pełny dzień.",
           "24h": "Ruchome okno 24-godzinne kończące się teraz.",
+          "week": "Od poniedziałku 00:00 (ten tydzień jak dotąd).",
           "7d": "Ruchome okno 7-dniowe kończące się teraz.",
           "30d": "Ostatnie 30 pełnych lokalnych dni.",
           "month": "Od 1. dnia tego miesiąca.",
@@ -118,7 +122,7 @@
         "name": "Czas trwania ({frame})"
       },
       "percent": {
-        "name": "Procent ({frame})"
+        "name": "Procent w śledzonym stanie ({frame})"
       },
       "compliance": {
         "name": "Zgodność ({frame})"
@@ -132,7 +136,7 @@
         "name": "Obecnie w stanie"
       },
       "compliant": {
-        "name": "Zgodny"
+        "name": "Zgodny ({frame})"
       }
     }
   },

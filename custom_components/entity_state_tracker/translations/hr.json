@@ -35,7 +35,7 @@
       },
       "compliance": {
         "title": "Koja se stanja računaju kao usklađena?",
-        "description": "Usklađenost se boduje kao postotak svakog vremenskog okvira koji je entitet proveo u bilo kojem od stanja koja ovdje odaberete. Ta su stanja neovisna o praćenim stanjima — usklađenost možete bodovati prema stanju koje inače ne pratite (na primjer, pratite koliko je dugo raspršivač „on“, ali označite „off“ kao usklađeno/željeno stanje). Unaprijed popunjeno vašim praćenim stanjima radi praktičnosti; slobodno promijenite. Možete i upisati prilagođeno stanje kojeg nema na popisu.",
+        "description": "Usklađenost se boduje kao postotak svakog vremenskog razdoblja koji je entitet proveo u bilo kojem od stanja koja ovdje odaberete.",
         "data": {
           "target": "Usklađeno(a) stanje(a)",
           "target_threshold": "Prag usklađenosti (%, neobavezno)"
@@ -47,11 +47,12 @@
       },
       "frames": {
         "title": "Vremenska razdoblja",
-        "description": "Odaberi koja vremenska razdoblja pratiti. Razdoblja dulja od zadržavanja recordera popunjavaju se s vremenom.",
+        "description": "Odaberi koja vremenska razdoblja pratiti. Duga razdoblja (30 dana, mjesec, godina) neće biti odmah potpuna: recorder u Home Assistantu čuva povijest tek nekoliko dana, pa ta razdoblja počinju djelomična i popunjavaju se iz dana u dan kako pratitelj bilježi vlastite podatke. Kratka su razdoblja odmah točna.",
         "data": {
           "today": "Danas",
           "yesterday": "Jučer",
           "24h": "Zadnja 24 sata",
+          "week": "Ovaj tjedan",
           "7d": "Zadnjih 7 dana",
           "30d": "Zadnjih 30 dana",
           "month": "Ovaj mjesec",
@@ -62,6 +63,7 @@
           "today": "Od lokalne ponoći.",
           "yesterday": "Prethodni cijeli dan.",
           "24h": "Klizni prozor od 24 sata koji završava sada.",
+          "week": "Od ponedjeljka 00:00 (ovaj tjedan dosad).",
           "7d": "Klizni prozor od 7 dana koji završava sada.",
           "30d": "Zadnjih 30 cijelih lokalnih dana.",
           "month": "Od 1. u ovom mjesecu.",
@@ -85,6 +87,7 @@
           "today": "Danas",
           "yesterday": "Jučer",
           "24h": "Zadnja 24 sata",
+          "week": "Ovaj tjedan",
           "7d": "Zadnjih 7 dana",
           "30d": "Zadnjih 30 dana",
           "month": "Ovaj mjesec",
@@ -97,6 +100,7 @@
           "today": "Od lokalne ponoći.",
           "yesterday": "Prethodni cijeli dan.",
           "24h": "Klizni prozor od 24 sata koji završava sada.",
+          "week": "Od ponedjeljka 00:00 (ovaj tjedan dosad).",
           "7d": "Klizni prozor od 7 dana koji završava sada.",
           "30d": "Zadnjih 30 cijelih lokalnih dana.",
           "month": "Od 1. u ovom mjesecu.",
@@ -118,7 +122,7 @@
         "name": "Trajanje ({frame})"
       },
       "percent": {
-        "name": "Postotak ({frame})"
+        "name": "Postotak u praćenom stanju ({frame})"
       },
       "compliance": {
         "name": "Usklađenost ({frame})"
@@ -132,7 +136,7 @@
         "name": "Trenutačno u stanju"
       },
       "compliant": {
-        "name": "Usklađeno"
+        "name": "Usklađeno ({frame})"
       }
     }
   },

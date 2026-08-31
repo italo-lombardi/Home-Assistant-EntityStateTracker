@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Entiteten vars tillståndslängder mäts. En entitet per spårare — peka på en grupphjälpare för att aggregera flera.",
-          "name": "Ett vänligt namn för denna spårare. Lämna tomt för att namnge den efter entiteten och läget (t.ex. ”Living Room (Specific States)”). Detta anger enhets-/konfigurationsnamnet; sensorentiteternas ID:n följer fortfarande standardnamngivningen. Du kan skapa flera spårare för samma entitet."
+          "name": "Ett beskrivande namn för denna spårare. Lämna tomt för att namnge den efter entiteten och läget (t.ex. ”Living Room (Specific States)”). Detta anger enhets-/konfigurationsnamnet; sensorentiteternas ID:n följer fortfarande standardnamngivningen. Du kan skapa flera spårare för samma entitet."
         }
       },
       "mode": {
@@ -35,23 +35,24 @@
       },
       "compliance": {
         "title": "Vilka tillstånd räknas som efterlevande?",
-        "description": "Efterlevnad poängsätts som andelen av varje tidsram som entiteten befann sig i något av de tillstånd du väljer här. Dessa tillstånd är oberoende av de spårade tillstånden — du kan poängsätta efterlevnad mot ett tillstånd du annars inte spårar (spåra till exempel hur länge en diffusor är „on“, men markera „off“ som det efterlevande/önskade tillståndet). Förifyllt med dina spårade tillstånd för bekvämlighets skull; ändra fritt. Du kan även skriva ett eget tillstånd som inte finns i listan.",
+        "description": "Efterlevnad poängsätts som andelen av varje tidsperiod som entiteten befann sig i något av de tillstånd du väljer här. Dessa tillstånd är oberoende av de spårade tillstånden — du kan poängsätta efterlevnad mot ett tillstånd du annars inte spårar (spåra till exempel hur länge en diffusor är ”on”, men markera ”off” som det önskade tillståndet). Förifyllt med dina spårade tillstånd för bekvämlighets skull; ändra fritt. Du kan även skriva ett eget tillstånd som inte finns i listan.",
         "data": {
           "target": "Efterlevande tillstånd",
           "target_threshold": "Efterlevnadströskel (%, valfritt)"
         },
         "data_description": {
           "target": "Tillstånden som räknas som efterlevande/önskade. Tid i något av dem poängsätts. Oberoende av de spårade tillstånden — välj vilket tillstånd som helst som entiteten kan vara i.",
-          "target_threshold": "Om angivet slås en binär sensor «Efterlevande» på när efterlevnadsprocenten når eller överstiger detta värde. Lämna tomt för att hoppa över tröskeln."
+          "target_threshold": "Om angivet slås en binär sensor ”Efterlevande” på när efterlevnadsprocenten når eller överstiger detta värde. Lämna tomt för att hoppa över tröskeln."
         }
       },
       "frames": {
         "title": "Tidsperioder",
-        "description": "Välj vilka tidsperioder som ska spåras. Perioder längre än recorderns lagring fylls på med tiden.",
+        "description": "Välj vilka tidsperioder som ska spåras. Långa perioder (30 dagar, månad, år) blir inte kompletta direkt: Home Assistants recorder sparar bara några dagars historik, så dessa fönster börjar ofullständiga och fylls i dag för dag allteftersom spåraren lagrar sina egna data. Korta perioder är korrekta omedelbart.",
         "data": {
           "today": "Idag",
           "yesterday": "Igår",
           "24h": "Senaste 24 timmarna",
+          "week": "Denna vecka",
           "7d": "Senaste 7 dagarna",
           "30d": "Senaste 30 dagarna",
           "month": "Denna månad",
@@ -62,6 +63,7 @@
           "today": "Sedan lokal midnatt.",
           "yesterday": "Den föregående hela dagen.",
           "24h": "Rullande 24-timmarsfönster som slutar nu.",
+          "week": "Sedan måndag kl. 00:00 (denna vecka hittills).",
           "7d": "Rullande 7-dagarsfönster som slutar nu.",
           "30d": "De senaste 30 hela lokala dagarna.",
           "month": "Sedan den 1:a denna månad.",
@@ -85,6 +87,7 @@
           "today": "Idag",
           "yesterday": "Igår",
           "24h": "Senaste 24 timmarna",
+          "week": "Denna vecka",
           "7d": "Senaste 7 dagarna",
           "30d": "Senaste 30 dagarna",
           "month": "Denna månad",
@@ -97,12 +100,13 @@
           "today": "Sedan lokal midnatt.",
           "yesterday": "Den föregående hela dagen.",
           "24h": "Rullande 24-timmarsfönster som slutar nu.",
+          "week": "Sedan måndag kl. 00:00 (denna vecka hittills).",
           "7d": "Rullande 7-dagarsfönster som slutar nu.",
           "30d": "De senaste 30 hela lokala dagarna.",
           "month": "Sedan den 1:a denna månad.",
           "year": "Sedan den 1 januari.",
           "target": "Uppsättningen tillstånd som anses efterlevande. Att vara i något av dem räknas. Oberoende av de spårade tillstånden — välj vilket tillstånd som helst som entiteten kan vara i. Används endast när efterlevnadspoängsättning är aktiverad.",
-          "target_threshold": "Om angivet slås en binär sensor «Efterlevande» på när efterlevnadsprocenten når eller överstiger detta värde. Lämna tomt för att hoppa över tröskeln.",
+          "target_threshold": "Om angivet slås en binär sensor ”Efterlevande” på när efterlevnadsprocenten når eller överstiger detta värde. Lämna tomt för att hoppa över tröskeln.",
           "min_state_duration": "Om den spårade entiteten växlar till ett tillstånd och ut igen snabbare än detta antal sekunder ignoreras det korta ögonblicket — dess tid läggs istället till det föregående tillståndet och räknas inte som en separat ändring. Använd det för att filtrera flimrande eller studsande sensorer. Ställ in på 0 för att räkna varje ändring, hur kort den än är."
         }
       }
@@ -118,7 +122,7 @@
         "name": "Varaktighet ({frame})"
       },
       "percent": {
-        "name": "Procent ({frame})"
+        "name": "I spårat tillstånd % ({frame})"
       },
       "compliance": {
         "name": "Efterlevnad ({frame})"
@@ -129,10 +133,10 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "För närvarande i tillstånd"
+        "name": "I ett spårat tillstånd"
       },
       "compliant": {
-        "name": "Efterlevande"
+        "name": "Efterlevande ({frame})"
       }
     }
   },

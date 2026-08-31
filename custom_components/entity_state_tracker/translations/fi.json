@@ -35,23 +35,24 @@
       },
       "compliance": {
         "title": "Mitkä tilat lasketaan vaatimusten mukaisiksi?",
-        "description": "Vaatimustenmukaisuus pisteytetään prosenttiosuutena kustakin ajanjaksosta, jonka entiteetti vietti jossakin tässä valitsemistasi tiloista. Nämä tilat ovat riippumattomia seuratuista tiloista — voit pisteyttää vaatimustenmukaisuuden tilan mukaan, jota et muuten seuraa (seuraa esimerkiksi kuinka kauan diffuusori on „on“, mutta merkitse „off“ vaatimukset täyttäväksi/toivotuksi tilaksi). Esitäytetty seuraamillasi tiloilla mukavuuden vuoksi; muuta vapaasti. Voit myös kirjoittaa mukautetun tilan, jota ei ole luettelossa.",
+        "description": "Vaatimustenmukaisuus pisteytetään prosenttiosuutena kustakin ajanjaksosta, jonka entiteetti vietti jossakin tässä valitsemistasi tiloista. Nämä tilat ovat riippumattomia seuratuista tiloista — voit pisteyttää vaatimustenmukaisuuden tilan mukaan, jota et muuten seuraa (seuraa esimerkiksi kuinka kauan diffuuseri on ”on”, mutta merkitse ”off” vaatimukset täyttäväksi/toivotuksi tilaksi). Esitäytetty seuraamillasi tiloilla mukavuuden vuoksi; muuta vapaasti. Voit myös kirjoittaa mukautetun tilan, jota ei ole luettelossa.",
         "data": {
           "target": "Vaatimusten mukainen tila (mukaiset tilat)",
           "target_threshold": "Vaatimustenmukaisuuskynnys (%, valinnainen)"
         },
         "data_description": {
           "target": "Tilat, jotka lasketaan vaatimukset täyttäviksi/toivotuiksi. Missä tahansa niistä vietetty aika pisteytetään. Riippumattomia seuratuista tiloista — valitse mikä tahansa tila, jossa entiteetti voi olla.",
-          "target_threshold": "Jos asetettu, binäärianturi «Vaatimusten mukainen» kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen."
+          "target_threshold": "Jos asetettu, binäärianturi ”Vaatimusten mukainen” kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen."
         }
       },
       "frames": {
         "title": "Aikajaksot",
-        "description": "Valitse, mitä aikajaksoja seurataan. Tallentimen säilytystä pidemmät jaksot täyttyvät ajan myötä.",
+        "description": "Valitse, mitä aikajaksoja seurataan. Pitkät jaksot (30 päivää, kuukausi, vuosi) eivät ole heti täydellisiä: Home Assistantin tallennin säilyttää vain muutaman päivän historiaa, joten nämä jaksot alkavat vajaina ja täyttyvät päivä päivältä sitä mukaa kuin seuraaja kerää omaa dataansa. Lyhyet jaksot ovat tarkkoja heti.",
         "data": {
           "today": "Tänään",
           "yesterday": "Eilen",
           "24h": "Viimeiset 24 tuntia",
+          "week": "Tällä viikolla",
           "7d": "Viimeiset 7 päivää",
           "30d": "Viimeiset 30 päivää",
           "month": "Tässä kuussa",
@@ -62,6 +63,7 @@
           "today": "Paikallisesta keskiyöstä.",
           "yesterday": "Edellinen koko päivä.",
           "24h": "Liukuva 24 tunnin ikkuna, joka päättyy nyt.",
+          "week": "Maanantaista klo 00:00 (tämä viikko tähän mennessä).",
           "7d": "Liukuva 7 päivän ikkuna, joka päättyy nyt.",
           "30d": "Viimeiset 30 kokonaista paikallista päivää.",
           "month": "Tämän kuun 1. päivästä.",
@@ -85,6 +87,7 @@
           "today": "Tänään",
           "yesterday": "Eilen",
           "24h": "Viimeiset 24 tuntia",
+          "week": "Tällä viikolla",
           "7d": "Viimeiset 7 päivää",
           "30d": "Viimeiset 30 päivää",
           "month": "Tässä kuussa",
@@ -97,12 +100,13 @@
           "today": "Paikallisesta keskiyöstä.",
           "yesterday": "Edellinen koko päivä.",
           "24h": "Liukuva 24 tunnin ikkuna, joka päättyy nyt.",
+          "week": "Maanantaista klo 00:00 (tämä viikko tähän mennessä).",
           "7d": "Liukuva 7 päivän ikkuna, joka päättyy nyt.",
           "30d": "Viimeiset 30 kokonaista paikallista päivää.",
           "month": "Tämän kuun 1. päivästä.",
           "year": "1. tammikuuta alkaen.",
           "target": "Vaatimukset täyttäviksi katsottujen tilojen joukko. Missä tahansa niistä oleminen lasketaan. Riippumattomia seuratuista tiloista — valitse mikä tahansa tila, jossa entiteetti voi olla. Käytetään vain, kun vaatimustenmukaisuuden pisteytys on käytössä.",
-          "target_threshold": "Jos asetettu, binäärianturi «Vaatimusten mukainen» kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen.",
+          "target_threshold": "Jos asetettu, binäärianturi ”Vaatimusten mukainen” kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen.",
           "min_state_duration": "Jos seurattu entiteetti siirtyy tilaan ja pois siitä nopeammin kuin tämä sekuntimäärä, tämä lyhyt hetki ohitetaan — sen aika lisätään sen sijaan edelliseen tilaan, eikä sitä lasketa erilliseksi muutokseksi. Käytä tätä välkkyvien tai pomppivien antureiden suodattamiseen. Aseta arvoksi 0 laskeaksesi jokaisen muutoksen, olipa se kuinka lyhyt tahansa."
         }
       }
@@ -118,7 +122,7 @@
         "name": "Kesto ({frame})"
       },
       "percent": {
-        "name": "Prosentti ({frame})"
+        "name": "Seuratussa tilassa % ({frame})"
       },
       "compliance": {
         "name": "Vaatimustenmukaisuus ({frame})"
@@ -132,7 +136,7 @@
         "name": "Tällä hetkellä tilassa"
       },
       "compliant": {
-        "name": "Vaatimusten mukainen"
+        "name": "Vaatimusten mukainen ({frame})"
       }
     }
   },

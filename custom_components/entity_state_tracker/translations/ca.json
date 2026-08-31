@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "L'entitat les durades d'estat de la qual es mesuraran. Una entitat per seguidor — apunteu a un ajudant de grup per agregar-ne diverses.",
-          "name": "Un nom descriptiu per a aquest rastrejador. Deixeu-ho en blanc per anomenar-lo segons l'entitat i el mode (p. ex. «Living Room (Specific States)»). Això estableix el nom del dispositiu/configuració; els ID de les entitats sensor segueixen igualment la nomenclatura estàndard. Podeu crear diversos rastrejadors per a la mateixa entitat."
+          "name": "Un nom descriptiu per a aquest seguidor. Deixeu-ho en blanc per anomenar-lo segons l'entitat i el mode (p. ex. «Living Room (Specific States)»). Això estableix el nom del dispositiu/configuració; els ID de les entitats sensor segueixen igualment la nomenclatura estàndard. Podeu crear diversos seguidors per a la mateixa entitat."
         }
       },
       "mode": {
@@ -35,7 +35,7 @@
       },
       "compliance": {
         "title": "Quins estats compten com a conformes?",
-        "description": "El compliment es puntua com el percentatge de cada interval de temps que l'entitat ha passat en qualsevol dels estats que trieu aquí. Aquests estats són independents dels estats seguits: podeu puntuar el compliment en un estat que, altrament, no seguiu (per exemple, seguiu quant de temps un difusor està «on», però marqueu «off» com a estat conforme/desitjat). Preemplenat amb els estats seguits per comoditat; canvieu-lo lliurement. També podeu escriure un estat personalitzat que no aparegui a la llista.",
+        "description": "El compliment es puntua com el percentatge de cada període de temps que l'entitat ha passat en qualsevol dels estats que trieu aquí. Aquests estats són independents dels estats seguits: podeu puntuar el compliment en un estat que, altrament, no seguiu (per exemple, seguiu quant de temps un difusor està «on», però marqueu «off» com a estat conforme/desitjat). Preomplert amb els estats seguits per comoditat; canvieu-lo lliurement. També podeu escriure un estat personalitzat que no aparegui a la llista.",
         "data": {
           "target": "Estat(s) conforme(s)",
           "target_threshold": "Llindar de compliment (%, opcional)"
@@ -47,11 +47,12 @@
       },
       "frames": {
         "title": "Períodes de temps",
-        "description": "Trieu quins períodes de temps seguir. Els períodes més llargs que la retenció del gravador s'omplen amb el temps.",
+        "description": "Trieu quins períodes de temps voleu seguir. Els períodes llargs (30 dies, mes, any) no estaran complets immediatament: el gravador de Home Assistant només conserva uns quants dies d'historial, així que aquestes finestres comencen parcials i s'omplen dia a dia a mesura que el seguidor registra les seves pròpies dades. Els períodes curts són exactes des del primer moment.",
         "data": {
           "today": "Avui",
           "yesterday": "Ahir",
           "24h": "Últimes 24 hores",
+          "week": "Aquesta setmana",
           "7d": "Últims 7 dies",
           "30d": "Últims 30 dies",
           "month": "Aquest mes",
@@ -62,6 +63,7 @@
           "today": "Des de la mitjanit local.",
           "yesterday": "El dia sencer anterior.",
           "24h": "Finestra mòbil de 24 hores fins ara.",
+          "week": "Des de dilluns a les 00:00 (aquesta setmana fins ara).",
           "7d": "Finestra mòbil de 7 dies fins ara.",
           "30d": "Els últims 30 dies locals sencers.",
           "month": "Des de l'1 d'aquest mes.",
@@ -85,6 +87,7 @@
           "today": "Avui",
           "yesterday": "Ahir",
           "24h": "Últimes 24 hores",
+          "week": "Aquesta setmana",
           "7d": "Últims 7 dies",
           "30d": "Últims 30 dies",
           "month": "Aquest mes",
@@ -97,6 +100,7 @@
           "today": "Des de la mitjanit local.",
           "yesterday": "El dia sencer anterior.",
           "24h": "Finestra mòbil de 24 hores fins ara.",
+          "week": "Des de dilluns a les 00:00 (aquesta setmana fins ara).",
           "7d": "Finestra mòbil de 7 dies fins ara.",
           "30d": "Els últims 30 dies locals sencers.",
           "month": "Des de l'1 d'aquest mes.",
@@ -118,7 +122,7 @@
         "name": "Durada ({frame})"
       },
       "percent": {
-        "name": "Percentatge ({frame})"
+        "name": "% en un estat seguit ({frame})"
       },
       "compliance": {
         "name": "Compliment ({frame})"
@@ -129,10 +133,10 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "Actualment en estat"
+        "name": "En un estat seguit"
       },
       "compliant": {
-        "name": "Conforme"
+        "name": "Conforme ({frame})"
       }
     }
   },

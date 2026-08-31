@@ -29,13 +29,13 @@
           "enable_compliance": "Aktiver samsvarsscore"
         },
         "data_description": {
-          "states": "Enhetstilstandene hvis varighet og prosent måles (f.eks. on, heat, home). Forhåndsutfylt med nylig sette tilstander.",
+          "states": "Enhetstilstandene hvis varighet og prosent måles (f.eks. on, heat, home). Forhåndsutfylt med tilstander som nylig er sett.",
           "enable_compliance": "Slå på for å score hvor mye av hvert vindu enheten tilbrakte i en ønsket måltilstand, med en valgfri bestått/ikke-bestått-terskel."
         }
       },
       "compliance": {
         "title": "Hvilke tilstander teller som samsvarende?",
-        "description": "Samsvar scores som prosentandelen av hvert tidsrom entiteten var i en av tilstandene du velger her. Disse tilstandene er uavhengige av de sporede tilstandene — du kan score samsvar på en tilstand du ellers ikke sporer (spor for eksempel hvor lenge en diffusor er „on“, men merk „off“ som samsvarende/ønsket tilstand). Forhåndsutfylt med de sporede tilstandene dine for enkelhets skyld; endre fritt. Du kan også skrive inn en egendefinert tilstand som ikke er oppført.",
+        "description": "Samsvar scores som prosentandelen av hvert tidsrom entiteten var i en av tilstandene du velger her. Disse tilstandene er uavhengige av de sporede tilstandene — du kan score samsvar på en tilstand du ellers ikke sporer (spor for eksempel hvor lenge en diffusor er «on», men merk «off» som samsvarende/ønsket tilstand). Forhåndsutfylt med de sporede tilstandene dine for enkelhets skyld; endre fritt. Du kan også skrive inn en egendefinert tilstand som ikke er oppført.",
         "data": {
           "target": "Samsvarende tilstand(er)",
           "target_threshold": "Samsvarsterskel (%, valgfritt)"
@@ -47,11 +47,12 @@
       },
       "frames": {
         "title": "Tidsrom",
-        "description": "Velg hvilke tidsrom som skal spores. Tidsrom lengre enn recorder-lagringen fylles inn over tid.",
+        "description": "Velg hvilke tidsrom som skal spores. Lange tidsrom (30 dager, måned, år) blir ikke fullstendige med en gang: Home Assistants recorder beholder bare noen få dager med historikk, så disse vinduene starter ufullstendige og fylles inn dag for dag etter hvert som sporeren registrerer sine egne data. Korte tidsrom er nøyaktige umiddelbart.",
         "data": {
           "today": "I dag",
           "yesterday": "I går",
           "24h": "Siste 24 timer",
+          "week": "Denne uken",
           "7d": "Siste 7 dager",
           "30d": "Siste 30 dager",
           "month": "Denne måneden",
@@ -62,6 +63,7 @@
           "today": "Siden lokal midnatt.",
           "yesterday": "Den forrige hele dagen.",
           "24h": "Rullerende 24-timersvindu som slutter nå.",
+          "week": "Siden mandag kl. 00:00 (denne uken så langt).",
           "7d": "Rullerende 7-dagersvindu som slutter nå.",
           "30d": "De siste 30 hele lokale dagene.",
           "month": "Siden den 1. i denne måneden.",
@@ -85,6 +87,7 @@
           "today": "I dag",
           "yesterday": "I går",
           "24h": "Siste 24 timer",
+          "week": "Denne uken",
           "7d": "Siste 7 dager",
           "30d": "Siste 30 dager",
           "month": "Denne måneden",
@@ -97,6 +100,7 @@
           "today": "Siden lokal midnatt.",
           "yesterday": "Den forrige hele dagen.",
           "24h": "Rullerende 24-timersvindu som slutter nå.",
+          "week": "Siden mandag kl. 00:00 (denne uken så langt).",
           "7d": "Rullerende 7-dagersvindu som slutter nå.",
           "30d": "De siste 30 hele lokale dagene.",
           "month": "Siden den 1. i denne måneden.",
@@ -118,7 +122,7 @@
         "name": "Varighet ({frame})"
       },
       "percent": {
-        "name": "Prosent ({frame})"
+        "name": "I sporet tilstand % ({frame})"
       },
       "compliance": {
         "name": "Samsvar ({frame})"
@@ -132,7 +136,7 @@
         "name": "For øyeblikket i tilstand"
       },
       "compliant": {
-        "name": "Samsvarende"
+        "name": "Samsvarende ({frame})"
       }
     }
   },

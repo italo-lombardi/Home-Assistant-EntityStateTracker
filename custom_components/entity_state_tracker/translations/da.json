@@ -42,16 +42,17 @@
         },
         "data_description": {
           "target": "De tilstande, der tæller som overholdende/ønskede. Tid brugt i en af dem scores. Uafhængige af de sporede tilstande — vælg enhver tilstand, enheden kan være i.",
-          "target_threshold": "Hvis angivet, tændes en binær sensor «Overholdende», når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over."
+          "target_threshold": "Hvis angivet, tændes en binær sensor „Overholdende“, når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over."
         }
       },
       "frames": {
         "title": "Tidsrum",
-        "description": "Vælg, hvilke tidsrum der skal spores. Tidsrum, der er længere end recorderens opbevaring, fyldes op over tid.",
+        "description": "Vælg, hvilke tidsrum der skal spores. Lange tidsrum (30 dage, måned, år) er ikke komplette med det samme: Home Assistants recorder gemmer kun nogle få dages historik, så disse vinduer starter delvist og fyldes op dag for dag, efterhånden som sporeren registrerer sine egne data. Korte tidsrum er præcise med det samme.",
         "data": {
           "today": "I dag",
           "yesterday": "I går",
           "24h": "Sidste 24 timer",
+          "week": "Denne uge",
           "7d": "Sidste 7 dage",
           "30d": "Sidste 30 dage",
           "month": "Denne måned",
@@ -62,6 +63,7 @@
           "today": "Siden lokal midnat.",
           "yesterday": "Den foregående hele dag.",
           "24h": "Rullende 24-timers vindue, der slutter nu.",
+          "week": "Siden mandag kl. 00:00 (denne uge indtil nu).",
           "7d": "Rullende 7-dages vindue, der slutter nu.",
           "30d": "De sidste 30 hele lokale dage.",
           "month": "Siden den 1. i denne måned.",
@@ -85,6 +87,7 @@
           "today": "I dag",
           "yesterday": "I går",
           "24h": "Sidste 24 timer",
+          "week": "Denne uge",
           "7d": "Sidste 7 dage",
           "30d": "Sidste 30 dage",
           "month": "Denne måned",
@@ -97,12 +100,13 @@
           "today": "Siden lokal midnat.",
           "yesterday": "Den foregående hele dag.",
           "24h": "Rullende 24-timers vindue, der slutter nu.",
+          "week": "Siden mandag kl. 00:00 (denne uge indtil nu).",
           "7d": "Rullende 7-dages vindue, der slutter nu.",
           "30d": "De sidste 30 hele lokale dage.",
           "month": "Siden den 1. i denne måned.",
           "year": "Siden 1. januar.",
           "target": "Sættet af tilstande, der betragtes som overholdende. At være i en af dem tæller. Uafhængige af de sporede tilstande — vælg enhver tilstand, enheden kan være i. Bruges kun, når scoring af overholdelse er aktiveret.",
-          "target_threshold": "Hvis angivet, tændes en binær sensor «Overholdende», når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over.",
+          "target_threshold": "Hvis angivet, tændes en binær sensor „Overholdende“, når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over.",
           "min_state_duration": "Hvis den sporede enhed skifter til en tilstand og ud igen hurtigere end dette antal sekunder, ignoreres dette korte øjeblik — dets tid lægges i stedet til den forrige tilstand, og det tæller ikke som en separat ændring. Brug det til at filtrere flimrende eller hoppende sensorer. Sæt til 0 for at tælle hver ændring, uanset hvor kort."
         }
       }
@@ -118,7 +122,7 @@
         "name": "Varighed ({frame})"
       },
       "percent": {
-        "name": "Procent ({frame})"
+        "name": "I sporet tilstand % ({frame})"
       },
       "compliance": {
         "name": "Overholdelse ({frame})"
@@ -132,7 +136,7 @@
         "name": "Aktuelt i tilstand"
       },
       "compliant": {
-        "name": "Overholdende"
+        "name": "Overholdende ({frame})"
       }
     }
   },

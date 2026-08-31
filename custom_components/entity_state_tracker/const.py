@@ -24,13 +24,14 @@ FRAMES: dict[str, FrameKind] = {
     "today": "calendar",
     "yesterday": "calendar",
     "24h": "rolling",
+    "week": "calendar",
     "7d": "rolling",
     "30d": "rolling",
     "month": "calendar",
     "year": "calendar",
 }
 
-# Frames on by default; 30d/month/year exceed retention and fill in over time.
+# Frames on by default; week/30d/month/year exceed retention and fill in over time.
 DEFAULT_FRAMES = ["today", "yesterday", "24h", "7d"]
 
 # Config flow keys
