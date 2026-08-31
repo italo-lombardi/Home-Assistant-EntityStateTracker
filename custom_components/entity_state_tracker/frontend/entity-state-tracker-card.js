@@ -577,8 +577,9 @@ const cardStyles = css`
   th,
   td {
     text-align: right;
-    padding: 6px 8px;
-    border-bottom: 1px solid var(--est-divider);
+    padding: 7px 10px;
+    /* tabular-nums keeps digits the same width so columns line up. */
+    font-variant-numeric: tabular-nums;
   }
 
   th:first-child,
@@ -586,20 +587,62 @@ const cardStyles = css`
     text-align: left;
   }
 
+  /* State column takes the slack; duration/% stay tight and right-aligned. */
+  .state-col {
+    width: 100%;
+    text-align: left;
+  }
+
   thead th {
-    color: var(--est-text-secondary);
+    color: var(--est-text-primary);
+    font-weight: 600;
+    border-bottom: 2px solid var(--est-divider);
+    white-space: nowrap;
+  }
+
+  tbody td {
+    border-bottom: 1px solid var(--est-divider);
+  }
+
+  /* Zebra + hover so the rows stay scannable. */
+  tbody tr:nth-child(even) {
+    background: color-mix(in srgb, var(--est-text-primary) 4%, transparent);
+  }
+
+  tbody tr:hover {
+    background: color-mix(in srgb, var(--est-accent) 10%, transparent);
+  }
+
+  /* Class was on the span, not the td — the old td.state-cell selector never
+     matched. Now it styles the swatch+label group directly. */
+  .state-cell {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     font-weight: 500;
   }
 
-  td.state-cell {
-    display: flex;
-    align-items: center;
-    gap: 6px;
+  /* Value cell: a per-cell mini-bar (state color, width = share of frame) sits
+     behind the number as a low-alpha background, giving the grid a scan anchor
+     without a separate column. Theme-safe via color-mix on the state color. */
+  td.value-cell {
+    background-image: var(--cell-bar, none);
+    background-repeat: no-repeat;
+    background-position: right center;
+  }
+
+  .cell-primary {
+    color: var(--est-text-primary);
   }
 
   .cell-secondary {
     color: var(--est-text-secondary);
     font-size: 11px;
+  }
+
+  .compliance-mark {
+    font-weight: 700;
+    margin-right: 3px;
   }
 `;
 
@@ -1019,48 +1062,60 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // ---------------------------------------------------------------------------
-  // Compliance gauge: a 2-slice donut answering "how much of the frame met the
-  // target set" — compliant (green) vs not (red), from the aggregate
-  // compliance_percent. Opt-in (config.compliance_pie), only meaningful when a
-  // target threshold is set. Never blank: a full green/red ring at 100%/0%.
+  // Compliance gauge: a single-value donut reading the aggregate
+  // compliance_percent against the target threshold. Arc length = the score;
+  // arc color = green when met, red when under. The REMAINDER is the same hue
+  // faded (~0.18 opacity), NOT grey — grey would collide with the state pie's
+  // no-data grey, and the remainder is "not-yet-target time", not an alarm.
+  // Center prints the % (arc-colored) + a pass/fail glyph; no legend (the
+  // number is the legend). Opt-in (config.compliance_pie); shown only with a
+  // numeric threshold (met/unmet is undefined without one). Never blank:
+  // full solid ring at 100%, full faint ring at 0%.
   // ---------------------------------------------------------------------------
   _renderComplianceGauge(a) {
     const pct = a.compliance_percent;
-    if (pct == null) return nothing; // N/A window — nothing to gauge.
     const threshold = a.target_threshold;
-    const met = threshold == null || Number(pct) >= Number(threshold);
-    const green = "var(--success-color, #4caf50)";
-    const red = "var(--error-color, #f44336)";
-    // Green/red slice = time in the target set (compliance_percent); grey
-    // remainder = the rest of the frame, NOT in the target set. The green/red
-    // slice carries the met/unmet color; the complement is neutral grey so a
-    // "compliant" gauge reads as color-on-grey, not a green-vs-red alarm.
+    // No score, or no threshold to score against → nothing meaningful to gauge.
+    // (target_states can be set without a threshold; met/unmet needs the number.)
+    if (pct == null || threshold == null) return nothing;
+    const met = Number(pct) >= Number(threshold);
     const p = Math.max(0, Math.min(100, Number(pct)));
-    const slices = [
-      { state: met ? "Compliant" : "Not compliant", secs: p, pct: p, color: met ? green : red },
-      { state: "Not in target", secs: 100 - p, pct: 100 - p, color: "var(--est-bar-bg)" },
-    ].filter((s) => s.secs >= 0.05);
-    const total = slices.reduce((n, s) => n + s.secs, 0) || 1;
+    const compColor = met
+      ? "var(--success-color, #4caf50)"
+      : "var(--error-color, #f44336)";
+    // Remainder = same hue, faded. color-mix keeps it theme-safe and always the
+    // arc's own hue, so a passing gauge never shows a second alarm color.
+    const faint = `color-mix(in srgb, ${compColor} 18%, transparent)`;
     const cx = 50, cy = 50, r = 40, inner = 24;
-    let angle = -Math.PI / 2;
-    const single = slices.length === 1;
-    const paths = slices.map((s) => {
-      const frac = s.secs / total;
-      if (single || frac >= 0.9999) {
-        return { d: this._ring(cx, cy, r, inner), color: s.color, evenodd: true };
-      }
-      const a0 = angle;
-      const a1 = angle + frac * 2 * Math.PI;
-      angle = a1;
-      return { d: this._arc(cx, cy, r, inner, a0, a1), color: s.color, evenodd: false };
-    });
-    // No target line here — _metaHeader already states "Compliance target ≥ X%"
-    // once for the whole card; repeating it on the gauge is redundant.
-    return this._pieColumn(
-      html`<div class="frame-picker">Compliance</div>`,
-      paths,
-      slices.map((s) => ({ color: s.color, label: s.state, value: fmtPct(s.pct) }))
-    );
+    // A ~0-area slice can't paint an arc, so at the extremes draw ONE full ring:
+    // solid arc-color at 100%, faint at 0%. Mid-range draws the two arcs.
+    let paths;
+    if (p >= 99.95) {
+      paths = [{ d: this._ring(cx, cy, r, inner), color: compColor, evenodd: true }];
+    } else if (p <= 0.05) {
+      paths = [{ d: this._ring(cx, cy, r, inner), color: faint, evenodd: true }];
+    } else {
+      const a0 = -Math.PI / 2;
+      const a1 = a0 + (p / 100) * 2 * Math.PI;
+      paths = [
+        { d: this._arc(cx, cy, r, inner, a0, a1), color: compColor, evenodd: false },
+        { d: this._arc(cx, cy, r, inner, a1, a0 + 2 * Math.PI), color: faint, evenodd: false },
+      ];
+    }
+    // No legend, no target line here — _metaHeader already states the target
+    // once for the whole card, and the center number + glyph carry meaning.
+    return html`
+      <div class="pie-chart">
+        <div class="frame-picker">Compliance</div>
+        <div class="pie-body">
+          ${this._pieSvg(paths, {
+            value: `${Math.round(p)}%`,
+            glyph: met ? "✓" : "✗",
+            color: compColor,
+          })}
+        </div>
+      </div>
+    `;
   }
 
   // ---------------------------------------------------------------------------
@@ -1209,7 +1264,7 @@ class EntityStateTrackerCard extends LitElement {
   // renders a Node child value directly (no re-parsing, no namespace loss),
   // which sidesteps the missing `svg` template tag entirely. Rebuilt each
   // render — cheap (a handful of nodes) and always fresh.
-  _pieSvg(paths) {
+  _pieSvg(paths, center = null) {
     const NS = "http://www.w3.org/2000/svg";
     const el = document.createElementNS(NS, "svg");
     el.setAttribute("class", "pie-svg");
@@ -1222,6 +1277,36 @@ class EntityStateTrackerCard extends LitElement {
       path.setAttribute("fill", p.color);
       if (p.evenodd) path.setAttribute("fill-rule", "evenodd");
       el.appendChild(path);
+    }
+    // Optional center label (gauge): a big value + small glyph in the hole.
+    if (center) {
+      const val = document.createElementNS(NS, "text");
+      val.setAttribute("x", "50");
+      val.setAttribute("y", center.glyph ? "48" : "50");
+      val.setAttribute("text-anchor", "middle");
+      val.setAttribute("dominant-baseline", "central");
+      val.setAttribute("fill", center.color);
+      val.setAttribute("style", "font-size:14px;font-weight:700");
+      // Only cap width when the text is long enough to risk spilling past the
+      // inner ring ("100%"). textLength on a short string ("0%") stretches it
+      // to the full width and wrecks the glyph spacing, so leave those natural.
+      if (center.value.length >= 4) {
+        val.setAttribute("textLength", "40");
+        val.setAttribute("lengthAdjust", "spacingAndGlyphs");
+      }
+      val.textContent = center.value;
+      el.appendChild(val);
+      if (center.glyph) {
+        const g = document.createElementNS(NS, "text");
+        g.setAttribute("x", "50");
+        g.setAttribute("y", "64");
+        g.setAttribute("text-anchor", "middle");
+        g.setAttribute("dominant-baseline", "central");
+        g.setAttribute("fill", center.color);
+        g.setAttribute("style", "font-size:12px");
+        g.textContent = center.glyph;
+        el.appendChild(g);
+      }
     }
     return el;
   }
@@ -1258,101 +1343,160 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // ---------------------------------------------------------------------------
-  // Table: rows = states, columns = frames (duration + %). Best for all-states.
+  // Table — mode-aware, narrow by construction (never the old states×frames grid
+  // that overflowed):
+  //   * all-states  → rows = states of ONE frame (per-state is the story);
+  //                    cols State | Duration | %. Frame from config.frame.
+  //   * specific    → rows = every enabled FRAME (per-window is the story, same
+  //                    axis as the bars); cols Frame | Duration | %
+  //                    (+ Compliance when a target is set).
   // ---------------------------------------------------------------------------
   _renderTable(sensors) {
-    // Collect the union of states across frames (breakdown mode). For specific
-    // mode, the single "tracked" row.
-    const stateSet = new Set();
-    let anyGap = false;
-    for (const s of sensors) {
-      if (this._isBreakdown(s)) {
-        Object.keys((s.attrs || {}).breakdown_seconds || {}).forEach((st) =>
-          stateSet.add(st)
-        );
-        if (Number((s.attrs || {}).unaccounted_seconds) > 0) anyGap = true;
-      } else {
-        stateSet.add(((s.attrs || {}).tracked_states || []).join(", ") || "tracked");
-      }
-    }
-    // Trailing pseudo-row for window time attributed to no state (breakdown
-    // mode), mirroring the pie's grey slice so the table columns sum to 100.
-    const GAP_ROW = "__gap__"; // sentinel key, never a real state name
-    // Order rows by total seconds desc for a stable, readable table.
-    const totals = {};
-    for (const st of stateSet) totals[st] = 0;
-    const secsFor = (s, st) => {
-      if (st === GAP_ROW)
-        return this._isBreakdown(s) ? Number((s.attrs || {}).unaccounted_seconds) || 0 : 0;
-      if (this._isBreakdown(s)) return ((s.attrs || {}).breakdown_seconds || {})[st] || 0;
-      const tracked = ((s.attrs || {}).tracked_states || []).join(", ") || "tracked";
-      // Prefer raw seconds attr; s.state is HA-unit-converted (hours) and thus
-      // ambiguous. Fall back for older backends.
-      const secs =
-        (s.attrs || {}).duration_seconds != null
-          ? Number((s.attrs || {}).duration_seconds)
-          : Number(s.state);
-      return st === tracked ? secs || 0 : 0;
-    };
-    const pctFor = (s, st) => {
-      if (st === GAP_ROW) {
-        if (!this._isBreakdown(s)) return null;
-        const ws = Number((s.attrs || {}).window_seconds) || 0;
-        const gap = Number((s.attrs || {}).unaccounted_seconds) || 0;
-        return ws > 0 ? (gap / ws) * 100 : null;
-      }
-      if (this._isBreakdown(s)) return ((s.attrs || {}).breakdown_pct || {})[st];
-      const tracked = ((s.attrs || {}).tracked_states || []).join(", ") || "tracked";
-      return st === tracked ? (s.attrs || {}).percent : null;
-    };
-    for (const s of sensors)
-      for (const st of stateSet) totals[st] += secsFor(s, st);
-    const rows = [...stateSet].sort((x, y) => totals[y] - totals[x]);
-    // Gap row always last, regardless of magnitude.
-    if (anyGap) rows.push(GAP_ROW);
-    const rowLabel = (st) => (st === GAP_ROW ? "No data" : st);
-    const rowColor = (st) =>
-      st === GAP_ROW ? "var(--est-bar-bg)" : stateColor(st);
+    const isBreakdown = sensors.some((s) => this._isBreakdown(s));
+    return isBreakdown
+      ? this._renderStateTable(sensors)
+      : this._renderFrameTable(sensors);
+  }
 
-    return html`<table>
-      <thead>
-        <tr>
-          <th>State</th>
-          ${sensors.map(
-            (s) =>
-              html`<th>
-                ${FRAME_LABELS[s.frame] || s.frame}${this._incomplete(s.attrs)
-                  ? html`<span class="since">*</span>`
+  // Specific mode: one row per enabled frame — the window comparison.
+  _renderFrameTable(sensors) {
+    const a0 = sensors[0]?.attrs || {};
+    const hasCompliance = sensors.some(
+      (s) => (s.attrs || {}).compliance_percent != null
+    );
+    const rows = sensors.map((s) => {
+      const a = s.attrs || {};
+      const secs =
+        a.duration_seconds != null ? Number(a.duration_seconds) : Number(s.state);
+      return {
+        frame: s.frame,
+        secs: secs || 0,
+        pct: a.percent,
+        compliance: a.compliance_percent,
+        threshold: a.target_threshold,
+        incomplete: this._incomplete(a),
+        since: a.data_start,
+      };
+    });
+    return html`
+      ${this._metaHeader(a0)}
+      <table>
+        <thead>
+          <tr>
+            <th class="state-col">Frame</th>
+            <th>Duration</th>
+            <th>%</th>
+            ${hasCompliance ? html`<th>Compliance</th>` : nothing}
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((r) => {
+            const w = r.pct == null ? 0 : Math.max(0, Math.min(100, Number(r.pct)));
+            const tint = `color-mix(in srgb, var(--est-accent) 22%, transparent)`;
+            const bar =
+              w > 0
+                ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
+                : "none";
+            return html`<tr>
+              <td class="state-col">
+                ${FRAME_LABELS[r.frame] || r.frame}${r.incomplete && r.since
+                  ? html`<span class="since">since ${fmtDate(r.since)}</span>`
                   : nothing}
-              </th>`
-          )}
-        </tr>
-      </thead>
-      <tbody>
-        ${rows.map(
-          (st) => html`<tr>
-            <td>
-              <span class="state-cell"
-                ><span
-                  class="legend-swatch"
-                  style="background:${rowColor(st)}"
-                ></span
-                >${rowLabel(st)}</span
-              >
-            </td>
-            ${sensors.map((s) => {
-              const secs = secsFor(s, st);
-              const pct = pctFor(s, st);
-              return html`<td>
-                ${fmtDuration(secs)}<br /><span class="cell-secondary"
-                  >${fmtPct(pct)}</span
+              </td>
+              <td class="cell-primary">${fmtDuration(r.secs)}</td>
+              <td class="value-cell cell-secondary" style="--cell-bar:${bar}">
+                ${fmtPct(r.pct)}
+              </td>
+              ${hasCompliance
+                ? html`<td class="cell-secondary">
+                    ${r.compliance != null && r.threshold != null
+                      ? html`<span
+                            class="compliance-mark"
+                            style="color:${Number(r.compliance) >=
+                            Number(r.threshold)
+                              ? "var(--success-color, #4caf50)"
+                              : "var(--error-color, #f44336)"}"
+                            >${Number(r.compliance) >= Number(r.threshold)
+                              ? "✓"
+                              : "✗"}</span
+                          >${fmtPct(r.compliance)}`
+                      : fmtPct(r.compliance)}
+                  </td>`
+                : nothing}
+            </tr>`;
+          })}
+        </tbody>
+      </table>
+    `;
+  }
+
+  // All-states mode: one frame's per-state breakdown.
+  _renderStateTable(sensors) {
+    // Pick the configured frame, else the first available — identical to _renderPie.
+    const pick = sensors.find((s) => s.frame === this._config.frame) || sensors[0];
+    const a = pick.attrs || {};
+    const GAP_ROW = "__gap__"; // sentinel key, never a real state name
+
+    // Build (state → {secs, pct}) rows for this one frame.
+    const rowData = {};
+    const bs = a.breakdown_seconds || {};
+    const bp = a.breakdown_pct || {};
+    for (const st of Object.keys(bs)) rowData[st] = { secs: bs[st] || 0, pct: bp[st] };
+    // Trailing "No data" row for window time attributed to no state (mirrors the
+    // pie's grey slice), so the % column sums to ~100.
+    const gap = Number(a.unaccounted_seconds) || 0;
+    if (gap > 0) {
+      const ws = Number(a.window_seconds) || 0;
+      rowData[GAP_ROW] = { secs: gap, pct: ws > 0 ? (gap / ws) * 100 : null };
+    }
+
+    // States by seconds desc; gap row always last.
+    const rows = Object.keys(rowData)
+      .filter((st) => st !== GAP_ROW)
+      .sort((x, y) => rowData[y].secs - rowData[x].secs);
+    if (rowData[GAP_ROW]) rows.push(GAP_ROW);
+    const rowLabel = (st) => (st === GAP_ROW ? "No data" : st);
+    const rowColor = (st) => (st === GAP_ROW ? "var(--est-bar-bg)" : stateColor(st));
+
+    return html`
+      ${this._metaHeader(a)}
+      <table>
+        <thead>
+          <tr>
+            <th class="state-col">State</th>
+            <th>Duration</th>
+            <th>%</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((st) => {
+            const { secs, pct } = rowData[st];
+            // Mini-bar behind the % cell: low-alpha state color, width = pct.
+            const w = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
+            const tint = `color-mix(in srgb, ${rowColor(st)} 22%, transparent)`;
+            const bar =
+              w > 0
+                ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
+                : "none";
+            return html`<tr>
+              <td class="state-col">
+                <span class="state-cell"
+                  ><span
+                    class="legend-swatch"
+                    style="background:${rowColor(st)}"
+                  ></span
+                  >${rowLabel(st)}</span
                 >
-              </td>`;
-            })}
-          </tr>`
-        )}
-      </tbody>
-    </table>`;
+              </td>
+              <td class="cell-primary">${fmtDuration(secs)}</td>
+              <td class="value-cell cell-secondary" style="--cell-bar:${bar}">
+                ${fmtPct(pct)}
+              </td>
+            </tr>`;
+          })}
+        </tbody>
+      </table>
+    `;
   }
 }
 
@@ -1481,19 +1625,19 @@ class EntityStateTrackerCardEditor extends LitElement {
           >
             <option value="bars" ?selected=${chart === "bars"}>Bars (one row per frame)</option>
             <option value="pie" ?selected=${chart === "pie"}>Pie (one frame's breakdown)</option>
-            <option value="table" ?selected=${chart === "table"}>Table (states × frames)</option>
+            <option value="table" ?selected=${chart === "table"}>Table (one frame's states)</option>
           </select>
         </div>
         ${showFrame
           ? html`<div class="editor-row">
-              <label>Frame${chart === "pie" ? "" : " (emphasis)"}</label>
+              <label>Frame</label>
               <select
                 .value=${this._config.frame || ""}
                 @change=${(e) =>
                   this._updateConfig("frame", e.target.value || undefined)}
               >
                 <option value="" ?selected=${!this._config.frame}>
-                  ${chart === "pie" ? "First available" : "All frames"}
+                  First available
                 </option>
                 ${this._frameOptions().map(
                   (f) => html`<option
@@ -1507,7 +1651,7 @@ class EntityStateTrackerCardEditor extends LitElement {
               <div class="editor-hint">
                 ${chart === "pie"
                   ? "Which frame the pie breaks down."
-                  : "Optional — the table shows every enabled frame as a column."}
+                  : "Which frame the table lists states for."}
               </div>
             </div>`
           : nothing}
@@ -1526,7 +1670,8 @@ class EntityStateTrackerCardEditor extends LitElement {
                 Show compliance gauge
               </label>
               <div class="editor-hint">
-                Adds a met/unmet donut below the state pie.
+                Adds a compliance-score gauge (green when the target is met,
+                red when not) beside the state pie.
               </div>
             </div>`
           : nothing}
