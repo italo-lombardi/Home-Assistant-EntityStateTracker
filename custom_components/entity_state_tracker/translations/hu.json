@@ -117,6 +117,12 @@
       "duration": {
         "name": "Időtartam ({frame})"
       },
+      "percent": {
+        "name": "Százalék ({frame})"
+      },
+      "compliance": {
+        "name": "Megfelelés ({frame})"
+      },
       "breakdown": {
         "name": "Állapotlebontás ({frame})"
       }

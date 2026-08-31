@@ -41,6 +41,7 @@ from custom_components.entity_state_tracker.const import (
 )
 from custom_components.entity_state_tracker.coordinator import (
     _RECORDER_OFF_ISSUE,
+    _SEEN_CAP,
     EntityStateTrackerCoordinator,
     _parse_day,
     _parse_ts,
@@ -644,6 +645,92 @@ async def test_live_fold_no_prior_state_is_noop_fold(
     assert c._previous_state is None
     # No fold happened: no day bucket gained an "on" row.
     assert all("on" not in day for day in ledger.daily.values())
+    await hass.async_block_till_done()
+    await c.async_shutdown()
+
+
+async def test_transition_stamps_last_entered_and_exited(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """A transition A→B stamps last_exited[A] and last_entered[B] at now (§7)."""
+    now = _utc(2026, 6, 10, 12, 0)
+    c = await _prime(hass, all_states_config_entry, now, patch_recorder)
+    ledger = c._ledger
+    assert ledger is not None
+    ledger.last_state = "on"
+    ledger.last_changed_ts = _utc(2026, 6, 10, 11, 0).isoformat()
+    # Invariant: the current state is always in _seen (seeded from the ledger at
+    # setup via _ledger_seen_states, which includes last_state). Mirror that here
+    # since the test sets last_state directly — the stamp is gated on _seen so the
+    # unique-state-per-transition cap also bounds last_entered/last_exited.
+    c._seen.add("on")
+
+    changed = _utc(2026, 6, 10, 12, 0)
+    event = _state_event("binary_sensor.front_door", "off", changed)
+    with patch.object(c._debouncer, "async_call", new_callable=AsyncMock):
+        c._handle_state_change(event)
+
+    # Exit of the state we left + entry of the state we moved to, both at now.
+    assert ledger.last_exited["on"] == changed.isoformat()
+    assert ledger.last_entered["off"] == changed.isoformat()
+    # The state we entered has no exit yet; the one we left keeps its entry unset
+    # (it was seeded before these fields existed in this test).
+    assert "off" not in ledger.last_exited
+    await hass.async_block_till_done()
+    await c.async_shutdown()
+
+
+async def test_stamps_bounded_by_seen_cap(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """last_entered/last_exited never grow past _SEEN_CAP distinct states.
+
+    Regression guard: a unique-state-per-transition entity used to grow these
+    persisted dicts without bound, defeating the _SEEN_CAP that protects _seen.
+    Drive more than _SEEN_CAP distinct states and assert both dicts stay capped.
+    """
+    now = _utc(2026, 6, 10, 12, 0)
+    c = await _prime(hass, all_states_config_entry, now, patch_recorder)
+    ledger = c._ledger
+    assert ledger is not None
+
+    with patch.object(c._debouncer, "async_call", new_callable=AsyncMock):
+        for i in range(_SEEN_CAP + 25):
+            changed = now + dt.timedelta(seconds=i)
+            event = _state_event("binary_sensor.front_door", f"s{i}", changed)
+            c._handle_state_change(event)
+
+    assert len(c._seen) <= _SEEN_CAP
+    assert len(ledger.last_entered) <= _SEEN_CAP
+    assert len(ledger.last_exited) <= _SEEN_CAP
+    await hass.async_block_till_done()
+    await c.async_shutdown()
+
+
+async def test_first_transition_stamps_entry_only(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """First-ever transition (no prior state) stamps last_entered, not exited."""
+    now = _utc(2026, 6, 10, 12, 0)
+    c = await _prime(hass, all_states_config_entry, now, patch_recorder)
+    ledger = c._ledger
+    assert ledger is not None
+    assert ledger.last_state is None
+
+    changed = _utc(2026, 6, 10, 12, 0)
+    event = _state_event("binary_sensor.front_door", "on", changed)
+    with patch.object(c._debouncer, "async_call", new_callable=AsyncMock):
+        c._handle_state_change(event)
+
+    assert ledger.last_entered["on"] == changed.isoformat()
+    # No prior state → nothing exited.
+    assert ledger.last_exited == {}
     await hass.async_block_till_done()
     await c.async_shutdown()
 

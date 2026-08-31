@@ -203,13 +203,15 @@ The integration ships a custom Lovelace card, auto-registered as a Lovelace reso
 
 Incomplete frames (where data is younger than the window) render hatched and labelled "since &lt;date&gt;". On YAML-mode dashboards, where Lovelace resources are read-only, the card degrades gracefully and logs manual-add instructions.
 
-Point `entity:` at **any one of the tracker's own sensors** (not the source entity you are tracking). The card discovers that sensor's siblings — every frame and metric of the same tracker — from its shared entity-id stem, so a single sensor id is enough. Pick, for example, its `state_breakdown` (all-states mode) or `duration` (specific mode) sensor for `today`.
+Add the card from the dashboard's **visual editor** and pick your tracker from the **Tracker** dropdown — it lists every Entity State Tracker by name. The card then discovers all of that tracker's frames and metrics itself, by device, so **you can freely rename any of the tracker's sensor entity IDs without breaking the card**.
 
 ```yaml
 type: custom:entity-state-tracker-card
-entity: sensor.entity_state_tracker_sun_state_breakdown_today   # one tracker sensor
-chart: bars                                                     # bars | pie | table
+tracker_id: 01JABCXYZ...        # the tracker's config-entry id (visual editor fills this in)
+chart: bars                     # bars | pie | table
 ```
+
+The `tracker_id` is the tracker's config-entry id. You normally never type it by hand — the visual editor sets it for you. To find it manually, open the tracker under **Settings → Devices & Services → Entity State Tracker**; the id is the last path segment of the config-entry URL.
 
 ---
 

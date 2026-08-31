@@ -117,6 +117,12 @@
       "duration": {
         "name": "Продължителност ({frame})"
       },
+      "percent": {
+        "name": "Процент ({frame})"
+      },
+      "compliance": {
+        "name": "Съответствие ({frame})"
+      },
       "breakdown": {
         "name": "Разбивка на състоянията ({frame})"
       }

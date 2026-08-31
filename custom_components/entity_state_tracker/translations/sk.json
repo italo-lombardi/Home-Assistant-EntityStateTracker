@@ -117,6 +117,12 @@
       "duration": {
         "name": "Doba trvania ({frame})"
       },
+      "percent": {
+        "name": "Percento ({frame})"
+      },
+      "compliance": {
+        "name": "Zhoda ({frame})"
+      },
       "breakdown": {
         "name": "Rozpad stavov ({frame})"
       }

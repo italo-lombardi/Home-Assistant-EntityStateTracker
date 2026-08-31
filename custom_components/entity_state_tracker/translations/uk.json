@@ -117,6 +117,12 @@
       "duration": {
         "name": "Тривалість ({frame})"
       },
+      "percent": {
+        "name": "Відсоток ({frame})"
+      },
+      "compliance": {
+        "name": "Відповідність ({frame})"
+      },
       "breakdown": {
         "name": "Розподіл станів ({frame})"
       }

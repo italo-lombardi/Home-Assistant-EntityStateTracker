@@ -117,6 +117,12 @@
       "duration": {
         "name": "지속 시간({frame})"
       },
+      "percent": {
+        "name": "백분율 ({frame})"
+      },
+      "compliance": {
+        "name": "준수 ({frame})"
+      },
       "breakdown": {
         "name": "상태 분석({frame})"
       }

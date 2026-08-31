@@ -12,7 +12,7 @@ from typing import Any
 
 import pytest
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from homeassistant.const import UnitOfTime
+from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTime
 
 from custom_components.entity_state_tracker.binary_sensor import (
     _device_info as binary_device_info,
@@ -25,7 +25,9 @@ from custom_components.entity_state_tracker.const import (
 from custom_components.entity_state_tracker.models import FrameResult, TrackerData
 from custom_components.entity_state_tracker.sensor import (
     BreakdownSensor,
+    ComplianceSensor,
     DurationSensor,
+    PercentSensor,
     async_setup_entry,
 )
 from custom_components.entity_state_tracker.sensor import (
@@ -98,7 +100,10 @@ async def _collect(coordinator, hass, entry_id) -> list:
 
 @pytest.mark.asyncio
 async def test_setup_specific_no_target_counts(hass) -> None:
-    """SPECIFIC, no target: exactly one DurationSensor per enabled frame."""
+    """SPECIFIC, no target: one DurationSensor + one PercentSensor per frame.
+
+    No compliance sensor without a target set.
+    """
     frames = ["today", "yesterday", "24h", "7d"]
     data = TrackerData(frames={f: _frame_result() for f in frames})
     coord = _fake_coordinator(
@@ -111,13 +116,16 @@ async def test_setup_specific_no_target_counts(hass) -> None:
     )
     added = await _collect(coord, hass, "e1")
     durations = [e for e in added if isinstance(e, DurationSensor)]
+    percents = [e for e in added if isinstance(e, PercentSensor)]
     assert len(durations) == len(frames)
-    assert len(added) == len(frames)
+    assert len(percents) == len(frames)
+    assert not [e for e in added if isinstance(e, ComplianceSensor)]
+    assert len(added) == 2 * len(frames)
 
 
 @pytest.mark.asyncio
 async def test_setup_specific_with_target_counts(hass) -> None:
-    """SPECIFIC + target: still one DurationSensor per frame, no extra sensors."""
+    """SPECIFIC + target: duration + percent + compliance per frame."""
     frames = ["today", "yesterday", "24h", "7d"]
     data = TrackerData(frames={f: _frame_result() for f in frames})
     coord = _fake_coordinator(
@@ -130,12 +138,14 @@ async def test_setup_specific_with_target_counts(hass) -> None:
     )
     added = await _collect(coord, hass, "e2")
     assert len([e for e in added if isinstance(e, DurationSensor)]) == len(frames)
-    assert len(added) == len(frames)
+    assert len([e for e in added if isinstance(e, PercentSensor)]) == len(frames)
+    assert len([e for e in added if isinstance(e, ComplianceSensor)]) == len(frames)
+    assert len(added) == 3 * len(frames)
 
 
 @pytest.mark.asyncio
 async def test_setup_specific_today_disabled_counts(hass) -> None:
-    """SPECIFIC with today disabled: still one DurationSensor per enabled frame."""
+    """SPECIFIC with today disabled: the per-frame set covers only enabled frames."""
     frames = ["yesterday", "24h"]
     data = TrackerData(frames={f: _frame_result() for f in frames})
     coord = _fake_coordinator(
@@ -148,7 +158,9 @@ async def test_setup_specific_today_disabled_counts(hass) -> None:
     )
     added = await _collect(coord, hass, "e3")
     assert len([e for e in added if isinstance(e, DurationSensor)]) == len(frames)
-    assert len(added) == len(frames)
+    assert len([e for e in added if isinstance(e, PercentSensor)]) == len(frames)
+    assert len([e for e in added if isinstance(e, ComplianceSensor)]) == len(frames)
+    assert len(added) == 3 * len(frames)
 
 
 @pytest.mark.asyncio
@@ -291,11 +303,14 @@ def test_duration_entity_descriptors() -> None:
     assert sensor.suggested_display_precision == 1
     assert sensor.state_class == SensorStateClass.MEASUREMENT
     assert sensor.unique_id == "est_entry_today_duration"
-    # entity_id is PINNED to the card-discoverable slug (§card parity): metric
-    # LABEL slug ("duration") + frame LABEL slug ("today"), NOT the metric/frame
-    # keys — so the card's DOMAIN_PREFIX discovery always finds a custom-named
-    # tracker.
-    assert sensor.entity_id == "sensor.entity_state_tracker_est_entry_duration_today"
+    # entity_id is PINNED to id==slug(name), namespaced by the tracker NAME
+    # (entry.title "Living Room — heat/auto"), NEVER the entry_id ULID: metric
+    # slug ("duration") + frame LABEL slug ("today"). The card discovers by
+    # device_id + translation_key, so it finds a custom-named tracker regardless.
+    assert (
+        sensor.entity_id
+        == "sensor.entity_state_tracker_living_room_heat_auto_duration_today"
+    )
 
 
 def test_frame_sensor_entity_id_pinned_frame_label_slug() -> None:
@@ -308,20 +323,24 @@ def test_frame_sensor_entity_id_pinned_frame_label_slug() -> None:
         tracked_states=["heat"],
         target_states=None,
         data=data,
-        entry_id="e_multi",
+        title="Front Door",
     )
     sensor = DurationSensor(coord, "24h")
     assert (
-        sensor.entity_id == "sensor.entity_state_tracker_e_multi_duration_last_24_hours"
+        sensor.entity_id
+        == "sensor.entity_state_tracker_front_door_duration_last_24_hours"
     )
 
 
 def test_breakdown_sensor_entity_id_uses_state_breakdown_metric_slug() -> None:
     """Breakdown sensor pins the "state_breakdown" metric slug (not "breakdown")."""
     coord = _breakdown_coord()
-    coord.entry.entry_id = "e_bd"
+    coord.entry.title = "Front Door"
     sensor = BreakdownSensor(coord, "today")
-    assert sensor.entity_id == "sensor.entity_state_tracker_e_bd_state_breakdown_today"
+    assert (
+        sensor.entity_id
+        == "sensor.entity_state_tracker_front_door_state_breakdown_today"
+    )
 
 
 def test_duration_attributes_without_target() -> None:
@@ -355,7 +374,8 @@ def test_duration_attributes_without_target() -> None:
     assert set(attrs["counts"]) == {"heat", "auto"}
     assert attrs["counts"]["heat"] == 3
     assert attrs["avg_duration_seconds"]["heat"] == 600.0
-    # last_seen was dropped; auto simply carries no last-seen attribute now.
+    # last_seen was dropped; last_entered/last_exited replace it (asserted in the
+    # dedicated exposure test below).
     assert "last_seen" not in attrs
 
 
@@ -399,6 +419,58 @@ def test_duration_attributes_none_before_data() -> None:
     assert sensor.extra_state_attributes is None
 
 
+def test_last_entered_exited_exposed_on_both_sensors() -> None:
+    """Both sensors expose last_entered/last_exited as flat {state: iso} dicts.
+
+    They are tracker-global (frame-independent) → sourced whole from
+    coordinator.data, identical on the duration and breakdown sensors (§7).
+    """
+    entered = {"heat": "2026-08-31T10:00:00+00:00", "off": "2026-08-31T09:00:00+00:00"}
+    exited = {"off": "2026-08-31T10:00:00+00:00"}
+    dur_data = TrackerData(
+        frames={"today": _frame_result()},
+        last_entered=entered,
+        last_exited=exited,
+    )
+    dur_coord = _fake_coordinator(
+        mode=MODE_SPECIFIC,
+        enabled_frames=["today"],
+        tracked_states=["heat"],
+        target_states=None,
+        data=dur_data,
+    )
+    dur_attrs = DurationSensor(dur_coord, "today").extra_state_attributes
+    assert dur_attrs["last_entered"] == entered
+    assert dur_attrs["last_exited"] == exited
+
+    brk_data = TrackerData(
+        frames={"today": _frame_result()},
+        last_entered=entered,
+        last_exited=exited,
+    )
+    brk_coord = _fake_coordinator(
+        mode=MODE_ALL,
+        enabled_frames=["today"],
+        tracked_states=None,
+        target_states=None,
+        data=brk_data,
+    )
+    brk_attrs = BreakdownSensor(brk_coord, "today").extra_state_attributes
+    assert brk_attrs["last_entered"] == entered
+    assert brk_attrs["last_exited"] == exited
+    # Both keys are stripped from the recorder (they churn) on both sensors.
+    assert {"last_entered", "last_exited"} <= DurationSensor._unrecorded_attributes
+    assert {"last_entered", "last_exited"} <= BreakdownSensor._unrecorded_attributes
+
+
+def test_last_entered_exited_default_empty_when_no_data() -> None:
+    """A TrackerData carrying no stamps yet exposes empty dicts, not None/error."""
+    coord = _duration_coord(tracked=("heat",))
+    attrs = DurationSensor(coord, "today").extra_state_attributes
+    assert attrs["last_entered"] == {}
+    assert attrs["last_exited"] == {}
+
+
 def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
     """DurationSensor strips its churny attributes from the recorder (§5.3)."""
     unrecorded = DurationSensor._unrecorded_attributes
@@ -407,6 +479,8 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
         "counts",
         "avg_duration_seconds",
         "previous_state",
+        "last_entered",
+        "last_exited",
         "percent",
         "compliance_percent",
         "duration_seconds",
@@ -420,7 +494,7 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
     assert "target_states" not in unrecorded
     # source_entity is config-stable → RECORDED (not stripped from recorder).
     assert "source_entity" not in unrecorded
-    # last_seen was dropped entirely — no longer an attribute at all.
+    # last_seen was dropped entirely — replaced by last_entered/last_exited.
     assert "last_seen" not in unrecorded
 
 
@@ -466,6 +540,8 @@ def test_breakdown_unrecorded_attributes_exact_set() -> None:
             "counts",
             "avg_duration_seconds",
             "previous_state",
+            "last_entered",
+            "last_exited",
             "window_seconds",
             "data_start",
             "window_coverage",
@@ -567,3 +643,164 @@ def test_breakdown_previous_state_none_passthrough() -> None:
     )
     sensor = BreakdownSensor(coord, "today")
     assert sensor.extra_state_attributes["previous_state"] is None
+
+
+# --------------------------------------------------------------------------
+# PercentSensor / ComplianceSensor (specific-mode, standalone % entities §5.1)
+# --------------------------------------------------------------------------
+
+
+def test_percent_sensor_descriptors() -> None:
+    """Percent sensor carries the §5.1 HA-correct % measurement contract."""
+    coord = _duration_coord(tracked=("heat", "auto"))
+    sensor = PercentSensor(coord, "today")
+    assert sensor.native_unit_of_measurement == PERCENTAGE
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
+    # No SensorDeviceClass.PERCENTAGE exists — device_class is deliberately None
+    # (no borrowed BATTERY/HUMIDITY class).
+    assert sensor.device_class is None
+    assert sensor.suggested_display_precision == 1
+    assert sensor.entity_category == EntityCategory.DIAGNOSTIC
+    # DIAGNOSTIC, NOT disabled-by-default (§5 decision): a disabled MEASUREMENT
+    # sensor accrues no Statistics until manually enabled.
+    assert sensor.entity_registry_enabled_default is True
+
+
+def test_compliance_sensor_descriptors() -> None:
+    """Compliance sensor shares the percent descriptor contract."""
+    coord = _duration_coord(tracked=("heat", "auto"), target=("heat",))
+    sensor = ComplianceSensor(coord, "today")
+    assert sensor.native_unit_of_measurement == PERCENTAGE
+    assert sensor.state_class == SensorStateClass.MEASUREMENT
+    assert sensor.device_class is None
+    assert sensor.suggested_display_precision == 1
+    assert sensor.entity_category == EntityCategory.DIAGNOSTIC
+    assert sensor.entity_registry_enabled_default is True
+
+
+def test_percent_native_value_equals_frame_percent() -> None:
+    """native_value is the frame's percent (0–100), rounded 1 dp."""
+    coord = _duration_coord(tracked=("heat", "auto"))
+    sensor = PercentSensor(coord, "today")
+    assert sensor.native_value == 66.7
+
+
+def test_compliance_native_value_equals_frame_compliance() -> None:
+    """native_value is the frame's compliance_percent (0–100), rounded 1 dp."""
+    coord = _duration_coord(tracked=("heat", "auto"), target=("heat",))
+    sensor = ComplianceSensor(coord, "today")
+    assert sensor.native_value == 50.0
+
+
+def test_percent_native_value_rounds_to_one_dp() -> None:
+    """A drifting ratio is rounded to 1 dp so idle ticks hash-dedup (§5)."""
+    result = _frame_result(percent=66.6666, compliance_percent=33.3333)
+    coord = _fake_coordinator(
+        mode=MODE_SPECIFIC,
+        enabled_frames=["today"],
+        tracked_states=["heat"],
+        target_states=["heat"],
+        target_threshold=80.0,
+        data=TrackerData(frames={"today": result}),
+    )
+    assert PercentSensor(coord, "today").native_value == 66.7
+    assert ComplianceSensor(coord, "today").native_value == 33.3
+
+
+def test_percent_native_value_none_before_data() -> None:
+    """No coordinator data → native_value is None."""
+    coord = _duration_coord(result=None)
+    assert PercentSensor(coord, "today").native_value is None
+
+
+def test_compliance_native_value_none_before_data() -> None:
+    """No coordinator data → native_value is None."""
+    coord = _duration_coord(target=("heat",), result=None)
+    assert ComplianceSensor(coord, "today").native_value is None
+
+
+def test_percent_native_value_none_when_result_percent_none() -> None:
+    """A frame whose percent is None (never expected in specific mode) → None."""
+    result = _frame_result(percent=None, compliance_percent=None)
+    coord = _fake_coordinator(
+        mode=MODE_SPECIFIC,
+        enabled_frames=["today"],
+        tracked_states=["heat"],
+        target_states=["heat"],
+        target_threshold=80.0,
+        data=TrackerData(frames={"today": result}),
+    )
+    assert PercentSensor(coord, "today").native_value is None
+    assert ComplianceSensor(coord, "today").native_value is None
+
+
+def test_percent_and_compliance_unique_ids() -> None:
+    """unique_id uses the 'percent'/'compliance' metric slug, distinct from duration."""
+    coord = _duration_coord(tracked=("heat",), target=("heat",))
+    pct = PercentSensor(coord, "today")
+    comp = ComplianceSensor(coord, "today")
+    dur = DurationSensor(coord, "today")
+    assert pct.unique_id == "est_entry_today_percent"
+    assert comp.unique_id == "est_entry_today_compliance"
+    # No collision with the duration sensor's unique_id.
+    assert len({pct.unique_id, comp.unique_id, dur.unique_id}) == 3
+
+
+def test_percent_and_compliance_entity_ids_pinned() -> None:
+    """Pinned entity_ids carry the percent/compliance metric name slug."""
+    coord = _duration_coord(tracked=("heat",), target=("heat",))
+    assert PercentSensor(coord, "today").entity_id == (
+        "sensor.entity_state_tracker_living_room_heat_auto"
+        "_in_a_tracked_state_percent_today"
+    )
+    assert (
+        ComplianceSensor(coord, "today").entity_id
+        == "sensor.entity_state_tracker_living_room_heat_auto_compliance_today"
+    )
+
+
+def test_percent_and_compliance_carry_no_extra_attributes() -> None:
+    """The % sensors publish their STATE only — no volatile attribute churn (§8)."""
+    coord = _duration_coord(tracked=("heat",), target=("heat",))
+    assert PercentSensor(coord, "today").extra_state_attributes is None
+    assert ComplianceSensor(coord, "today").extra_state_attributes is None
+
+
+@pytest.mark.asyncio
+async def test_percent_absent_in_all_states_mode(hass) -> None:
+    """ALL_STATES emits neither PercentSensor nor ComplianceSensor (§5.1)."""
+    frames = ["today", "yesterday"]
+    data = TrackerData(frames={f: _frame_result() for f in frames})
+    coord = _fake_coordinator(
+        mode=MODE_ALL,
+        enabled_frames=frames,
+        tracked_states=None,
+        target_states=None,
+        data=data,
+        entry_id="e_all",
+    )
+    added = await _collect(coord, hass, "e_all")
+    assert not [e for e in added if isinstance(e, (PercentSensor, ComplianceSensor))]
+
+
+@pytest.mark.asyncio
+async def test_disabling_frame_drops_its_percent_and_compliance(hass) -> None:
+    """Disabling a frame removes its percent + compliance sensors (per-frame scope)."""
+    frames = ["today"]  # yesterday/24h/7d disabled
+    data = TrackerData(frames={f: _frame_result() for f in frames})
+    coord = _fake_coordinator(
+        mode=MODE_SPECIFIC,
+        enabled_frames=frames,
+        tracked_states=["heat"],
+        target_states=["heat"],
+        data=data,
+        entry_id="e_drop",
+    )
+    added = await _collect(coord, hass, "e_drop")
+    pct_frames = {e._frame for e in added if isinstance(e, PercentSensor)}
+    comp_frames = {e._frame for e in added if isinstance(e, ComplianceSensor)}
+    assert pct_frames == {"today"}
+    assert comp_frames == {"today"}
+    # No sensor for a disabled frame.
+    assert "yesterday" not in pct_frames
+    assert "yesterday" not in comp_frames

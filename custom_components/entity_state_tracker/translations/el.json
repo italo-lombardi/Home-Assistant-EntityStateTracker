@@ -117,6 +117,12 @@
       "duration": {
         "name": "Διάρκεια ({frame})"
       },
+      "percent": {
+        "name": "Ποσοστό ({frame})"
+      },
+      "compliance": {
+        "name": "Συμμόρφωση ({frame})"
+      },
       "breakdown": {
         "name": "Ανάλυση καταστάσεων ({frame})"
       }

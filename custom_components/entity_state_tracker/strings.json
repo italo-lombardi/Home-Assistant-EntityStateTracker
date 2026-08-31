@@ -117,6 +117,12 @@
       "duration": {
         "name": "Duration ({frame})"
       },
+      "percent": {
+        "name": "In a Tracked State % ({frame})"
+      },
+      "compliance": {
+        "name": "Compliance ({frame})"
+      },
       "breakdown": {
         "name": "State Breakdown ({frame})"
       }
@@ -126,7 +132,7 @@
         "name": "In a Tracked State"
       },
       "compliant": {
-        "name": "Compliant"
+        "name": "Compliant ({frame})"
       }
     }
   },

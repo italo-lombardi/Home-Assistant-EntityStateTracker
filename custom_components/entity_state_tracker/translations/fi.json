@@ -117,6 +117,12 @@
       "duration": {
         "name": "Kesto ({frame})"
       },
+      "percent": {
+        "name": "Prosentti ({frame})"
+      },
+      "compliance": {
+        "name": "Vaatimustenmukaisuus ({frame})"
+      },
       "breakdown": {
         "name": "Tilojen erittely ({frame})"
       }

@@ -454,6 +454,15 @@ def bs_eid_for(entry_id: str, metric: str, reg: dict[str, dict] | None = None):
     return entry.get("entity_id") if entry else None
 
 
+def category_for(
+    entry_id: str, frame: str, metric: str, reg: dict[str, dict] | None = None
+):
+    """entity_category (e.g. 'diagnostic') for a frame-scoped sensor, or None."""
+    reg = reg if reg is not None else est_entities(entry_id)
+    entry = reg.get(f"{entry_id}_{frame}_{metric}")
+    return entry.get("entity_category") if entry else None
+
+
 def wait_entities(entry_id: str, min_count: int = 1, timeout=30) -> dict[str, dict]:
     """Poll the registry until at least ``min_count`` EST entities exist."""
     deadline = time.time() + timeout
@@ -484,6 +493,8 @@ def make_entity(suffix: str, initial: str = "on") -> str:
 # Frame sensor metric keys (translation keys — see const.py)
 # ---------------------------------------------------------------------------
 M_DURATION = "duration"
+M_PERCENT = "percent"
+M_COMPLIANCE = "compliance"
 M_BREAKDOWN = "breakdown"
 M_CURRENTLY = "currently_in_state"
 M_COMPLIANT = "compliant"
@@ -506,7 +517,8 @@ def ec1_specific_duration_sensors():
     entry = create_tracker(
         eid, "specific_states", states=["on", "off"], frames=FRAMES_ON
     )
-    reg = wait_entities(entry, min_count=4)
+    # Per frame: DurationSensor + PercentSensor (both enabled by default) → 8 total.
+    reg = wait_entities(entry, min_count=8)
     for frame in ("today", "yesterday", "24h", "7d"):
         dur_eid = eid_for(entry, frame, M_DURATION, reg)
         chk(
@@ -531,6 +543,43 @@ def ec1_specific_duration_sensors():
             chk(
                 f"EC1 duration state numeric ({frame})", numeric, True, f"state={val!r}"
             )
+        # PercentSensor: enabled-by-default, DIAGNOSTIC, numeric 0-100.
+        pct_eid = eid_for(entry, frame, M_PERCENT, reg)
+        chk(
+            f"EC1 percent sensor exists ({frame})",
+            pct_eid is not None,
+            True,
+            f"reg_uids={list(reg)}",
+        )
+        chk(
+            f"EC1 percent sensor is DIAGNOSTIC ({frame})",
+            category_for(entry, frame, M_PERCENT, reg),
+            "diagnostic",
+        )
+        if pct_eid:
+            wait_until(
+                lambda pe=pct_eid: (
+                    gs(pe).get("state") not in (None, "unknown", "unavailable")
+                )
+            )
+            pv = gs(pct_eid).get("state")
+            in_range = False
+            try:
+                in_range = 0.0 <= float(pv) <= 100.0
+            except (TypeError, ValueError):
+                in_range = False
+            chk(
+                f"EC1 percent state in [0,100] ({frame})",
+                in_range,
+                True,
+                f"state={pv!r}",
+            )
+            pattrs = gs(pct_eid).get("attributes", {})
+            chk(
+                f"EC1 percent unit is % ({frame})",
+                pattrs.get("unit_of_measurement"),
+                "%",
+            )
     # Duration sensor carries the full config-context + bounds attribute set.
     today_dur = eid_for(entry, "today", M_DURATION, reg)
     if today_dur:
@@ -546,6 +595,8 @@ def ec1_specific_duration_sensors():
             "data_start",
             "window_coverage",
             "has_gap",
+            "last_entered",
+            "last_exited",
         ):
             chk(
                 f"EC1 duration attr '{key}' present",
@@ -559,6 +610,13 @@ def ec1_specific_duration_sensors():
             eid,
         )
         chk("EC1 duration frame = today", attrs.get("frame"), "today")
+    # No compliance configured → NO compliance percent sensor for any frame.
+    chk(
+        "EC1 no compliance sensor without target (specific, no compliance)",
+        eid_for(entry, "today", M_COMPLIANCE, reg) is None,
+        True,
+        f"reg_uids={list(reg)}",
+    )
     return entry, eid
 
 
@@ -579,11 +637,12 @@ def ec2_ec3_duration_rises_and_currently(entry, eid):
     wait_for(lambda: gs(curr).get("state") if curr else None, "off")
     ss(eid, "on")
 
-    # CurrentlyInState reads coordinator.data.last_state, set synchronously in the
-    # coordinator's state-change handler and published on the ~0.5s debounce. On a
-    # freshly-restarted host the tracker's state subscription can miss the very
-    # first edge (registered a beat after we POST), so poll AND re-assert the edge
-    # each round — a re-POST refires state_changed for the subscription to catch.
+    # CurrentlyInState reads the tracked entity's LIVE state from HA's state
+    # machine (not the coordinator ledger), repainting on the ~0.5s debounce a
+    # state change schedules. On a freshly-restarted host the tracker's state
+    # subscription can miss the very first edge (registered a beat after we POST),
+    # so poll AND re-assert the edge each round — a re-POST refires state_changed
+    # for the subscription to catch and recompute.
     def _currently_on() -> bool:
         if not curr or gs(curr).get("state") == "on":
             return gs(curr).get("state") == "on" if curr else False
@@ -704,6 +763,37 @@ def ec4_compliance():
         True,
         f"uids={list(reg)}",
     )
+    # ComplianceSensor (numeric %) is created per frame only when compliance is on.
+    comp_pct_eid = eid_for(entry, "today", M_COMPLIANCE, reg)
+    chk(
+        "EC4 compliance percent sensor exists (compliance enabled)",
+        comp_pct_eid is not None,
+        True,
+        f"uids={list(reg)}",
+    )
+    chk(
+        "EC4 compliance percent sensor is DIAGNOSTIC",
+        category_for(entry, "today", M_COMPLIANCE, reg),
+        "diagnostic",
+    )
+    if comp_pct_eid:
+        wait_until(
+            lambda ce=comp_pct_eid: (
+                gs(ce).get("state") not in (None, "unknown", "unavailable")
+            )
+        )
+        cpv = gs(comp_pct_eid).get("state")
+        cin = False
+        try:
+            cin = 0.0 <= float(cpv) <= 100.0
+        except (TypeError, ValueError):
+            cin = False
+        chk(
+            "EC4 compliance percent state in [0,100]",
+            cin,
+            True,
+            f"state={cpv!r}",
+        )
 
     # Accrue some target time, then fold it so compliance_percent > 0.
     ss(eid, "on")
@@ -956,6 +1046,8 @@ def ec9_unrecorded(entry_allstates, eid_allstates, today_bd):
         "counts",
         "avg_duration_seconds",
         "previous_state",
+        "last_entered",
+        "last_exited",
         "window_seconds",
         "unaccounted_seconds",
         "window_coverage",
@@ -1391,43 +1483,8 @@ def ec12_restart_persistence():
     )
 
     # The store flushes on EVENT_HOMEASSISTANT_STOP; a clean restart triggers that.
-    # Restart HA inside the container. Fully detach the new process into its own
-    # session (setsid + stdin from /dev/null) so it is NOT torn down when this
-    # smoke script (its parent) exits — a plain "... &" child dies with us and HA
-    # goes down mid-suite ("Found N non-daemonic threads").
     note("restarting HA (this takes ~40s)…")
-    import subprocess
-
-    subprocess.run(["bash", "-c", "pkill -f 'homeassistant -c' || true"], check=False)
-    time.sleep(4)
-    subprocess.Popen(
-        [
-            "setsid",
-            "bash",
-            "-c",
-            (
-                f"cd {HA_DIR} && "
-                f"{HA_PYTHON} -m homeassistant -c {HA_CONFIG} "
-                ">>/tmp/ha.log 2>&1"
-            ),
-        ],
-        stdin=subprocess.DEVNULL,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        start_new_session=True,
-    )
-    # Poll for HA to come back.
-    back = False
-    deadline = time.time() + 150
-    while time.time() < deadline:
-        try:
-            with urllib.request.urlopen(BASE + "/", timeout=5) as r:
-                if r.status == 200:
-                    back = True
-                    break
-        except Exception:
-            pass
-        time.sleep(3)
+    back = _restart_ha()
     chk("EC12 HA came back after restart", back, True)
     if not back:
         return entry, eid
@@ -1480,6 +1537,114 @@ def ec12_restart_persistence():
 # ---------------------------------------------------------------------------
 
 
+def _restart_ha() -> bool:
+    """Kill + relaunch HA in-place; poll until it answers. Return True if back.
+
+    Shared by EC12 (persistence) and EC17 (currently-in-state reconcile). The
+    relaunched process is fully detached (setsid + own session) so it outlives
+    this smoke script — a plain child would die with us and take HA down
+    mid-suite.
+    """
+    import subprocess
+
+    subprocess.run(["bash", "-c", "pkill -f 'homeassistant -c' || true"], check=False)
+    time.sleep(4)
+    subprocess.Popen(
+        [
+            "setsid",
+            "bash",
+            "-c",
+            (
+                f"cd {HA_DIR} && "
+                f"{HA_PYTHON} -m homeassistant -c {HA_CONFIG} "
+                ">>/tmp/ha.log 2>&1"
+            ),
+        ],
+        stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        start_new_session=True,
+    )
+    deadline = time.time() + 150
+    while time.time() < deadline:
+        try:
+            with urllib.request.urlopen(BASE + "/", timeout=5) as r:
+                if r.status == 200:
+                    return True
+        except Exception:
+            pass
+        time.sleep(3)
+    return False
+
+
+def ec17_currently_reconcile_on_restart():
+    """EC17: CurrentlyInState reflects the LIVE state right after a restart.
+
+    Regression guard for the boot-stale bug: the sensor used to read the
+    coordinator ledger's ``last_state``, which lags the real entity on boot (and
+    stays ``None`` after a reset) until the next live transition — so a tracker
+    whose entity sat unchanged in a tracked state across a restart showed the
+    WRONG Off/On until something happened to fold. The fix reads HA's live state
+    machine, so it must be correct immediately after restart with NO transition.
+
+    We seed the entity into a tracked state, restart HA, and — crucially without
+    touching the entity — assert CurrentlyInState is ``on`` once the entry loads.
+    """
+    print(
+        "\n=== EC17: CurrentlyInState correct on restart with no transition ===",
+        flush=True,
+    )
+    if not HA_DIR:
+        print(
+            "EC17 SKIPPED: set EST_SMOKE_HA_DIR (see EC12) so this test can "
+            "relaunch HA.",
+            flush=True,
+        )
+        return None, None
+    eid = make_entity("reconcile", "on")
+    entry = create_tracker(
+        eid, "specific_states", states=["on"], frames={"today": True}
+    )
+    wait_entities(entry, min_count=1)
+    curr = bs_eid_for(entry, M_CURRENTLY)
+    chk("EC17 CurrentlyInState exists", curr is not None, True)
+    # Confirm it's on BEFORE the restart (entity is "on", a tracked state).
+    wait_for(lambda: (gs_safe(curr) or {}).get("state") if curr else None, "on")
+
+    note("restarting HA with entity held 'on' (no transition after)…")
+    back = _restart_ha()
+    chk("EC17 HA came back after restart", back, True)
+    if not back:
+        return entry, eid
+
+    # Re-seed the entity to "on" ONCE post-boot: POST /api/states restores our
+    # synthetic entity (it isn't a real integration, so it doesn't survive the
+    # restart) to the tracked state — WITHOUT going through a tracked→tracked
+    # transition that would fold the ledger. This mirrors a real entity that was
+    # already "on" at boot. The bug would show Off here (ledger last_state stale/
+    # None); the fix reads live state → on.
+    ss(eid, "on")
+
+    # Rediscover the (reloaded) entity_id and poll until the entry is back and the
+    # sensor reads on. No transition is driven — a correct sensor is on from the
+    # live "on" state alone.
+    def _curr_now():
+        e = bs_eid_for(entry, M_CURRENTLY)
+        if not e:
+            return None
+        st = gs_safe(e)
+        return st.get("state") if st else None
+
+    on_val = wait_for(_curr_now, "on", timeout=WAIT_FOR_TIMEOUT)
+    chk(
+        "EC17 CurrentlyInState=on from live state after restart (no fold)",
+        on_val,
+        "on",
+        "reads HA live state, not stale ledger last_state",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -1526,6 +1691,10 @@ def main():
         # EC12 last — it restarts HA.
         if ec_enabled(12):
             ec12_restart_persistence()
+
+        # EC17 also restarts HA (currently-in-state reconcile); after EC12.
+        if ec_enabled(17):
+            ec17_currently_reconcile_on_restart()
 
     finally:
         cleanup()

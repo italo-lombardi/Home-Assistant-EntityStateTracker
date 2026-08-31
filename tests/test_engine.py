@@ -1028,7 +1028,7 @@ def test_balance_seconds_and_derived_fields_unchanged() -> None:
     )
     assert fr.breakdown_seconds == {"a": 60.0, "b": 240.0, "c": 42900.0}
     assert fr.counts == {"a": 3, "b": 2, "c": 1}
-    assert fr.avg_duration == {"a": 60.0 // 3, "b": 240.0 // 2, "c": 42900.0 // 1}
+    assert fr.avg_duration == {"a": 20.0, "b": 120.0, "c": 42900.0}
     assert fr.unaccounted_seconds == pytest.approx(0.0)
     # 42900s of 43200s = 99.30… → 1-dp percent is 99.3, independent of the fix.
     assert fr.percent == pytest.approx(99.3)
@@ -1129,8 +1129,35 @@ def test_compute_frame_percent_and_compliance() -> None:
     assert fr.percent == pytest.approx(8.3)
     assert fr.compliance_percent == pytest.approx(8.3)
     assert fr.breakdown_pct["heat"] == pytest.approx(8.33)
-    assert fr.avg_duration["heat"] == 3600.0 // 2
-    assert fr.avg_duration["off"] == 3600.0 // 1
+    assert fr.avg_duration["heat"] == 1800.0
+    assert fr.avg_duration["off"] == 3600.0
+
+
+def test_avg_duration_is_1dp_float_not_floor() -> None:
+    # avg_duration is round(secs / count, 1), a 1-dp float — NOT floor division.
+    # 359s over 2 visits is 179.5 per visit; a `secs // count` regression yields
+    # 179.0 and fails here. None at count 0 (a ledger continuation day).
+    now = dt.datetime(2026, 1, 15, 12, 0, tzinfo=NY)
+    recent = {
+        "on": {"secs": 359.0, "count": 2},
+        "flap": {"secs": 100.0, "count": 3},  # 33.333… → 33.3
+        "carry": {"secs": 500.0, "count": 0},  # continuation day → None
+    }
+    fr = E.compute_frame(
+        "today",
+        now,
+        NY,
+        recent,
+        {},
+        None,
+        mode="all_states",
+        tracked_states=None,
+        target_states=None,
+        prior_dominant=None,
+    )
+    assert fr.avg_duration["on"] == 179.5
+    assert fr.avg_duration["flap"] == 33.3
+    assert fr.avg_duration["carry"] is None
 
 
 def test_f3_breakdown_pct_dst_denominator_not_86400() -> None:

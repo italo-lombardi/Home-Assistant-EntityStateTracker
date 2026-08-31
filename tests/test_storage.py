@@ -151,6 +151,20 @@ async def test_save_writes_and_caches(hass: HomeAssistant) -> None:
     assert ENTRY_ID in loaded.trackers
 
 
+async def test_last_entered_exited_survive_reload(hass: HomeAssistant) -> None:
+    """Stamps flushed to disk reload intact into a fresh store (§7 persistence)."""
+    store = _store(hass)
+    ledger = TrackerLedger("light.x", "all_states")
+    ledger.last_entered = {"on": "2026-08-31T10:00:00+00:00"}
+    ledger.last_exited = {"off": "2026-08-31T09:30:00+00:00"}
+    await store.save(StoredData(trackers={ENTRY_ID: ledger}))
+
+    # Fresh store over the same key → cold disk read, not the cache.
+    reloaded = (await _store(hass).load()).trackers[ENTRY_ID]
+    assert reloaded.last_entered == {"on": "2026-08-31T10:00:00+00:00"}
+    assert reloaded.last_exited == {"off": "2026-08-31T09:30:00+00:00"}
+
+
 async def test_save_rollback_on_oserror(hass: HomeAssistant) -> None:
     """An OSError during write reverts the cache to the previous value."""
     store = _store(hass)

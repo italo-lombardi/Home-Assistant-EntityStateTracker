@@ -117,6 +117,12 @@
       "duration": {
         "name": "Trukmė ({frame})"
       },
+      "percent": {
+        "name": "Procentai ({frame})"
+      },
+      "compliance": {
+        "name": "Atitiktis ({frame})"
+      },
       "breakdown": {
         "name": "Būsenų suskirstymas ({frame})"
       }

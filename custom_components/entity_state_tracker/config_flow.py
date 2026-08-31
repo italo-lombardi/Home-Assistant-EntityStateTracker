@@ -134,18 +134,19 @@ async def _async_seen_states(hass: HomeAssistant, entity_id: str) -> list[str]:
     Recorder query runs on the recorder executor and degrades to just the current
     state if the recorder is unavailable. The returned list is:
 
-    ``[current live state, <=_SEEN_PREFILL_CAP most-recent recorder states,
+    ``[real states (live + recorder-distinct) sorted alphabetically,
     unavailable, unknown]``
 
     — deduped, in that order. The recorder-derived distinct states are capped at
     ``_SEEN_PREFILL_CAP`` (most-recent kept) so a numeric entity with hundreds of
     distinct values can't flood the selector; the current live state is pulled
-    out BEFORE the cap and re-prepended after, so it ALWAYS survives even when the
-    recorder set exceeds the cap. ``unavailable`` and ``unknown`` are ALWAYS
-    offered last (unavailable before unknown), on top of the cap, because
-    entities routinely pass through them (startup, source outage) and tracking
-    them is a common ask but they are filtered from the live/recorder scan.
-    ``custom_value=True`` on the selector lets the user type any omitted state.
+    out BEFORE the cap so it ALWAYS survives even when the recorder set exceeds
+    the cap, then folded back into the alphabetical sort. ``unavailable`` and
+    ``unknown`` are ALWAYS offered last (unavailable before unknown), on top of
+    the cap, because entities routinely pass through them (startup, source
+    outage) and tracking them is a common ask but they are filtered from the
+    live/recorder scan. ``custom_value=True`` on the selector lets the user type
+    any omitted state.
     """
     live: str | None = None
     state = hass.states.get(entity_id)
@@ -191,13 +192,15 @@ async def _async_seen_states(hass: HomeAssistant, entity_id: str) -> list[str]:
     if len(distinct) > _SEEN_PREFILL_CAP:
         distinct = distinct[-_SEEN_PREFILL_CAP:]
 
-    # Re-prepend the live state (on TOP of the cap) so it is always offered first,
+    # Offer the real states alphabetically (live + recorder-distinct, sorted),
     # then always offer "unavailable" then "unknown" (in that order) as the LAST
     # two options: entities routinely pass through both and they are filtered from
-    # the current-state check above, so seed them explicitly. Neither the distinct
-    # set nor the live state includes them, so no dedup pass is needed.
+    # the current-state check above, so seed them explicitly. Sorting the real
+    # states — rather than live-first, chronological — matches the card's tracked-
+    # states display sort; unavailable/unknown stay pinned last regardless.
     head = [live] if live is not None else []
-    return [*head, *distinct, STATE_UNAVAILABLE, STATE_UNKNOWN]
+    real = sorted(dict.fromkeys([*head, *distinct]))
+    return [*real, STATE_UNAVAILABLE, STATE_UNKNOWN]
 
 
 class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
