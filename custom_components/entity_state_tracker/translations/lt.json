@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Objektas, kurio būsenų trukmės bus matuojamos. Vienas objektas vienam sekikliui — nurodykite grupės pagalbininką keliems sujungti.",
-          "name": "Patogus šio sekiklio pavadinimas. Palikite tuščią, kad būtų pavadintas pagal objektą ir režimą (pvz., „Entity State Tracker - Living Room - Specific States“). Tai nustato įrenginio/konfigūracijos pavadinimą; jutiklių objektų ID vis tiek atitinka standartinę vardų suteikimo tvarką. Tam pačiam objektui galite sukurti kelis sekiklius."
+          "name": "Patogus šio sekiklio pavadinimas. Palikite tuščią, kad būtų pavadintas pagal objektą ir režimą (pvz., „Living Room (Specific States)“). Tai nustato įrenginio/konfigūracijos pavadinimą; jutiklių objektų ID vis tiek atitinka standartinę vardų suteikimo tvarką. Tam pačiam objektui galite sukurti kelis sekiklius."
         }
       },
       "mode": {

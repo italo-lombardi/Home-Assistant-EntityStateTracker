@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "La entidad cuyas duraciones de estado se medirán. Una entidad por rastreador — apunta a un asistente de grupo para agregar varias.",
-          "name": "Un nombre descriptivo para este rastreador. Déjalo en blanco para nombrarlo según la entidad y el modo (p. ej., «Entity State Tracker - Living Room - Specific States»). Esto establece el nombre del dispositivo/configuración; los ID de las entidades sensor siguen la nomenclatura estándar. Puedes crear varios rastreadores para la misma entidad."
+          "name": "Un nombre descriptivo para este rastreador. Déjalo en blanco para nombrarlo según la entidad y el modo (p. ej., «Living Room (Specific States)»). Esto establece el nombre del dispositivo/configuración; los ID de las entidades sensor siguen la nomenclatura estándar. Puedes crear varios rastreadores para la misma entidad."
         }
       },
       "mode": {

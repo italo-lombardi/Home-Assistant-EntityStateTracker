@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "将测量其状态时长的实体。每个跟踪器一个实体——指向分组助手以聚合多个实体。",
-          "name": "此跟踪器的友好名称。留空则以实体和模式命名（例如\"Entity State Tracker - Living Room - Specific States\"）。这会设置设备/配置名称；传感器实体 ID 仍遵循标准命名。您可以为同一实体创建多个跟踪器。"
+          "name": "此跟踪器的友好名称。留空则以实体和模式命名（例如\"Living Room (Specific States)\"）。这会设置设备/配置名称；传感器实体 ID 仍遵循标准命名。您可以为同一实体创建多个跟踪器。"
         }
       },
       "mode": {

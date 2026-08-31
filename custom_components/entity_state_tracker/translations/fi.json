@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Entiteetti, jonka tilojen kestot mitataan. Yksi entiteetti seuraajaa kohti — osoita ryhmäavustajaan yhdistääksesi useita.",
-          "name": "Kuvaava nimi tälle seurannalle. Jätä tyhjäksi nimetäksesi sen entiteetin ja tilan mukaan (esim. ”Entity State Tracker - Living Room - Specific States”). Tämä asettaa laitteen/määrityksen nimen; anturientiteettien tunnukset noudattavat edelleen vakionimeämistä. Voit luoda useita seurantoja samalle entiteetille."
+          "name": "Kuvaava nimi tälle seurannalle. Jätä tyhjäksi nimetäksesi sen entiteetin ja tilan mukaan (esim. ”Living Room (Specific States)”). Tämä asettaa laitteen/määrityksen nimen; anturientiteettien tunnukset noudattavat edelleen vakionimeämistä. Voit luoda useita seurantoja samalle entiteetille."
         }
       },
       "mode": {

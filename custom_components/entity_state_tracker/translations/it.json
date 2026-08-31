@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "L'entità di cui verranno misurate le durate degli stati. Un'entità per tracker — punta a un helper di gruppo per aggregarne diverse.",
-          "name": "Un nome descrittivo per questo tracker. Lascia vuoto per denominarlo in base all'entità e alla modalità (ad es. «Entity State Tracker - Living Room - Specific States»). Questo imposta il nome del dispositivo/configurazione; gli ID delle entità sensore seguono comunque la denominazione standard. Puoi creare più tracker per la stessa entità."
+          "name": "Un nome descrittivo per questo tracker. Lascia vuoto per denominarlo in base all'entità e alla modalità (ad es. «Living Room (Specific States)»). Questo imposta il nome del dispositivo/configurazione; gli ID delle entità sensore seguono comunque la denominazione standard. Puoi creare più tracker per la stessa entità."
         }
       },
       "mode": {

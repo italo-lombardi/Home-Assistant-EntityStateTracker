@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Entita, ktorej doby trvania stavov sa budú merať. Jedna entita na sledovanie — nasmerujte na skupinového pomocníka na agregáciu viacerých.",
-          "name": "Priateľský názov pre tento sledovač. Ponechajte prázdne, aby bol pomenovaný podľa entity a režimu (napr. „Entity State Tracker - Living Room - Specific States“). Tým sa nastaví názov zariadenia/konfigurácie; ID entít senzorov naďalej dodržiavajú štandardné pomenovanie. Pre tú istú entitu môžete vytvoriť niekoľko sledovačov."
+          "name": "Priateľský názov pre tento sledovač. Ponechajte prázdne, aby bol pomenovaný podľa entity a režimu (napr. „Living Room (Specific States)“). Tým sa nastaví názov zariadenia/konfigurácie; ID entít senzorov naďalej dodržiavajú štandardné pomenovanie. Pre tú istú entitu môžete vytvoriť niekoľko sledovačov."
         }
       },
       "mode": {

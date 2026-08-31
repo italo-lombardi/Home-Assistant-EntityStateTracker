@@ -99,19 +99,22 @@ ECs cannot run.
 | EC2 | Time in a tracked state → today duration rises; CurrentlyInState = on |
 | EC3 | Non-tracked state → CurrentlyInState = off; duration does not accrue |
 | EC4 | Compliance enabled → Compliant binary sensor exists; Compliant flips as threshold crosses the computed compliance_percent (read off the duration sensor's `compliance_percent` attribute) |
-| EC5 | All-states tracker → a BreakdownSensor per frame; dominant = current state |
+| EC5 | All-states tracker → a BreakdownSensor per frame; dominant = current state; each enabled frame independently carries populated `breakdown_seconds` (EC5b — the data the card's Frame picker binds to) |
 | EC6 | New state at runtime → breakdown gains the key, `entity_state_tracker_new_state` event fires with `{entry_id, entity_id, state}` (event-only — no persistent notification) |
 | EC7 | `unavailable` / `unknown` counted as ordinary breakdown rows |
 | EC8 | `min_state_duration=5` → sub-5 s "flicker" visits filtered (count stays 0) |
 | EC9 | Breakdown attrs are `_unrecorded` — present in live `/api/states`, excluded from recorder history |
-| EC10 | `reset_ledger` confirm gate: `confirm:false` errors + no change; `confirm:true` clears the ledger (day_count → 0) |
 | EC11 | Options-flow toggles a frame off → entry reloads; that frame's sensor stops being produced (unavailable) while a kept frame stays live |
 | EC12 | Restart persistence: accrue, restart HA, ledger survives (per-state seconds + day_count retained) |
 | EC13 | `window_coverage` / `has_gap` fields present + internally consistent (`has_gap ⟺ data_start known AND coverage<1`) |
 | EC14 | Dominant hysteresis: a sub-margin near-tie does not flip the dominant state |
 | EC15 | Card JS served (200) and registered as a Lovelace resource |
-| EC16 | `reset_ledger` with an `entity_id` target clears only the matching tracker's ledger (others untouched); an unmatched target raises `reset_no_match` |
 | EC17 | Currently-in-state reflects the LIVE entity state right after a restart with **no** transition (reads HA's state machine, not the stale ledger `last_state`) — needs `EST_SMOKE_HA_DIR` like EC12, else skips |
+| EC18 | Diagnostics config-entry dump carries the full block structure (`entry`/`coordinator`/`frames`/`ledger`/`store`) with the coordinator's key fields |
+| EC19 | Default entity_ids follow `id == slug(name)` (frame last); a registry rename of a sensor's entity_id leaves its `unique_id` (history anchor) and `device_id` (card discovery key) intact |
+| EC20 | Two trackers on the **same** source entity coexist: distinct config entries, non-colliding unique_ids, HA-disambiguated entity_ids, distinct devices |
+| EC21 | Compliance across multiple frames → one Compliant binary sensor **per** frame, each with its own `frame` attr honoring `is_on == compliance_percent >= threshold` |
+| EC22 | Options flow edits the compliance target **set** and `min_state_duration` → both take effect after reload (target_states attr + diagnostics `min_state_duration`) |
 
 ## Notes on semantics that shape the tests
 

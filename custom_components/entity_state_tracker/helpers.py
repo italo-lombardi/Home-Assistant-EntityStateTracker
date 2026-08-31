@@ -34,13 +34,36 @@ _FRAME_LABELS: dict[str, str] = {
 }
 
 
+def _strip_integration_prefix(label: str) -> str:
+    """Drop a leading "Entity State Tracker" from a user/derived label.
+
+    The device name prepends "Entity State Tracker — " and the entity_id prepends
+    the ``entity_state_tracker`` DOMAIN, so a label that ALREADY starts with the
+    integration name doubles it (``Entity State Tracker — Entity State Tracker …``
+    / ``sensor.entity_state_tracker_entity_state_tracker_…``). Strip it once, in a
+    single place, so both paths stay clean regardless of what the user types.
+    Case/separator-insensitive on the prefix; a bare label ("Entity State Tracker"
+    alone) is left intact so we never produce an empty label.
+    """
+    stripped = label.strip()
+    prefix = "entity state tracker"
+    low = stripped.lower()
+    if low.startswith(prefix):
+        rest = stripped[len(prefix) :].lstrip(" -—–:")
+        if rest:
+            return rest
+    return stripped
+
+
 def tracker_device_name(entity_label: str) -> str:
     """Return the tracker's device name: ``Entity State Tracker — <label>`` (§5).
 
     The device name is mode-independent by design — one device per config entry
-    regardless of mode — so it takes only the entity label.
+    regardless of mode — so it takes only the entity label. Any leading
+    "Entity State Tracker" in the label is stripped first so the prefix is not
+    doubled.
     """
-    return f"Entity State Tracker — {entity_label}"
+    return f"Entity State Tracker — {_strip_integration_prefix(entity_label)}"
 
 
 def normalize_state(state: str) -> str:
@@ -133,7 +156,7 @@ def frame_entity_id(name: str, frame: str, metric: str) -> str:
     ``_2`` on insert, so a colliding pin is deduped safely — no guard needed.
     """
     return (
-        f"sensor.{DOMAIN}_{slugify(name)}_"
+        f"sensor.{DOMAIN}_{slugify(_strip_integration_prefix(name))}_"
         f"{_METRIC_ENTITY_SLUG[metric]}_{_frame_label_slug(frame)}"
     )
 
@@ -146,7 +169,7 @@ def binary_entity_id(name: str, metric: str) -> str:
     are not per-frame). ``name`` is ``entry.title`` (never the entry_id ULID). Only
     the DEFAULT; renameable, not depended on by the card.
     """
-    return f"binary_sensor.{DOMAIN}_{slugify(name)}_{_METRIC_ENTITY_SLUG[metric]}"
+    return f"binary_sensor.{DOMAIN}_{slugify(_strip_integration_prefix(name))}_{_METRIC_ENTITY_SLUG[metric]}"
 
 
 def binary_frame_entity_id(name: str, frame: str, metric: str) -> str:
@@ -158,7 +181,7 @@ def binary_frame_entity_id(name: str, frame: str, metric: str) -> str:
     reads as "Compliant (This month)" → ``compliant_this_month``.
     """
     return (
-        f"binary_sensor.{DOMAIN}_{slugify(name)}_"
+        f"binary_sensor.{DOMAIN}_{slugify(_strip_integration_prefix(name))}_"
         f"{_METRIC_ENTITY_SLUG[metric]}_{_frame_label_slug(frame)}"
     )
 
@@ -167,6 +190,26 @@ if __name__ == "__main__":  # pragma: no cover
     # Self-check: normalization, device name, and every canonical frame labels.
     assert normalize_state("  Heat ") == "heat"
     assert tracker_device_name("Front Door") == ("Entity State Tracker — Front Door")
+    # Prefix-doubling guard: a label already carrying the integration name must not
+    # double it in the device name or the entity_id slug (the reported bug).
+    assert (
+        _strip_integration_prefix("Entity State Tracker - Italo - All") == "Italo - All"
+    )
+    assert _strip_integration_prefix("entity state tracker — Foo") == "Foo"
+    assert _strip_integration_prefix("Living Room") == "Living Room"
+    assert _strip_integration_prefix("Entity State Tracker") == "Entity State Tracker"
+    assert (
+        tracker_device_name("Entity State Tracker - Italo - All States")
+        == "Entity State Tracker — Italo - All States"
+    )
+    assert (
+        frame_entity_id(
+            "Entity State Tracker - Italo - All States",
+            "7d",
+            TRANSLATION_KEY_DURATION,
+        )
+        == "sensor.entity_state_tracker_italo_all_states_duration_last_7_days"
+    )
     assert frame_label("24h") == "Last 24 hours"
     assert frame_label("today") == "Today"
     assert frame_label("mystery") == "mystery"

@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Enheten hvis tilstandsvarigheter måles. Én enhet per sporer — pek på en gruppehjelper for å slå sammen flere.",
-          "name": "Et vennlig navn for denne sporeren. La stå tomt for å navngi den etter entiteten og modusen (f.eks. «Entity State Tracker - Living Room - Specific States»). Dette angir enhets-/konfigurasjonsnavnet; sensorentitetenes ID-er følger fortsatt standardnavngivingen. Du kan opprette flere sporere for samme entitet."
+          "name": "Et vennlig navn for denne sporeren. La stå tomt for å navngi den etter entiteten og modusen (f.eks. «Living Room (Specific States)»). Dette angir enhets-/konfigurasjonsnavnet; sensorentitetenes ID-er følger fortsatt standardnavngivingen. Du kan opprette flere sporere for samme entitet."
         }
       },
       "mode": {

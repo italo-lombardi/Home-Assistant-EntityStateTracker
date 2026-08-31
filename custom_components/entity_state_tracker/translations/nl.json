@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "De entiteit waarvan de toestandsduren worden gemeten. Eén entiteit per tracker — wijs naar een groepshelper om er meerdere samen te voegen.",
-          "name": "Een herkenbare naam voor deze tracker. Laat leeg om deze naam te geven op basis van de entiteit en de modus (bijv. \"Entity State Tracker - Living Room - Specific States\"). Dit stelt de apparaat-/configuratienaam in; de sensor-entiteit-ID's volgen nog steeds de standaardnaamgeving. U kunt meerdere trackers voor dezelfde entiteit maken."
+          "name": "Een herkenbare naam voor deze tracker. Laat leeg om deze naam te geven op basis van de entiteit en de modus (bijv. \"Living Room (Specific States)\"). Dit stelt de apparaat-/configuratienaam in; de sensor-entiteit-ID's volgen nog steeds de standaardnaamgeving. U kunt meerdere trackers voor dezelfde entiteit maken."
         }
       },
       "mode": {

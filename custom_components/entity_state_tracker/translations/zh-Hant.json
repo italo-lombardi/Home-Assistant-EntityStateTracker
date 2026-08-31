@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "將測量其狀態時長的實體。每個追蹤器一個實體——指向群組助手以彙總多個實體。",
-          "name": "此追蹤器的友善名稱。留空則以實體和模式命名（例如「Entity State Tracker - Living Room - Specific States」）。這會設定裝置/設定名稱；感測器實體 ID 仍遵循標準命名。您可以為同一實體建立多個追蹤器。"
+          "name": "此追蹤器的友善名稱。留空則以實體和模式命名（例如「Living Room (Specific States)」）。這會設定裝置/設定名稱；感測器實體 ID 仍遵循標準命名。您可以為同一實體建立多個追蹤器。"
         }
       },
       "mode": {
