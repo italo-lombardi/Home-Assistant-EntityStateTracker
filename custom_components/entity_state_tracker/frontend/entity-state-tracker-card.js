@@ -305,6 +305,9 @@ const cardStyles = css`
     --est-text-secondary: var(--secondary-text-color, #727272);
     --est-divider: var(--divider-color, rgba(0, 0, 0, 0.12));
     --est-bar-bg: var(--disabled-color, #bdbdbd);
+    /* Darker grey for the specific-mode pie's "other" (non-tracked time) slice,
+       so it reads as distinct from the lighter --est-bar-bg "No data" slice. */
+    --est-bar-bg-alt: var(--secondary-text-color, #727272);
     --est-accent: var(--primary-color, #7e57c2);
   }
 
@@ -984,32 +987,32 @@ class EntityStateTrackerCard extends LitElement {
         });
       }
     } else {
-      // Specific mode: DurationSensor emits `percent` (in-state %) but NOT
-      // window_seconds. Derive the "rest" slice from the percentage so the pie
-      // is always two slices (in-state vs rest), scaled off the in-state secs.
-      // Prefer the raw seconds attr; pick.state is unit-converted to hours by
-      // HA and thus unit-ambiguous. Fall back for older backends.
+      // Specific mode: build three REAL-seconds slices from the DurationSensor's
+      // attrs — identical shape to all-states breakdown — so the donut is never
+      // blank (a full grey ring at 0% in-state) and never mislabels absence of
+      // data as time in a non-tracked state:
+      //   in-state = duration_seconds
+      //   other    = window_seconds - duration_seconds - unaccounted_seconds
+      //   no-data  = unaccounted_seconds  ("No data" past window / "In progress")
+      // Prefer the raw seconds attr; pick.state is unit-converted to hours by HA
+      // and thus unit-ambiguous.
       const inSecs =
         (a.duration_seconds != null ? Number(a.duration_seconds) : Number(pick.state)) || 0;
-      const inPct = a.percent != null ? Number(a.percent) : null;
-      const restPct = inPct != null ? Math.max(0, 100 - inPct) : null;
-      // Recover rest seconds proportionally: inSecs / inPct == total / 100.
-      const restSecs =
-        inPct != null && inPct > 0 ? inSecs * (restPct / inPct) : null;
+      const ws = Number(a.window_seconds) || 0;
+      const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
+      const other = ws > 0 ? Math.max(0, ws - inSecs - gap) : 0;
+      const denom = ws > 0 ? ws : inSecs + other + gap;
+      const pctOf = (secs) => (denom > 0 ? (secs / denom) * 100 : null);
       const tracked = (a.tracked_states || []).join(", ") || "tracked";
       slices = [
-        {
-          state: tracked,
-          secs: inSecs,
-          pct: inPct,
-          color: stateColor(tracked),
-        },
+        { state: tracked, secs: inSecs, pct: pctOf(inSecs), color: stateColor(tracked) },
+        { state: "other", secs: other, pct: pctOf(other), color: "var(--est-bar-bg-alt)" },
       ];
-      if (restPct != null) {
+      if (gap > 0) {
         slices.push({
-          state: "other",
-          secs: restSecs != null ? restSecs : 0,
-          pct: restPct,
+          state: a.has_gap ? "No data" : "In progress",
+          secs: gap,
+          pct: pctOf(gap),
           color: "var(--est-bar-bg)",
         });
       }
