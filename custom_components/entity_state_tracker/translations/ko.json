@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "원장 재설정",
-      "description": "추적기의 유지된 일일 버킷 기록을 지웁니다. 긴 기간은 아직 사용 가능한 경우 레코더 데이터에서 다시 구축됩니다. 이 작업은 취소할 수 없습니다.",
-      "fields": {
-        "confirm": {
-          "name": "확인",
-          "description": "재설정을 수행하려면 활성화해야 합니다. 실수로 기록을 잃는 것을 방지합니다."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "레코더를 사용할 수 없음",
       "description": "Entity State Tracker는 상태 지속 시간을 계산하기 위해 레코더에 의존합니다. 레코더를 사용할 수 없으므로 추적은 이제부터 라이브 전용 누적으로 대체되며 과거 기록을 채울 수 없습니다. 전체 기간 기록을 복원하려면 레코더 통합을 활성화하세요."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "원장을 재설정하려면 confirm을 true로 설정하세요. 이는 유지된 기록을 지우며 취소할 수 없습니다."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Скинути журнал",
-      "description": "Очищає збережену історію щоденних сегментів трекера. Довгі часові проміжки перебудовуються з даних рекордера там, де вони ще доступні. Цю дію не можна скасувати.",
-      "fields": {
-        "confirm": {
-          "name": "Підтвердити",
-          "description": "Має бути ввімкнено для виконання скидання. Захищає від випадкової втрати історії."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Рекордер недоступний",
       "description": "Entity State Tracker покладається на рекордер для обчислення тривалості станів. Рекордер недоступний, тому відстеження відтепер переходить лише на накопичення в реальному часі й не може заповнити минулу історію. Увімкніть інтеграцію рекордера, щоб відновити повну історію за проміжками."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Установіть confirm у значення true, щоб скинути журнал. Це очищає збережену історію, і дію не можна скасувати."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Επαναφορά καθολικού",
-      "description": "Διαγράφει το αποθηκευμένο ιστορικό ημερήσιων τμημάτων μιας παρακολούθησης. Τα μεγάλα χρονικά πλαίσια ανακατασκευάζονται από δεδομένα του recorder όπου είναι ακόμη διαθέσιμα. Αυτό δεν μπορεί να αναιρεθεί.",
-      "fields": {
-        "confirm": {
-          "name": "Επιβεβαίωση",
-          "description": "Πρέπει να είναι ενεργοποιημένο για την εκτέλεση της επαναφοράς. Προστατεύει από τυχαία απώλεια ιστορικού."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Ο recorder δεν είναι διαθέσιμος",
       "description": "Το Entity State Tracker βασίζεται στον recorder για τον υπολογισμό των διαρκειών κατάστασης. Ο recorder δεν είναι διαθέσιμος, οπότε η παρακολούθηση επιστρέφει από τώρα σε συσσώρευση μόνο σε πραγματικό χρόνο και δεν μπορεί να αναπληρώσει το παρελθόν ιστορικό. Ενεργοποιήστε την ενσωμάτωση recorder για να αποκαταστήσετε το πλήρες ιστορικό χρονικών πλαισίων."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Ορίστε το confirm σε true για επαναφορά του καθολικού. Αυτό διαγράφει το αποθηκευμένο ιστορικό και δεν μπορεί να αναιρεθεί."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

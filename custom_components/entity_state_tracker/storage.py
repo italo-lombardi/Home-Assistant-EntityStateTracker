@@ -215,7 +215,7 @@ class EntityStateTrackerStore:
         """Partially update the ledger's live-transition metadata."""
         data = await self.load()
         ledger = data.trackers.get(entry_id)
-        if ledger is None:  # reset_ledger dropped the tracker between load and here
+        if ledger is None:  # no tracker registered yet — nothing to update
             return
         if last_state is not None:
             ledger.last_state = last_state
@@ -231,24 +231,11 @@ class EntityStateTrackerStore:
         """Drop daily buckets with a day key strictly before ``before_iso``."""
         data = await self.load()
         ledger = data.trackers.get(entry_id)
-        if ledger is None:  # reset_ledger dropped the tracker between load and here
+        if ledger is None:  # no tracker registered yet — nothing to prune
             return
         stale = [day for day in ledger.daily if day < before_iso]
         if not stale:
             return
         for day in stale:
             del ledger.daily[day]
-        await self.save(data)
-
-    async def reset(self, entry_id: str | None = None) -> None:
-        """Clear one tracker's ledger, or all of them when ``entry_id`` is None."""
-        data = await self.load()
-        if entry_id is None:
-            if not data.trackers:
-                return
-            data.trackers.clear()
-        else:
-            if entry_id not in data.trackers:
-                return
-            del data.trackers[entry_id]
         await self.save(data)

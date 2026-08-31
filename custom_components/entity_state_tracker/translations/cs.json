@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Resetovat evidenci",
-      "description": "Vymaže uloženou historii denních přihrádek pro sledování. Dlouhá časová období se znovu sestaví z dat rekordéru, kde jsou stále dostupná. Tuto akci nelze vrátit zpět.",
-      "fields": {
-        "confirm": {
-          "name": "Potvrdit",
-          "description": "Musí být povoleno k provedení resetu. Chrání před náhodnou ztrátou historie."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Rekordér není dostupný",
       "description": "Entity State Tracker se při výpočtu dob trvání stavů spoléhá na rekordér. Rekordér není dostupný, takže sledování se od nynějška vrací pouze k akumulaci naživo a nemůže doplnit minulou historii. Povolte integraci rekordéru pro obnovení úplné historie časových období."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Nastavte confirm na true pro reset evidence. Tím se vymaže uložená historie a akci nelze vrátit zpět."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

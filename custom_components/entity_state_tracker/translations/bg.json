@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Нулиране на дневника",
-      "description": "Изчиства запазената история на дневните сегменти за тракер. Дългите времеви интервали се възстановяват от данни на записващото устройство, където все още са налични. Това не може да бъде отменено.",
-      "fields": {
-        "confirm": {
-          "name": "Потвърждаване",
-          "description": "Трябва да е активирано, за да се извърши нулирането. Предпазва от случайна загуба на история."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Записващото устройство е недостъпно",
       "description": "Entity State Tracker разчита на записващото устройство за изчисляване на продължителностите на състоянията. Записващото устройство не е налично, така че проследяването отсега нататък преминава само към натрупване на живо и не може да попълни миналата история. Активирайте интеграцията на записващото устройство, за да възстановите пълната история по времеви интервали."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Задайте confirm на true, за да нулирате дневника. Това изчиства запазената история и не може да бъде отменено."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

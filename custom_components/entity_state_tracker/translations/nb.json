@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Nullstill hovedbok",
-      "description": "Tømmer den lagrede daglig-bøtte-historikken for en sporer. Lange tidsrom bygges opp igjen fra recorder-data der de fortsatt er tilgjengelige. Dette kan ikke angres.",
-      "fields": {
-        "confirm": {
-          "name": "Bekreft",
-          "description": "Må være aktivert for å gjennomføre nullstillingen. Beskytter mot utilsiktet tap av historikk."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Recorder er utilgjengelig",
       "description": "Entity State Tracker er avhengig av recorder for å beregne tilstandsvarigheter. Recorder er ikke tilgjengelig, så sporingen faller fra nå av tilbake på ren sanntidsakkumulering og kan ikke fylle inn tidligere historikk. Aktiver recorder-integrasjonen for å gjenopprette full tidsromshistorikk."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Sett confirm til true for å nullstille hovedboken. Dette tømmer lagret historikk og kan ikke angres."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

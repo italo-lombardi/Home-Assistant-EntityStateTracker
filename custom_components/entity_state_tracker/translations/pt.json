@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Repor histórico",
-      "description": "Limpa o histórico diário persistente do Entity State Tracker. Períodos longos são reconstruídos a partir dos dados do recorder quando ainda disponíveis. Isto não pode ser desfeito.",
-      "fields": {
-        "confirm": {
-          "name": "Confirmar",
-          "description": "Tem de estar ativado para efetuar a reposição. Protege contra a perda acidental do histórico."
-        },
-        "entity_id": {
-          "name": "Entidade monitorizada",
-          "description": "Limita a reposição aos trackers que observam esta entidade monitorizada. Deixe vazio para repor todos os Entity State Tracker. Esta é a entidade que um tracker observa, não o sensor do próprio tracker."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "O recorder está indisponível",
       "description": "O Entity State Tracker depende do recorder para calcular as durações de estado. O recorder não está disponível, por isso o rastreamento passa a recorrer apenas à acumulação em tempo real e não consegue preencher o histórico passado. Ative a integração recorder para restaurar o histórico completo dos períodos."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Defina «confirm» como true para repor o histórico. Isto limpa o histórico persistente e não pode ser desfeito."
-    },
-    "reset_no_match": {
-      "message": "Nenhum Entity State Tracker está a monitorizar {entity_id}. Verifique o ID da entidade, ou deixe vazio para repor todos os trackers."
-    }
-  }
+  "exceptions": {}
 }

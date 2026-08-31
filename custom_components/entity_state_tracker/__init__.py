@@ -14,7 +14,6 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import EntityStateTrackerCoordinator
-from .services import async_setup_services, async_unload_services
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -66,7 +65,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(coordinator.async_shutdown)
     entry.async_on_unload(entry.add_update_listener(_async_update_options))
 
-    await async_setup_services(hass)
     await _async_install_card(hass)
 
     return True
@@ -177,7 +175,6 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         if e.state is ConfigEntryState.LOADED and e.entry_id != entry.entry_id
     ]
     if not remaining:
-        async_unload_services(hass)
         hass.data.get(DOMAIN, {}).pop(_CARD_INSTALLED_KEY, None)
 
     return unload_ok

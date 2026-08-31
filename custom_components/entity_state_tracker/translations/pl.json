@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Zresetuj rejestr",
-      "description": "Czyści utrwaloną historię dziennych segmentów trackera. Długie przedziały czasowe odbudowują się z danych rejestratora, gdy są jeszcze dostępne. Tej operacji nie można cofnąć.",
-      "fields": {
-        "confirm": {
-          "name": "Potwierdź",
-          "description": "Musi być włączone, aby przeprowadzić reset. Chroni przed przypadkową utratą historii."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Rejestrator jest niedostępny",
       "description": "Entity State Tracker polega na rejestratorze przy obliczaniu czasów trwania stanów. Rejestrator jest niedostępny, więc śledzenie od teraz przechodzi wyłącznie na akumulację na żywo i nie może uzupełnić przeszłej historii. Włącz integrację rejestratora, aby przywrócić pełną historię przedziałów czasowych."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Ustaw confirm na true, aby zresetować rejestr. Czyści to utrwaloną historię i nie można tego cofnąć."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

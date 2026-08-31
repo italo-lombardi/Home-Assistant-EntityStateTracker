@@ -355,53 +355,6 @@ automation:
 
 ---
 
-## Services
-
-### `entity_state_tracker.reset_ledger`
-
-Clears the persisted daily-bucket ledger and starts long-window accumulation fresh. Use it after you deliberately changed how an entity behaves and don't want the old history dragging the long frames. `confirm: true` is **required** — without it the call raises a validation error rather than silently wiping history, because history beyond recorder retention cannot be rebuilt.
-
-> With no `entity_id`, the reset applies to **every** Entity State Tracker config entry (each entry owns its own store, and all loaded trackers are reset together). Pass an optional `entity_id` — the *tracked* entity, not the tracker's own sensor — to reset only the tracker(s) watching that entity. One tracked entity can have several trackers (specific vs all-states, different names); all of them reset. A target that matches no loaded tracker raises a validation error.
-
-```yaml
-service: entity_state_tracker.reset_ledger
-data:
-  confirm: true
-```
-
-Reset just one tracked entity's trackers:
-
-```yaml
-service: entity_state_tracker.reset_ledger
-data:
-  confirm: true
-  entity_id: climate.living_room
-```
-
----
-
-### Automation 13 — Reset the ledger after a hardware swap
-
-Triggered by a helper toggle you flip when you replace the tracked device.
-
-```yaml
-automation:
-  alias: EST — reset ledger on device swap
-  trigger:
-    - platform: state
-      entity_id: input_boolean.device_replaced
-      to: "on"
-  action:
-    - service: entity_state_tracker.reset_ledger
-      data:
-        confirm: true
-    - service: input_boolean.turn_off
-      target:
-        entity_id: input_boolean.device_replaced
-```
-
----
-
 ## Notification channels
 
 ### Telegram

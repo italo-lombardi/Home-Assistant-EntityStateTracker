@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Nustatyti žurnalą iš naujo",
-      "description": "Išvalo išsaugotą sekiklio dienos segmentų istoriją. Ilgi laiko tarpsniai atkuriami iš įrašymo įrenginio duomenų ten, kur jie dar prieinami. To negalima atšaukti.",
-      "fields": {
-        "confirm": {
-          "name": "Patvirtinti",
-          "description": "Turi būti įjungta norint atlikti nustatymą iš naujo. Apsaugo nuo netyčinio istorijos praradimo."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Įrašymo įrenginys nepasiekiamas",
       "description": "Entity State Tracker remiasi įrašymo įrenginiu būsenų trukmėms apskaičiuoti. Įrašymo įrenginys nepasiekiamas, todėl stebėjimas nuo šiol grįžta tik prie tiesioginio kaupimo ir negali papildyti praeities istorijos. Įjunkite įrašymo įrenginio integraciją, kad atkurtumėte visą laiko tarpsnių istoriją."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Nustatykite confirm į true, kad iš naujo nustatytumėte žurnalą. Tai išvalo išsaugotą istoriją ir negali būti atšaukta."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

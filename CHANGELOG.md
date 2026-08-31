@@ -22,8 +22,7 @@ Initial release.
 - **DST-correct math** — every percentage divides by the real elapsed seconds of the window (never a fixed 86,400), so 23h/25h DST days read correctly.
 - **Glitch filter** — optional `min_state_duration` (default 0) merges sub-threshold visits into the preceding block, keeping durations and transition counts clean.
 - **Custom Lovelace card** — bars, pie/donut, and table views with a visual editor and deterministic per-state colours; auto-installed as a Lovelace resource, with graceful degradation on YAML-mode dashboards.
-- **`entity_state_tracker.reset_ledger` service** — clears a tracker's persisted ledger (requires `confirm: true`); optional `entity_id` targets specific trackers, otherwise resets all.
 - **Diagnostics** — dumps ledger stats, coverage, and gap flags for support.
 - **Options flow** — edit states, frames, target, and glitch filter after creation (within-mode only).
-- **Real translations across 29 locales** for config, options, entity, selector, and service strings (Lovelace card English-only).
+- **Real translations across 29 locales** for config, options, entity, and selector strings (Lovelace card English-only).
 - Recorder-friendly writes (unrecorded breakdown attributes, rounded/deduplicated sensor states) budgeted at ~250–400 KB/yr per tracker.

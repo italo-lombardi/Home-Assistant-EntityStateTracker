@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "重置账本",
-      "description": "清除跟踪器持久化的每日分桶历史。长时间范围会在记录器数据仍可用处从中重建。此操作无法撤销。",
-      "fields": {
-        "confirm": {
-          "name": "确认",
-          "description": "必须启用才能执行重置。防止意外丢失历史。"
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "记录器不可用",
       "description": "Entity State Tracker 依赖记录器来计算状态时长。记录器不可用，因此跟踪从现在起回退为仅实时累积，无法回填过去的历史。启用记录器集成以恢复完整的时间范围历史。"
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "将 confirm 设置为 true 以重置账本。此操作会清除持久化历史，且无法撤销。"
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

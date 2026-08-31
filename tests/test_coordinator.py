@@ -1869,48 +1869,6 @@ def test_parse_day_variants() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# reset_ledger (§9) — clears the store AND rebuilds the in-memory reference
-# --------------------------------------------------------------------------- #
-
-
-async def test_async_reset_ledger_clears_daily_and_refreshes(
-    hass: HomeAssistant, all_states_config_entry, patch_recorder
-) -> None:
-    """async_reset_ledger wipes the ledger's daily buckets and requests a refresh.
-
-    Regression: resetting only the store left the coordinator's held ``_ledger``
-    reference stale, so the very next frame recompute (and diagnostics) still saw
-    the pre-reset buckets. The reset must re-seed ``_ledger`` from an empty
-    tracker so the sensors recompute from now-empty history in the same tick.
-    """
-    now = _utc(2026, 6, 10, 12, 0)
-    c = await _prime(hass, all_states_config_entry, now, patch_recorder)
-    # Seed some closed-day buckets directly on the held ledger.
-    c._ledger.daily = {
-        "2026-06-08": {"on": {"secs": 100.0, "count": 2}},
-        "2026-06-09": {"off": {"secs": 50.0, "count": 1}},
-    }
-    c._ledger.last_state = "on"
-    c._previous_state = "off"
-    assert c._ledger.daily  # precondition
-
-    with patch.object(c, "async_request_refresh", new_callable=AsyncMock) as refresh:
-        await c.async_reset_ledger()
-
-    # The held reference is a fresh, empty ledger — not the stale seeded object.
-    assert c._ledger is not None
-    assert c._ledger.daily == {}
-    assert c._previous_state is None
-    assert c._dirty is False
-    refresh.assert_awaited_once()
-    # And the store itself no longer carries the old buckets.
-    reloaded = (await c.store.load()).trackers.get(c._entry_id)
-    assert reloaded is not None
-    assert reloaded.daily == {}
-    await c.async_shutdown()
-
-
-# --------------------------------------------------------------------------- #
 # Rolling-frame recorder+ledger seam (the 24h/7d partial-oldest-day over-count
 # fix). Recorder retention is injected by patching recorder.get_instance.
 # --------------------------------------------------------------------------- #

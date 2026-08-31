@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Resetează registrul",
-      "description": "Șterge istoricul persistent al segmentelor zilnice pentru un urmăritor. Intervalele lungi se reconstruiesc din datele recorderului acolo unde sunt încă disponibile. Această acțiune nu poate fi anulată.",
-      "fields": {
-        "confirm": {
-          "name": "Confirmă",
-          "description": "Trebuie activat pentru a efectua resetarea. Protejează împotriva pierderii accidentale a istoricului."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Recorderul este indisponibil",
       "description": "Entity State Tracker se bazează pe recorder pentru a calcula duratele stărilor. Recorderul nu este disponibil, așa că urmărirea revine de acum înainte doar la acumularea în timp real și nu poate completa istoricul trecut. Activează integrarea recorder pentru a restabili istoricul complet al intervalelor de timp."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Setează confirm pe true pentru a reseta registrul. Aceasta șterge istoricul persistent și nu poate fi anulată."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Restableix el registre",
-      "description": "Esborra l'historial persistent de compartiments diaris d'un seguidor. Els períodes llargs es reconstrueixen a partir de les dades del gravador on encara estiguin disponibles. Això no es pot desfer.",
-      "fields": {
-        "confirm": {
-          "name": "Confirma",
-          "description": "S'ha d'activar per dur a terme el restabliment. Protegeix contra la pèrdua accidental de l'historial."
-        },
-        "entity_id": {
-          "name": "Tracked entity",
-          "description": "Limit the reset to the tracker(s) watching this tracked entity. Leave empty to reset every Entity State Tracker. This is the entity a tracker watches, not the tracker's own sensor."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "El gravador no està disponible",
       "description": "Entity State Tracker es basa en el gravador per calcular les durades d'estat. El gravador no està disponible, així que el seguiment recorre d'ara endavant només a l'acumulació en directe i no pot reomplir l'historial passat. Activeu la integració del gravador per restaurar l'historial complet de períodes de temps."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Establiu confirm a true per restablir el registre. Això esborra l'historial persistent i no es pot desfer."
-    },
-    "reset_no_match": {
-      "message": "No Entity State Tracker is tracking {entity_id}. Check the entity ID, or leave it empty to reset every tracker."
-    }
-  }
+  "exceptions": {}
 }

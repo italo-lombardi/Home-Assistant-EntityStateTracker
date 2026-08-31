@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Verlauf zurücksetzen",
-      "description": "Löscht den gespeicherten Tagesverlauf für Entity State Tracker. Lange Zeiträume werden aus den Recorder-Daten neu aufgebaut, sofern noch verfügbar. Dies kann nicht rückgängig gemacht werden.",
-      "fields": {
-        "confirm": {
-          "name": "Bestätigen",
-          "description": "Muss aktiviert sein, um das Zurücksetzen auszuführen. Schützt vor versehentlichem Verlust des Verlaufs."
-        },
-        "entity_id": {
-          "name": "Erfasste Entität",
-          "description": "Beschränkt das Zurücksetzen auf die Tracker, die diese erfasste Entität beobachten. Leer lassen, um jeden Entity State Tracker zurückzusetzen. Dies ist die von einem Tracker beobachtete Entität, nicht der Sensor des Trackers selbst."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Recorder ist nicht verfügbar",
       "description": "Entity State Tracker verlässt sich auf den Recorder, um Zustandsdauern zu berechnen. Der Recorder ist nicht verfügbar, daher fällt die Verfolgung ab jetzt auf reine Live-Akkumulation zurück und kann keinen vergangenen Verlauf nachfüllen. Aktiviere die Recorder-Integration, um den vollständigen Zeitraumverlauf wiederherzustellen."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Setze „confirm“ auf true, um den Verlauf zurückzusetzen. Dies löscht den gespeicherten Verlauf und kann nicht rückgängig gemacht werden."
-    },
-    "reset_no_match": {
-      "message": "Kein Entity State Tracker erfasst {entity_id}. Überprüfe die Entitäts-ID oder lass das Feld leer, um jeden Tracker zurückzusetzen."
-    }
-  }
+  "exceptions": {}
 }

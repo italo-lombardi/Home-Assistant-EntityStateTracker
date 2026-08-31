@@ -144,34 +144,12 @@
       }
     }
   },
-  "services": {
-    "reset_ledger": {
-      "name": "Reimposta cronologia",
-      "description": "Cancella la cronologia giornaliera persistente di Entity State Tracker. Gli intervalli lunghi vengono ricostruiti dai dati del recorder quando ancora disponibili. Questa operazione non può essere annullata.",
-      "fields": {
-        "confirm": {
-          "name": "Conferma",
-          "description": "Deve essere abilitato per eseguire il ripristino. Protegge dalla perdita accidentale della cronologia."
-        },
-        "entity_id": {
-          "name": "Entità monitorata",
-          "description": "Limita il ripristino ai tracker che osservano questa entità monitorata. Lascia vuoto per reimpostare ogni Entity State Tracker. Questa è l'entità che un tracker osserva, non il sensore del tracker stesso."
-        }
-      }
-    }
-  },
+  "services": {},
   "issues": {
     "recorder_off": {
       "title": "Il recorder non è disponibile",
       "description": "Entity State Tracker si affida al recorder per calcolare le durate degli stati. Il recorder non è disponibile, quindi il tracciamento ricade d'ora in poi sulla sola accumulazione in tempo reale e non può recuperare la cronologia passata. Abilita l'integrazione recorder per ripristinare la cronologia completa degli intervalli."
     }
   },
-  "exceptions": {
-    "reset_not_confirmed": {
-      "message": "Imposta «confirm» su true per reimpostare la cronologia. Questo cancella la cronologia persistente e non può essere annullato."
-    },
-    "reset_no_match": {
-      "message": "Nessun Entity State Tracker sta monitorando {entity_id}. Controlla l'ID dell'entità, oppure lascia vuoto per reimpostare tutti i tracker."
-    }
-  }
+  "exceptions": {}
 }

@@ -350,51 +350,13 @@ async def test_prune_days_no_stale_early_return(hass: HomeAssistant) -> None:
 
 
 async def test_prune_days_missing_tracker_noop(hass: HomeAssistant) -> None:
-    """prune_days on an unknown tracker is a no-op (reset-race guard, no write).
+    """prune_days on an unknown tracker is a no-op (no write).
 
-    A concurrent reset_ledger can delete the tracker between a coordinator's
-    load and its prune tick; prune must tolerate the missing key silently.
+    A coordinator's prune tick can race a not-yet-registered tracker between
+    load and prune; prune must tolerate the missing key silently.
     """
     store = _store(hass)
     await store.load()
     with patch.object(store._store, "async_save") as saver:
         await store.prune_days("nope", "2026-08-29")
-    saver.assert_not_called()
-
-
-async def test_reset_single_entry(hass: HomeAssistant) -> None:
-    """reset(entry_id) drops just that tracker."""
-    store = _store(hass)
-    await store.get_or_create_tracker(ENTRY_ID, "light.x", "all_states", None, None)
-    await store.get_or_create_tracker("other", "light.y", "all_states", None, None)
-    await store.reset(ENTRY_ID)
-    trackers = (await store.load()).trackers
-    assert ENTRY_ID not in trackers
-    assert "other" in trackers
-
-
-async def test_reset_single_entry_absent_early_return(hass: HomeAssistant) -> None:
-    """reset() on an unknown tracker is a no-op (no write)."""
-    store = _store(hass)
-    await store.load()
-    with patch.object(store._store, "async_save") as saver:
-        await store.reset("nope")
-    saver.assert_not_called()
-
-
-async def test_reset_all(hass: HomeAssistant) -> None:
-    """reset(None) clears every tracker."""
-    store = _store(hass)
-    await store.get_or_create_tracker(ENTRY_ID, "light.x", "all_states", None, None)
-    await store.get_or_create_tracker("other", "light.y", "all_states", None, None)
-    await store.reset(None)
-    assert (await store.load()).trackers == {}
-
-
-async def test_reset_all_empty_early_return(hass: HomeAssistant) -> None:
-    """reset(None) with no trackers is a no-op (no write)."""
-    store = _store(hass)
-    await store.load()
-    with patch.object(store._store, "async_save") as saver:
-        await store.reset(None)
     saver.assert_not_called()
