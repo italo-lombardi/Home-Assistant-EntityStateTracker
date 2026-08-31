@@ -497,12 +497,28 @@ const cardStyles = css`
     padding-top: 8px;
   }
 
-  /* One chart column: legend on top, donut below. */
+  /* One chart column: caption, then the donut+legend group. */
   .pie-chart {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
+  }
+
+  /* Donut + legend. Default stacks (legend below); .beside is a solo chart
+     with the legend to the right of the donut. */
+  .pie-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .pie-body.beside {
+    flex-direction: row;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
   }
 
   .pie-svg {
@@ -969,24 +985,26 @@ class EntityStateTrackerCard extends LitElement {
       : nothing}`;
   }
 
-  // One donut column: caption, SVG, then legend BELOW. Shared by the state pie
-  // and the compliance gauge so both stack the same way inside .pie-charts.
-  // legendItems: [{color, label, value}].
-  _pieColumn(caption, paths, legendItems) {
+  // One donut column: caption on top, then the donut+legend group. With
+  // beside=true (solo chart) the legend sits to the RIGHT of the donut; else
+  // (two charts side-by-side) it stacks BELOW. legendItems: [{color,label,value}].
+  _pieColumn(caption, paths, legendItems, beside = false) {
     return html`
       <div class="pie-chart">
         ${caption}
-        ${this._pieSvg(paths)}
-        <div class="legend">
-          ${legendItems.map(
-            (i) => html`<div class="legend-item">
-              <span class="legend-swatch" style="background:${i.color}"></span>
-              <span>${i.label}</span>
-              ${i.value != null
-                ? html`<span class="legend-value">${i.value}</span>`
-                : nothing}
-            </div>`
-          )}
+        <div class="pie-body${beside ? " beside" : ""}">
+          ${this._pieSvg(paths)}
+          <div class="legend">
+            ${legendItems.map(
+              (i) => html`<div class="legend-item">
+                <span class="legend-swatch" style="background:${i.color}"></span>
+                <span>${i.label}</span>
+                ${i.value != null
+                  ? html`<span class="legend-value">${i.value}</span>`
+                  : nothing}
+              </div>`
+            )}
+          </div>
         </div>
       </div>
     `;
@@ -1005,13 +1023,14 @@ class EntityStateTrackerCard extends LitElement {
     const met = threshold == null || Number(pct) >= Number(threshold);
     const green = "var(--success-color, #4caf50)";
     const red = "var(--error-color, #f44336)";
-    // Two proportion-only slices (no seconds — compliance is a ratio). The met
-    // slice takes the compliance color; the remainder is neutral grey so a
-    // "compliant" gauge reads as green-on-grey, not green-vs-red alarm.
+    // Green/red slice = time in the target set (compliance_percent); grey
+    // remainder = the rest of the frame, NOT in the target set. The green/red
+    // slice carries the met/unmet color; the complement is neutral grey so a
+    // "compliant" gauge reads as color-on-grey, not a green-vs-red alarm.
     const p = Math.max(0, Math.min(100, Number(pct)));
     const slices = [
       { state: met ? "Compliant" : "Not compliant", secs: p, pct: p, color: met ? green : red },
-      { state: "shortfall", secs: 100 - p, pct: 100 - p, color: "var(--est-bar-bg)" },
+      { state: "Not in target", secs: 100 - p, pct: 100 - p, color: "var(--est-bar-bg)" },
     ].filter((s) => s.secs >= 0.05);
     const total = slices.reduce((n, s) => n + s.secs, 0) || 1;
     const cx = 50, cy = 50, r = 40, inner = 24;
@@ -1160,7 +1179,8 @@ class EntityStateTrackerCard extends LitElement {
             color: s.color,
             label: s.state,
             value: html`${fmtDuration(s.secs)} · ${fmtPct(s.pct)}`,
-          }))
+          })),
+          gauge === nothing // solo → legend beside; with gauge → legend below
         )}
         ${gauge}
       </div>
