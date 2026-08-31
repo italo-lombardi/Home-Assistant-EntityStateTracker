@@ -118,6 +118,49 @@ def test_resolve_frame_bounds_week_starts_local_monday(
     assert end == now.astimezone(UTC)
 
 
+@pytest.mark.parametrize(
+    ("frame", "now_local", "expected_start_local"),
+    [
+        # A DST transition INSIDE the rewound span is the trap: timedelta(days=N)
+        # on a ZoneInfo-aware datetime is WALL-CLOCK arithmetic (shifts the naive
+        # Y/M/D fields, re-derives the offset), NOT N*86400 s of absolute time —
+        # so the start still lands on local 00:00 and the absolute UTC span simply
+        # absorbs the 23h/25h day. These pin that: a naive "fix" that switched to
+        # absolute subtraction would push these to 01:00 / 23:00 and fail here.
+        #
+        # week — today Wed 2026-03-11 rewinds 2 days ACROSS spring-forward Sun 03-08.
+        pytest.param(
+            "week", (2026, 3, 11, 12, 0), (2026, 3, 9, 0, 0), id="week-spring"
+        ),
+        # week — today Wed 2025-11-05 rewinds 2 days ACROSS fall-back Sun 11-02.
+        pytest.param("week", (2025, 11, 5, 12, 0), (2025, 11, 3, 0, 0), id="week-fall"),
+        # yesterday — today 2026-03-09 is the day AFTER spring-forward.
+        pytest.param(
+            "yesterday", (2026, 3, 9, 12, 0), (2026, 3, 8, 0, 0), id="yesterday-spring"
+        ),
+        # yesterday — today 2025-11-03 is the day AFTER fall-back.
+        pytest.param(
+            "yesterday", (2025, 11, 3, 12, 0), (2025, 11, 2, 0, 0), id="yesterday-fall"
+        ),
+        # 30d — today 2026-03-20 rewinds 30 days ACROSS spring-forward 03-08.
+        pytest.param("30d", (2026, 3, 20, 12, 0), (2026, 2, 18, 0, 0), id="30d-spring"),
+        # 30d — today 2025-11-20 rewinds 30 days ACROSS fall-back 11-02.
+        pytest.param("30d", (2025, 11, 20, 12, 0), (2025, 10, 21, 0, 0), id="30d-fall"),
+    ],
+)
+def test_resolve_frame_bounds_dst_crossing_start_stays_local_midnight(
+    frame: str,
+    now_local: tuple[int, ...],
+    expected_start_local: tuple[int, ...],
+) -> None:
+    now = dt.datetime(*now_local, tzinfo=NY)
+    start, _ = E.resolve_frame_bounds(frame, now, NY)
+    landed = start.astimezone(NY)
+    assert landed == dt.datetime(*expected_start_local, tzinfo=NY)
+    # The whole point: wall-clock 00:00, not 01:00 (spring) or 23:00 (fall).
+    assert landed.time() == dt.time(0, 0, 0)
+
+
 def test_resolve_frame_bounds_normalises_foreign_zone_now() -> None:
     # now given in UTC; boundary must still land on NY local midnight.
     now_utc = dt.datetime(2026, 1, 15, 4, 0, tzinfo=UTC)  # = 2026-01-14 23:00 NY
