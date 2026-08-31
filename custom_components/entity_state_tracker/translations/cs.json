@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Entita, jejíž doby trvání stavů se budou měřit. Jedna entita na sledování — nasměrujte na skupinového pomocníka pro agregaci více entit.",
-          "name": "Přátelský název pro tento sledovač. Ponechte prázdné, aby byl pojmenován podle entity a režimu (např. „Living Room (Specific States)“). Tím se nastaví název zařízení/konfigurace; ID entit senzorů se nadále řídí standardním pojmenováním. Pro stejnou entitu můžete vytvořit několik sledovačů."
+          "name": "Popisný název pro tento sledovač. Ponechte prázdné, aby byl pojmenován podle entity a režimu (např. „Living Room (Specific States)“). Tím se nastaví název zařízení/konfigurace; ID entit senzorů se nadále řídí standardním pojmenováním. Pro stejnou entitu můžete vytvořit několik sledovačů."
         }
       },
       "mode": {
@@ -37,7 +37,7 @@
         "title": "Které stavy se počítají jako shodné?",
         "description": "Shoda se hodnotí jako procento každého časového rámce, které entita strávila v některém ze stavů, které zde zvolíte. Tyto stavy jsou nezávislé na sledovaných stavech — shodu můžete hodnotit vůči stavu, který jinak nesledujete (například sledujte, jak dlouho je difuzér „on“, ale jako vyhovující/požadovaný stav označte „off“). Předvyplněno vašimi sledovanými stavy pro pohodlí; můžete je volně změnit. Můžete také zadat vlastní stav, který není v seznamu.",
         "data": {
-          "target": "Shodný(é) stav(y)",
+          "target": "Vyhovující stav(y)",
           "target_threshold": "Práh shody (%, volitelné)"
         },
         "data_description": {
@@ -47,7 +47,7 @@
       },
       "frames": {
         "title": "Časová období",
-        "description": "Vyberte, která časová období sledovat. Období delší než uchovávání rekordéru se doplní časem.",
+        "description": "Vyberte, která časová období sledovat. Dlouhá období (30 dní, měsíc, rok) nebudou hned úplná: rekordér Home Assistant uchovává historii jen několik dní, takže tato okna začínají neúplná a den po dni se doplňují, jak si sledovač zaznamenává vlastní data. Krátká období jsou přesná okamžitě.",
         "data": {
           "today": "Dnes",
           "yesterday": "Včera",
@@ -81,8 +81,8 @@
   "options": {
     "step": {
       "init": {
-        "title": "Upravit sledování",
-        "description": "Upravte sledovaná období a nastavení tohoto sledování. Sledovanou entitu a režim nelze změnit — pro jejich změnu vytvořte nové sledování.",
+        "title": "Upravit sledovač",
+        "description": "Upravte sledovaná období a nastavení tohoto sledovače. Sledovanou entitu a režim nelze změnit — pro jejich změnu vytvořte nový sledovač.",
         "data": {
           "today": "Dnes",
           "yesterday": "Včera",
@@ -122,7 +122,7 @@
         "name": "Doba trvání ({frame})"
       },
       "percent": {
-        "name": "Procento ({frame})"
+        "name": "Ve sledovaném stavu % ({frame})"
       },
       "compliance": {
         "name": "Shoda ({frame})"
@@ -136,7 +136,7 @@
         "name": "Aktuálně ve stavu"
       },
       "compliant": {
-        "name": "Ve shodě"
+        "name": "Ve shodě ({frame})"
       }
     }
   },

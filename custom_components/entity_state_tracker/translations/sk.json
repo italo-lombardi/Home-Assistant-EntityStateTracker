@@ -35,7 +35,7 @@
       },
       "compliance": {
         "title": "Ktoré stavy sa počítajú ako zhodné?",
-        "description": "Zhoda sa hodnotí ako percento každého časového rámca, ktoré entita strávila v niektorom zo stavov, ktoré tu zvolíte. Tieto stavy sú nezávislé od sledovaných stavov — zhodu môžete hodnotiť voči stavu, ktorý inak nesledujete (napríklad sledujte, ako dlho je difuzér „on“, ale ako vyhovujúci/požadovaný stav označte „off“). Pre pohodlie predvyplnené vašimi sledovanými stavmi; voľne meňte. Môžete tiež zadať vlastný stav, ktorý nie je v zozname.",
+        "description": "Zhoda sa hodnotí ako percento každého časového obdobia, ktoré entita strávila v niektorom zo stavov, ktoré tu zvolíte.",
         "data": {
           "target": "Zhodný(é) stav(y)",
           "target_threshold": "Prah zhody (%, voliteľné)"
@@ -47,7 +47,7 @@
       },
       "frames": {
         "title": "Časové obdobia",
-        "description": "Vyberte, ktoré časové obdobia sledovať. Obdobia dlhšie ako uchovávanie rekordéra sa doplnia časom.",
+        "description": "Vyberte, ktoré časové obdobia sledovať. Dlhé obdobia (30 dní, mesiac, rok) nebudú úplné hneď: rekordér Home Assistant uchováva iba niekoľko dní histórie, takže tieto okná začínajú neúplné a dopĺňajú sa deň po dni, ako si sledovač zaznamenáva vlastné údaje. Krátke obdobia sú presné okamžite.",
         "data": {
           "today": "Dnes",
           "yesterday": "Včera",
@@ -81,8 +81,8 @@
   "options": {
     "step": {
       "init": {
-        "title": "Upraviť sledovanie",
-        "description": "Upravte sledované obdobia a nastavenia tohto sledovania. Sledovanú entitu a režim nemožno zmeniť — na ich zmenu vytvorte nové sledovanie.",
+        "title": "Upraviť sledovač",
+        "description": "Upravte sledované obdobia a nastavenia tohto sledovača. Sledovanú entitu a režim nemožno zmeniť — na ich zmenu vytvorte nový sledovač.",
         "data": {
           "today": "Dnes",
           "yesterday": "Včera",
@@ -122,7 +122,7 @@
         "name": "Doba trvania ({frame})"
       },
       "percent": {
-        "name": "Percento ({frame})"
+        "name": "Percento v sledovanom stave ({frame})"
       },
       "compliance": {
         "name": "Zhoda ({frame})"
@@ -136,7 +136,7 @@
         "name": "Aktuálne v stave"
       },
       "compliant": {
-        "name": "V zhode"
+        "name": "V zhode ({frame})"
       }
     }
   },

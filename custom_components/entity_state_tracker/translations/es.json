@@ -30,24 +30,24 @@
         },
         "data_description": {
           "states": "Los estados de la entidad cuya duración y porcentaje se miden (p. ej. on, heat, home). Precargados con los estados vistos recientemente.",
-          "enable_compliance": "Actívalo para puntuar cuánto de cada ventana pasó la entidad en un estado objetivo deseado, con un umbral opcional de aprobado/reprobado."
+          "enable_compliance": "Actívalo para puntuar qué parte de cada ventana pasó la entidad en un estado objetivo deseado, con un umbral opcional de apto/no apto."
         }
       },
       "compliance": {
         "title": "¿Qué estados cuentan como conformes?",
-        "description": "El cumplimiento se calcula como el porcentaje de cada período que la entidad pasó en alguno de los estados que elijas aquí. Estos estados son independientes de los estados seguidos: puedes evaluar el cumplimiento sobre un estado que no sigues de otro modo (por ejemplo, seguir cuánto tiempo un difusor está 'on', pero marcar 'off' como el estado conforme/deseado). Prerrellenado con tus estados seguidos por comodidad; cámbialo libremente. También puedes escribir un estado que no esté en la lista.",
+        "description": "El cumplimiento se calcula como el porcentaje de cada periodo que la entidad pasó en alguno de los estados que elijas aquí. Estos estados son independientes de los estados rastreados: puedes evaluar el cumplimiento sobre un estado que no rastreas de otro modo (por ejemplo, rastrear cuánto tiempo un difusor está 'on', pero marcar 'off' como el estado conforme/deseado). Precargado con tus estados rastreados por comodidad; cámbialo libremente. También puedes escribir un estado que no esté en la lista.",
         "data": {
           "target": "Estado(s) conforme(s)",
           "target_threshold": "Umbral de cumplimiento (%, opcional)"
         },
         "data_description": {
-          "target": "Los estados que cuentan como conformes/deseados. Se contabiliza el tiempo pasado en cualquiera de ellos. Independiente de los estados seguidos: elige cualquier estado que la entidad pueda tener.",
+          "target": "Los estados que cuentan como conformes/deseados. Se contabiliza el tiempo pasado en cualquiera de ellos. Independiente de los estados rastreados: elige cualquier estado que la entidad pueda tener.",
           "target_threshold": "Si se establece, un sensor binario «Conforme» se activa cuando el porcentaje de cumplimiento alcanza o supera este valor. Déjalo vacío para omitir el umbral."
         }
       },
       "frames": {
         "title": "Periodos",
-        "description": "Elige qué periodos rastrear. Los periodos más largos que la retención del recorder se rellenan con el tiempo.",
+        "description": "Elige qué periodos rastrear. Los periodos largos (30 días, mes, año) no estarán completos de inmediato: el recorder de Home Assistant solo conserva unos pocos días de historial, así que estos periodos empiezan parciales y se van completando día a día a medida que el rastreador registra sus propios datos. Los periodos cortos son precisos de inmediato.",
         "data": {
           "today": "Hoy",
           "yesterday": "Ayer",
@@ -105,7 +105,7 @@
           "30d": "Los últimos 30 días locales completos.",
           "month": "Desde el día 1 de este mes.",
           "year": "Desde el 1 de enero.",
-          "target": "El conjunto de estados considerados conformes. Estar en cualquiera de ellos cuenta. Independiente de los estados seguidos: elige cualquier estado que la entidad pueda tener. Solo se usa cuando la puntuación de cumplimiento está habilitada.",
+          "target": "El conjunto de estados considerados conformes. Estar en cualquiera de ellos cuenta. Independiente de los estados rastreados: elige cualquier estado que la entidad pueda tener. Solo se usa cuando la puntuación de cumplimiento está habilitada.",
           "target_threshold": "Si se establece, un sensor binario «Conforme» se activa cuando el porcentaje de cumplimiento alcanza o supera este valor. Déjalo vacío para omitir el umbral.",
           "min_state_duration": "Si la entidad seguida cambia a un estado y sale de él más rápido que este número de segundos, ese breve momento se ignora — su tiempo se añade al estado anterior y no cuenta como un cambio separado. Úsalo para filtrar sensores que parpadean o rebotan. Ponlo en 0 para contar cada cambio, por breve que sea."
         }
@@ -122,7 +122,7 @@
         "name": "Duración ({frame})"
       },
       "percent": {
-        "name": "Porcentaje ({frame})"
+        "name": "En un estado seguido % ({frame})"
       },
       "compliance": {
         "name": "Cumplimiento ({frame})"
@@ -136,7 +136,7 @@
         "name": "En un estado seguido"
       },
       "compliant": {
-        "name": "Conforme"
+        "name": "Conforme ({frame})"
       }
     }
   },

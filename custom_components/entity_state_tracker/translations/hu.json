@@ -35,7 +35,7 @@
       },
       "compliance": {
         "title": "Mely állapotok számítanak megfelelőnek?",
-        "description": "A megfelelőség pontszáma az egyes időkeretek azon százaléka, amelyet az entitás az itt kiválasztott állapotok valamelyikében töltött. Ezek az állapotok függetlenek a követett állapotoktól — a megfelelőséget olyan állapotra is pontozhatja, amelyet egyébként nem követ (például kövesse, meddig van egy diffúzor „on“ állapotban, de az „off“-ot jelölje meg megfelelő/kívánt állapotként). Kényelmi okból a követett állapotokkal előre kitöltve; szabadon módosíthatja. Beírhat egyéni, a listában nem szereplő állapotot is.",
+        "description": "A megfelelőség pontszáma az egyes időkeretek azon százaléka, amelyet az entitás az itt kiválasztott állapotok valamelyikében töltött. Ezek az állapotok függetlenek a követett állapotoktól — a megfelelőséget olyan állapotra is pontozhatja, amelyet egyébként nem követ (például kövesse, meddig van egy diffúzor „on\" állapotban, de az „off\"-ot jelölje meg megfelelő/kívánt állapotként). Kényelmi okból a követett állapotokkal előre kitöltve; szabadon módosíthatja. Beírhat egyéni, a listában nem szereplő állapotot is.",
         "data": {
           "target": "Megfelelő állapot(ok)",
           "target_threshold": "Megfelelőségi küszöb (%, opcionális)"
@@ -47,7 +47,7 @@
       },
       "frames": {
         "title": "Időszakok",
-        "description": "Válassza ki, mely időszakokat kövesse. A rögzítő megőrzésénél hosszabb időszakok idővel töltődnek fel.",
+        "description": "Válassza ki, mely időszakokat kövesse. A hosszú időszakok (30 nap, hónap, év) nem lesznek azonnal teljesek: a Home Assistant rögzítője csak néhány napnyi előzményt őriz meg, ezért ezek az ablakok részlegesen indulnak, és napról napra töltődnek fel, ahogy a követő rögzíti a saját adatait. A rövid időszakok azonnal pontosak.",
         "data": {
           "today": "Ma",
           "yesterday": "Tegnap",
@@ -122,10 +122,10 @@
         "name": "Időtartam ({frame})"
       },
       "percent": {
-        "name": "Százalék ({frame})"
+        "name": "Követett állapotban töltött % ({frame})"
       },
       "compliance": {
-        "name": "Megfelelés ({frame})"
+        "name": "Megfelelőség ({frame})"
       },
       "breakdown": {
         "name": "Állapotlebontás ({frame})"
@@ -133,10 +133,10 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "Jelenleg állapotban"
+        "name": "Követett állapotban"
       },
       "compliant": {
-        "name": "Megfelelő"
+        "name": "Megfelelő ({frame})"
       }
     }
   },

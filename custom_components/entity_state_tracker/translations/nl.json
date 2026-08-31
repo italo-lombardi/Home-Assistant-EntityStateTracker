@@ -35,19 +35,19 @@
       },
       "compliance": {
         "title": "Welke toestanden tellen als conform?",
-        "description": "Naleving wordt berekend als het percentage van elk tijdvenster dat de entiteit in een van de hier gekozen statussen doorbracht. Deze statussen staan los van de gevolgde statussen — je kunt naleving beoordelen op een status die je verder niet volgt (bijvoorbeeld bijhouden hoe lang een diffuser 'on' is, maar 'off' markeren als de conforme/gewenste status). Voor het gemak vooraf ingevuld met je gevolgde statussen; vrij te wijzigen. Je kunt ook een niet-vermelde status typen.",
+        "description": "Naleving wordt berekend als het percentage van elk tijdvak dat de entiteit in een van de hier gekozen toestanden doorbracht. Deze toestanden staan los van de gevolgde toestanden — je kunt naleving beoordelen op een toestand die je verder niet volgt (bijvoorbeeld bijhouden hoe lang een diffuser 'on' is, maar 'off' markeren als de conforme/gewenste toestand). Voor het gemak vooraf ingevuld met je gevolgde toestanden; vrij te wijzigen. Je kunt ook een niet-vermelde toestand typen.",
         "data": {
           "target": "Conforme toestand(en)",
           "target_threshold": "Nalevingsdrempel (%, optioneel)"
         },
         "data_description": {
-          "target": "De statussen die als conform/gewenst tellen. De tijd in een ervan wordt meegeteld. Los van de gevolgde statussen — kies elke status die de entiteit kan hebben.",
-          "target_threshold": "Indien ingesteld, gaat een binaire sensor «Conform» aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan."
+          "target": "De toestanden die als conform/gewenst tellen. De tijd in een ervan wordt meegeteld. Los van de gevolgde toestanden — kies elke toestand die de entiteit kan hebben.",
+          "target_threshold": "Indien ingesteld, gaat een binaire sensor „Conform” aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan."
         }
       },
       "frames": {
         "title": "Tijdvakken",
-        "description": "Kies welke tijdvakken worden gevolgd. Tijdvakken langer dan de recorder-bewaring vullen zich na verloop van tijd.",
+        "description": "Kies welke tijdvakken worden gevolgd. Lange tijdvakken (30 dagen, maand, jaar) zijn niet meteen volledig: de recorder van Home Assistant bewaart maar enkele dagen geschiedenis, dus deze vensters beginnen gedeeltelijk en vullen zich dag na dag aan naarmate de tracker zijn eigen gegevens vastlegt. Korte tijdvakken zijn direct nauwkeurig.",
         "data": {
           "today": "Vandaag",
           "yesterday": "Gisteren",
@@ -105,8 +105,8 @@
           "30d": "De laatste 30 hele lokale dagen.",
           "month": "Sinds de 1e van deze maand.",
           "year": "Sinds 1 januari.",
-          "target": "De verzameling statussen die als conform gelden. In een ervan zijn telt mee. Los van de gevolgde statussen — kies elke status die de entiteit kan hebben. Alleen gebruikt wanneer nalevingsscore is ingeschakeld.",
-          "target_threshold": "Indien ingesteld, gaat een binaire sensor «Conform» aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan.",
+          "target": "De verzameling toestanden die als conform gelden. In een van deze toestanden zijn telt mee. Los van de gevolgde toestanden — kies elke toestand die de entiteit kan hebben. Alleen gebruikt wanneer nalevingsscore is ingeschakeld.",
+          "target_threshold": "Indien ingesteld, gaat een binaire sensor „Conform” aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan.",
           "min_state_duration": "Als de gevolgde entiteit sneller dan dit aantal seconden in een toestand komt en er weer uit gaat, wordt dat korte moment genegeerd — de tijd ervan wordt in plaats daarvan bij de vorige toestand opgeteld en telt niet als een aparte wijziging. Gebruik het om flikkerende of stuiterende sensoren te filteren. Stel in op 0 om elke wijziging te tellen, hoe kort ook."
         }
       }
@@ -122,7 +122,7 @@
         "name": "Duur ({frame})"
       },
       "percent": {
-        "name": "Percentage ({frame})"
+        "name": "In een gevolgde toestand % ({frame})"
       },
       "compliance": {
         "name": "Naleving ({frame})"
@@ -133,10 +133,10 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "In een gevolgde status"
+        "name": "In een gevolgde toestand"
       },
       "compliant": {
-        "name": "Conform"
+        "name": "Conform ({frame})"
       }
     }
   },

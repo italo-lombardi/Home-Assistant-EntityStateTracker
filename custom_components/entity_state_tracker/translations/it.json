@@ -30,7 +30,7 @@
         },
         "data_description": {
           "states": "Gli stati dell'entità di cui vengono misurati durata e percentuale (es. on, heat, home). Precompilato con gli stati visti di recente.",
-          "enable_compliance": "Attiva per valutare quanta parte di ogni finestra l'entità ha trascorso in uno stato obiettivo desiderato, con una soglia superato/non superato opzionale."
+          "enable_compliance": "Attiva per valutare quanta parte di ogni intervallo l'entità ha trascorso in uno stato obiettivo desiderato, con una soglia superato/non superato opzionale."
         }
       },
       "compliance": {
@@ -47,7 +47,7 @@
       },
       "frames": {
         "title": "Intervalli di tempo",
-        "description": "Scegli quali intervalli di tempo tracciare. Gli intervalli più lunghi della conservazione del recorder si riempiono nel tempo.",
+        "description": "Scegli quali intervalli di tempo tracciare. Gli intervalli lunghi (30 giorni, mese, anno) non saranno completi subito: il recorder di Home Assistant conserva solo pochi giorni di cronologia, quindi queste finestre iniziano parziali e si completano giorno dopo giorno man mano che il tracker registra i propri dati. Gli intervalli brevi sono accurati fin da subito.",
         "data": {
           "today": "Oggi",
           "yesterday": "Ieri",
@@ -122,7 +122,7 @@
         "name": "Durata ({frame})"
       },
       "percent": {
-        "name": "Percentuale ({frame})"
+        "name": "In uno stato monitorato % ({frame})"
       },
       "compliance": {
         "name": "Conformità ({frame})"
@@ -136,7 +136,7 @@
         "name": "In uno stato monitorato"
       },
       "compliant": {
-        "name": "Conforme"
+        "name": "Conforme ({frame})"
       }
     }
   },

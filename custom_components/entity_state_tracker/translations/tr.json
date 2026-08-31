@@ -30,24 +30,24 @@
         },
         "data_description": {
           "states": "Süresi ve yüzdesi ölçülen varlık durumları (örn. on, heat, home). Yakın zamanda görülen durumlarla önceden doldurulur.",
-          "enable_compliance": "Varlığın her pencerenin ne kadarını istenen bir hedef durumda geçirdiğini, isteğe bağlı bir geçti/kaldı eşiğiyle puanlamak için açın."
+          "enable_compliance": "Varlığın her zaman aralığının ne kadarını istenen bir hedef durumda geçirdiğini, isteğe bağlı bir başarılı/başarısız eşiğiyle puanlamak için açın."
         }
       },
       "compliance": {
         "title": "Hangi durumlar uyumlu olarak sayılır?",
-        "description": "Uyumluluk, varlığın burada seçtiğiniz durumlardan herhangi birinde geçirdiği her zaman aralığının yüzdesi olarak puanlanır. Bu durumlar izlenen durumlardan bağımsızdır — uyumluluğu, aksi takdirde izlemediğiniz bir durum üzerinden puanlayabilirsiniz (örneğin, bir difüzörün ne kadar süre „on“ olduğunu izleyin, ancak „off“u uyumlu/istenen durum olarak işaretleyin). Kolaylık için izlenen durumlarınızla önceden doldurulur; serbestçe değiştirin. Listede olmayan özel bir durum da yazabilirsiniz.",
+        "description": "Uyumluluk, varlığın burada seçtiğiniz durumlardan herhangi birinde geçirdiği süreye göre, her zaman aralığının yüzdesi olarak puanlanır. Bu durumlar izlenen durumlardan bağımsızdır — uyumluluğu, aksi takdirde izlemediğiniz bir durum üzerinden puanlayabilirsiniz (örneğin, bir difüzörün ne kadar süre \"on\" olduğunu izleyin, ancak \"off\" durumunu uyumlu/istenen durum olarak işaretleyin). Kolaylık için izlenen durumlarınızla önceden doldurulur; serbestçe değiştirin. Listede olmayan özel bir durum da yazabilirsiniz.",
         "data": {
           "target": "Uyumlu durum(lar)",
           "target_threshold": "Uyumluluk eşiği (%, isteğe bağlı)"
         },
         "data_description": {
           "target": "Uyumlu/istenen sayılan durumlar. Bunlardan herhangi birinde geçirilen süre puanlanır. İzlenen durumlardan bağımsızdır — varlığın olabileceği herhangi bir durumu seçin.",
-          "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya aştığında bir «Uyumlu» ikili sensör açılır. Eşiği atlamak için boş bırakın."
+          "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya bu değeri aştığında \"Uyumlu\" ikili sensörü açılır. Eşiği atlamak için boş bırakın."
         }
       },
       "frames": {
         "title": "Zaman aralıkları",
-        "description": "Hangi zaman aralıklarının izleneceğini seçin. Kaydedicinin saklama süresinden daha uzun aralıklar zamanla dolar.",
+        "description": "Hangi zaman aralıklarının izleneceğini seçin. Uzun aralıklar (30 gün, ay, yıl) hemen tamamlanmaz: Home Assistant'ın kaydedicisi geçmişin yalnızca birkaç günlük kısmını sakladığı için bu pencereler eksik başlar ve izleyici kendi verisini kaydettikçe gün geçtikçe dolar. Kısa aralıklar ise hemen doğrudur.",
         "data": {
           "today": "Bugün",
           "yesterday": "Dün",
@@ -106,7 +106,7 @@
           "month": "Bu ayın 1'inden itibaren.",
           "year": "1 Ocak'tan itibaren.",
           "target": "Uyumlu kabul edilen durumlar kümesi. Bunlardan herhangi birinde bulunmak sayılır. İzlenen durumlardan bağımsızdır — varlığın olabileceği herhangi bir durumu seçin. Yalnızca uyumluluk puanlaması etkinken kullanılır.",
-          "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya aştığında bir «Uyumlu» ikili sensör açılır. Eşiği atlamak için boş bırakın.",
+          "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya bu değeri aştığında \"Uyumlu\" ikili sensörü açılır. Eşiği atlamak için boş bırakın.",
           "min_state_duration": "İzlenen varlık bir duruma girip bu saniye sayısından daha hızlı çıkarsa, o kısa an yok sayılır — süresi bunun yerine önceki duruma eklenir ve ayrı bir değişiklik olarak sayılmaz. Titreşen veya zıplayan sensörleri filtrelemek için kullanın. Ne kadar kısa olursa olsun her değişikliği saymak için 0 olarak ayarlayın."
         }
       }
@@ -122,7 +122,7 @@
         "name": "Süre ({frame})"
       },
       "percent": {
-        "name": "Yüzde ({frame})"
+        "name": "İzlenen durumda % ({frame})"
       },
       "compliance": {
         "name": "Uyumluluk ({frame})"
@@ -133,10 +133,10 @@
     },
     "binary_sensor": {
       "currently_in_state": {
-        "name": "Şu anda durumda"
+        "name": "İzlenen bir durumda"
       },
       "compliant": {
-        "name": "Uyumlu"
+        "name": "Uyumlu ({frame})"
       }
     }
   },
@@ -151,7 +151,7 @@
   "issues": {
     "recorder_off": {
       "title": "Kaydedici kullanılamıyor",
-      "description": "Entity State Tracker, durum sürelerini hesaplamak için kaydediciye dayanır. Kaydedici kullanılamıyor, bu nedenle izleme bundan böyle yalnızca canlı birikime geri döner ve geçmiş geçmişi dolduramaz. Tam zaman aralığı geçmişini geri yüklemek için kaydedici entegrasyonunu etkinleştirin."
+      "description": "Entity State Tracker, durum sürelerini hesaplamak için kaydediciye dayanır. Kaydedici kullanılamadığından, izleme bundan böyle yalnızca canlı birikime geçer ve geçmiş verileri geriye dönük olarak dolduramaz. Tam zaman aralığı geçmişini geri yüklemek için kaydedici entegrasyonunu etkinleştirin."
     }
   }
 }

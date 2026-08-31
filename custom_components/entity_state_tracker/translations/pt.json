@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "A entidade cujas durações de estado serão medidas. Uma entidade por rastreador — aponte para um ajudante de grupo para agregar várias.",
-          "name": "Um nome amigável para este acompanhador. Deixe em branco para nomeá-lo segundo a entidade e o modo (por ex., \"Living Room (Specific States)\"). Isto define o nome do dispositivo/configuração; os IDs das entidades de sensor continuam a seguir a nomenclatura padrão. Pode criar vários acompanhadores para a mesma entidade."
+          "name": "Um nome amigável para este rastreador. Deixe em branco para nomeá-lo segundo a entidade e o modo (por ex., \"Living Room (Specific States)\"). Isto define o nome do dispositivo/configuração; os IDs das entidades de sensor continuam a seguir a nomenclatura padrão. Pode criar vários rastreadores para a mesma entidade."
         }
       },
       "mode": {
@@ -47,7 +47,7 @@
       },
       "frames": {
         "title": "Períodos",
-        "description": "Escolha quais períodos rastrear. Períodos mais longos do que a retenção do recorder preenchem-se ao longo do tempo.",
+        "description": "Escolha quais períodos rastrear. Os períodos longos (30 dias, mês, ano) não ficam completos de imediato: o recorder do Home Assistant só guarda alguns dias de histórico, por isso essas janelas começam parciais e preenchem-se dia a dia à medida que o rastreador regista os seus próprios dados. Os períodos curtos são precisos de imediato.",
         "data": {
           "today": "Hoje",
           "yesterday": "Ontem",
@@ -122,7 +122,7 @@
         "name": "Duração ({frame})"
       },
       "percent": {
-        "name": "Percentagem ({frame})"
+        "name": "% Num estado monitorizado ({frame})"
       },
       "compliance": {
         "name": "Conformidade ({frame})"
@@ -136,7 +136,7 @@
         "name": "Num estado monitorizado"
       },
       "compliant": {
-        "name": "Conforme"
+        "name": "Conforme ({frame})"
       }
     }
   },

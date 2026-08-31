@@ -47,7 +47,7 @@
       },
       "frames": {
         "title": "时间范围",
-        "description": "选择要跟踪的时间范围。长于记录器保留期的范围会随时间填充。",
+        "description": "选择要跟踪的时间范围。较长的范围（30 天、本月、今年）不会立即完整：Home Assistant 的记录器只保留几天的历史，因此这些窗口一开始是部分数据，并随着跟踪器记录自己的数据而逐日填充。较短的范围会立即准确。",
         "data": {
           "today": "今天",
           "yesterday": "昨天",
@@ -122,7 +122,7 @@
         "name": "时长（{frame}）"
       },
       "percent": {
-        "name": "百分比 ({frame})"
+        "name": "处于被跟踪状态百分比（{frame}）"
       },
       "compliance": {
         "name": "合规性 ({frame})"
@@ -136,7 +136,7 @@
         "name": "当前处于状态"
       },
       "compliant": {
-        "name": "合规"
+        "name": "合规（{frame}）"
       }
     }
   },

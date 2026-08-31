@@ -10,7 +10,7 @@
         },
         "data_description": {
           "entity": "Entītija, kuras stāvokļu ilgumi tiks mērīti. Viena entītija uz sekotāju — norādiet uz grupas palīgu, lai apkopotu vairākas.",
-          "name": "Draudzīgs nosaukums šim izsekotājam. Atstājiet tukšu, lai to nosauktu pēc entītijas un režīma (piem., “Living Room (Specific States)”). Tas iestata ierīces/konfigurācijas nosaukumu; sensoru entītiju ID joprojām atbilst standarta nosaukumu piešķiršanai. Vienai entītijai varat izveidot vairākus izsekotājus."
+          "name": "Ērts nosaukums šim sekotājam. Atstājiet tukšu, lai to nosauktu pēc entītijas un režīma (piem., “Living Room (Specific States)”). Tas iestata ierīces/konfigurācijas nosaukumu; sensoru entītiju ID joprojām atbilst standarta nosaukumu piešķiršanai. Vienai entītijai varat izveidot vairākus sekotājus."
         }
       },
       "mode": {
@@ -35,19 +35,19 @@
       },
       "compliance": {
         "title": "Kuri stāvokļi tiek uzskatīti par atbilstošiem?",
-        "description": "Atbilstība tiek vērtēta kā procentuālā daļa no katra laika perioda, ko entītija pavadīja kādā no šeit izvēlētajiem stāvokļiem. Šie stāvokļi ir neatkarīgi no izsekotajiem stāvokļiem — atbilstību varat vērtēt pēc stāvokļa, ko citādi neizsekojat (piemēram, izsekojiet, cik ilgi difuzors ir „on“, bet „off“ atzīmējiet kā atbilstošo/vēlamo stāvokli). Ērtībai iepriekš aizpildīts ar izsekotajiem stāvokļiem; mainiet brīvi. Varat arī ievadīt pielāgotu stāvokli, kas nav sarakstā.",
+        "description": "Atbilstība tiek vērtēta kā procentuālā daļa no katra laika posma, ko entītija pavadīja kādā no šeit izvēlētajiem stāvokļiem. Šie stāvokļi ir neatkarīgi no sekojamajiem stāvokļiem — atbilstību varat vērtēt pēc stāvokļa, kam citādi nesekojat (piemēram, sekojiet, cik ilgi difuzors ir „on“, bet „off“ atzīmējiet kā atbilstošo/vēlamo stāvokli). Ērtībai iepriekš aizpildīts ar sekojamajiem stāvokļiem; mainiet brīvi. Varat arī ievadīt pielāgotu stāvokli, kas nav sarakstā.",
         "data": {
           "target": "Atbilstošs(-i) stāvoklis(-ļi)",
           "target_threshold": "Atbilstības slieksnis (%, neobligāts)"
         },
         "data_description": {
-          "target": "Stāvokļi, kas tiek uzskatīti par atbilstošiem/vēlamiem. Tiek vērtēts jebkurā no tiem pavadītais laiks. Neatkarīgi no izsekotajiem stāvokļiem — izvēlieties jebkuru stāvokli, kādā entītija var būt.",
+          "target": "Stāvokļi, kas tiek uzskatīti par atbilstošiem/vēlamiem. Tiek vērtēts jebkurā no tiem pavadītais laiks. Neatkarīgi no sekojamajiem stāvokļiem — izvēlieties jebkuru stāvokli, kādā entītija var būt.",
           "target_threshold": "Ja iestatīts, binārais sensors „Atbilstošs” ieslēdzas, kad atbilstības procents sasniedz vai pārsniedz šo vērtību. Atstājiet tukšu, lai izlaistu slieksni."
         }
       },
       "frames": {
         "title": "Laika posmi",
-        "description": "Izvēlieties, kuriem laika posmiem sekot. Posmi, kas garāki par ierakstītāja saglabāšanu, aizpildās laika gaitā.",
+        "description": "Izvēlieties, kuriem laika posmiem sekot. Garie posmi (30 dienas, mēnesis, gads) nebūs pilnīgi uzreiz: Home Assistant ierakstītājs glabā tikai dažu dienu vēsturi, tāpēc šie logi sākumā ir daļēji un aizpildās dienu pēc dienas, kad sekotājs ieraksta savus datus. Īsie posmi ir precīzi nekavējoties.",
         "data": {
           "today": "Šodien",
           "yesterday": "Vakar",
@@ -55,7 +55,7 @@
           "week": "Šī nedēļa",
           "7d": "Pēdējās 7 dienas",
           "30d": "Pēdējās 30 dienas",
-          "month": "Šajā mēnesī",
+          "month": "Šis mēnesis",
           "year": "Šogad",
           "min_state_duration": "Minimālais stāvokļa ilgums (sekundes)"
         },
@@ -68,7 +68,7 @@
           "30d": "Pēdējās 30 pilnās vietējās dienas.",
           "month": "Kopš šī mēneša 1. datuma.",
           "year": "Kopš 1. janvāra.",
-          "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā izietuz ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu."
+          "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā iziet ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu."
         }
       }
     },
@@ -90,7 +90,7 @@
           "week": "Šī nedēļa",
           "7d": "Pēdējās 7 dienas",
           "30d": "Pēdējās 30 dienas",
-          "month": "Šajā mēnesī",
+          "month": "Šis mēnesis",
           "year": "Šogad",
           "target": "Mērķa stāvoklis (-ļi)",
           "target_threshold": "Atbilstības slieksnis (%, neobligāts)",
@@ -105,9 +105,9 @@
           "30d": "Pēdējās 30 pilnās vietējās dienas.",
           "month": "Kopš šī mēneša 1. datuma.",
           "year": "Kopš 1. janvāra.",
-          "target": "Par atbilstošiem uzskatīto stāvokļu kopa. Atrašanās jebkurā no tiem tiek ieskaitīta. Neatkarīgi no izsekotajiem stāvokļiem — izvēlieties jebkuru stāvokli, kādā entītija var būt. Izmanto tikai tad, kad ir iespējota atbilstības vērtēšana.",
+          "target": "Par atbilstošiem uzskatīto stāvokļu kopa. Atrašanās jebkurā no tiem tiek ieskaitīta. Neatkarīgi no sekojamajiem stāvokļiem — izvēlieties jebkuru stāvokli, kādā entītija var būt. Izmanto tikai tad, kad ir iespējota atbilstības vērtēšana.",
           "target_threshold": "Ja iestatīts, binārais sensors „Atbilstošs” ieslēdzas, kad atbilstības procents sasniedz vai pārsniedz šo vērtību. Atstājiet tukšu, lai izlaistu slieksni.",
-          "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā izietuz ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu."
+          "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā iziet ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu."
         }
       }
     },
@@ -122,7 +122,7 @@
         "name": "Ilgums ({frame})"
       },
       "percent": {
-        "name": "Procenti ({frame})"
+        "name": "Sekojamā stāvoklī % ({frame})"
       },
       "compliance": {
         "name": "Atbilstība ({frame})"
@@ -136,7 +136,7 @@
         "name": "Pašlaik stāvoklī"
       },
       "compliant": {
-        "name": "Atbilstošs"
+        "name": "Atbilstošs ({frame})"
       }
     }
   },

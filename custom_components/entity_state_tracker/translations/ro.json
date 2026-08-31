@@ -30,12 +30,12 @@
         },
         "data_description": {
           "states": "Stările entității a căror durată și procent sunt măsurate (de ex. on, heat, home). Precompletat cu stările observate recent.",
-          "enable_compliance": "Activează pentru a puncta cât din fiecare fereastră a petrecut entitatea într-o stare-țintă dorită, cu un prag opțional de trecut/picat."
+          "enable_compliance": "Activează pentru a puncta cât din fiecare fereastră a petrecut entitatea într-o stare-țintă dorită, cu un prag opțional de reușit/eșuat."
         }
       },
       "compliance": {
         "title": "Ce stări contează ca fiind conforme?",
-        "description": "Conformitatea este punctată ca procentul din fiecare interval de timp în care entitatea s-a aflat în oricare dintre stările pe care le alegeți aici. Aceste stări sunt independente de stările urmărite — puteți puncta conformitatea pe o stare pe care altfel nu o urmăriți (de exemplu, urmăriți cât timp un difuzor este „on“, dar marcați „off“ ca stare conformă/dorită). Precompletat cu stările urmărite pentru comoditate; modificați liber. Puteți introduce și o stare personalizată care nu este în listă.",
+        "description": "Conformitatea este punctată ca procentul din fiecare interval de timp în care entitatea s-a aflat în oricare dintre stările pe care le alegeți aici. Aceste stări sunt independente de stările urmărite — puteți puncta conformitatea pe o stare pe care altfel nu o urmăriți (de exemplu, urmăriți cât timp un difuzor este „on”, dar marcați „off” ca stare conformă/dorită). Precompletat cu stările urmărite pentru comoditate; modificați liber. Puteți introduce și o stare personalizată care nu este în listă.",
         "data": {
           "target": "Stare (stări) conformă(e)",
           "target_threshold": "Prag de conformitate (%, opțional)"
@@ -47,7 +47,7 @@
       },
       "frames": {
         "title": "Intervale de timp",
-        "description": "Alege ce intervale de timp să urmărești. Intervalele mai lungi decât retenția recorderului se completează în timp.",
+        "description": "Alege ce intervale de timp să urmărești. Intervalele lungi (30 de zile, lună, an) nu vor fi complete imediat: recorderul din Home Assistant păstrează doar câteva zile de istoric, așa că aceste ferestre încep parțiale și se completează zi de zi, pe măsură ce urmăritorul își înregistrează propriile date. Intervalele scurte sunt exacte imediat.",
         "data": {
           "today": "Astăzi",
           "yesterday": "Ieri",
@@ -122,7 +122,7 @@
         "name": "Durată ({frame})"
       },
       "percent": {
-        "name": "Procent ({frame})"
+        "name": "Procent în stare urmărită ({frame})"
       },
       "compliance": {
         "name": "Conformitate ({frame})"
@@ -136,7 +136,7 @@
         "name": "În prezent în stare"
       },
       "compliant": {
-        "name": "Conform"
+        "name": "Conform ({frame})"
       }
     }
   },

@@ -47,7 +47,7 @@
       },
       "frames": {
         "title": "Périodes",
-        "description": "Choisissez les périodes à suivre. Les périodes plus longues que la rétention du recorder se remplissent avec le temps.",
+        "description": "Choisissez les périodes à suivre. Les périodes longues (30 jours, ce mois-ci, cette année) ne seront pas complètes immédiatement : le recorder de Home Assistant ne conserve que quelques jours d'historique, donc ces fenêtres démarrent partielles et se complètent jour après jour à mesure que le suivi enregistre ses propres données. Les périodes courtes sont exactes immédiatement.",
         "data": {
           "today": "Aujourd'hui",
           "yesterday": "Hier",
@@ -122,7 +122,7 @@
         "name": "Durée ({frame})"
       },
       "percent": {
-        "name": "Pourcentage ({frame})"
+        "name": "Pourcentage dans un état suivi ({frame})"
       },
       "compliance": {
         "name": "Conformité ({frame})"
@@ -136,7 +136,7 @@
         "name": "Dans un état suivi"
       },
       "compliant": {
-        "name": "Conforme"
+        "name": "Conforme ({frame})"
       }
     }
   },
