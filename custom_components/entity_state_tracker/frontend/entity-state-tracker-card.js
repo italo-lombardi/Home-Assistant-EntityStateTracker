@@ -792,19 +792,7 @@ class EntityStateTrackerCard extends LitElement {
   _renderBars(sensors) {
     // Header rows above the bars: the tracked state(s) and the compliance target
     // (stated once, instead of repeating "(target ≥ N%)" on every row's chip).
-    const a0 = sensors[0]?.attrs || {};
-    const tracked = a0.tracked_states;
-    const threshold = a0.target_threshold;
-    const trackedLine =
-      Array.isArray(tracked) && tracked.length
-        ? html`<div class="bars-note">
-            Tracked ${tracked.length > 1 ? "states" : "state"}:
-            ${sortStates(tracked).join(", ")}
-          </div>`
-        : nothing;
-    const header = html`${trackedLine}${threshold != null
-      ? html`<div class="bars-note">Compliance target ≥ ${threshold}%</div>`
-      : nothing}`;
+    const header = this._metaHeader(sensors[0]?.attrs || {});
     const rows = sensors.map((s) => {
       const a = s.attrs || {};
       let pct;
@@ -955,6 +943,79 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // ---------------------------------------------------------------------------
+  // Shared header: tracked state(s) + compliance target, stated once. Used by
+  // the bars and pie views so both carry the same context line(s).
+  // ---------------------------------------------------------------------------
+  _metaHeader(a) {
+    const tracked = a.tracked_states;
+    const threshold = a.target_threshold;
+    const trackedLine =
+      Array.isArray(tracked) && tracked.length
+        ? html`<div class="bars-note">
+            Tracked ${tracked.length > 1 ? "states" : "state"}:
+            ${sortStates(tracked).join(", ")}
+          </div>`
+        : nothing;
+    return html`${trackedLine}${threshold != null
+      ? html`<div class="bars-note">Compliance target ≥ ${threshold}%</div>`
+      : nothing}`;
+  }
+
+  // ---------------------------------------------------------------------------
+  // Compliance gauge: a 2-slice donut answering "how much of the frame met the
+  // target set" — compliant (green) vs not (red), from the aggregate
+  // compliance_percent. Opt-in (config.compliance_pie), only meaningful when a
+  // target threshold is set. Never blank: a full green/red ring at 100%/0%.
+  // ---------------------------------------------------------------------------
+  _renderComplianceGauge(a) {
+    const pct = a.compliance_percent;
+    if (pct == null) return nothing; // N/A window — nothing to gauge.
+    const threshold = a.target_threshold;
+    const met = threshold == null || Number(pct) >= Number(threshold);
+    const green = "var(--success-color, #4caf50)";
+    const red = "var(--error-color, #f44336)";
+    // Two proportion-only slices (no seconds — compliance is a ratio). The met
+    // slice takes the compliance color; the remainder is neutral grey so a
+    // "compliant" gauge reads as green-on-grey, not green-vs-red alarm.
+    const p = Math.max(0, Math.min(100, Number(pct)));
+    const slices = [
+      { state: met ? "Compliant" : "Not compliant", secs: p, pct: p, color: met ? green : red },
+      { state: "shortfall", secs: 100 - p, pct: 100 - p, color: "var(--est-bar-bg)" },
+    ].filter((s) => s.secs >= 0.05);
+    const total = slices.reduce((n, s) => n + s.secs, 0) || 1;
+    const cx = 50, cy = 50, r = 40, inner = 24;
+    let angle = -Math.PI / 2;
+    const single = slices.length === 1;
+    const paths = slices.map((s) => {
+      const frac = s.secs / total;
+      if (single || frac >= 0.9999) {
+        return { d: this._ring(cx, cy, r, inner), color: s.color, evenodd: true };
+      }
+      const a0 = angle;
+      const a1 = angle + frac * 2 * Math.PI;
+      angle = a1;
+      return { d: this._arc(cx, cy, r, inner, a0, a1), color: s.color, evenodd: false };
+    });
+    return html`
+      <div class="frame-picker">
+        Compliance${threshold != null ? html` (target ≥ ${threshold}%)` : nothing}
+      </div>
+      <div class="pie-wrap">
+        ${this._pieSvg(paths)}
+        <div class="legend">
+          ${slices.map(
+            (s) => html`<div class="legend-item">
+              <span class="legend-swatch" style="background:${s.color}"></span>
+              <span>${s.state}</span>
+              <span class="legend-value">${fmtPct(s.pct)}</span>
+            </div>`
+          )}
+        </div>
+      </div>
+    `;
+  }
+
+  // ---------------------------------------------------------------------------
   // Pie/donut: one frame's breakdown. all-states → every state; specific →
   // in-state vs rest. Deterministic per-state color.
   // ---------------------------------------------------------------------------
@@ -1057,7 +1118,14 @@ class EntityStateTrackerCard extends LitElement {
     });
 
     const incomplete = this._incomplete(a);
+    // Opt-in compliance gauge below the state donut — only when the card asks
+    // for it AND the frame has a compliance figure to show.
+    const gauge =
+      this._config.compliance_pie && a.compliance_percent != null
+        ? this._renderComplianceGauge(a)
+        : nothing;
     return html`
+      ${this._metaHeader(a)}
       <div class="frame-picker">
         ${FRAME_LABELS[pick.frame] || pick.frame}${incomplete && a.data_start
           ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
@@ -1077,6 +1145,7 @@ class EntityStateTrackerCard extends LitElement {
           )}
         </div>
       </div>
+      ${gauge}
     `;
   }
 
@@ -1297,6 +1366,15 @@ class EntityStateTrackerCardEditor extends LitElement {
     return FRAME_ORDER;
   }
 
+  // True when the selected tracker has a compliance target — the gauge is
+  // meaningless without one, so the checkbox only appears then. Read off any
+  // frame sensor's live attrs (target_threshold rides on the duration sensor).
+  _hasTarget() {
+    return trackerFrameSensors(this.hass, this._config?.tracker_id).some(
+      (s) => this.hass?.states?.[s.entity_id]?.attributes?.target_threshold != null
+    );
+  }
+
   render() {
     if (!this._config) return html``;
 
@@ -1376,6 +1454,25 @@ class EntityStateTrackerCardEditor extends LitElement {
                 ${chart === "pie"
                   ? "Which frame the pie breaks down."
                   : "Optional — the table shows every enabled frame as a column."}
+              </div>
+            </div>`
+          : nothing}
+        ${chart === "pie" && this._hasTarget()
+          ? html`<div class="editor-row">
+              <label>
+                <input
+                  type="checkbox"
+                  ?checked=${!!this._config.compliance_pie}
+                  @change=${(e) =>
+                    this._updateConfig(
+                      "compliance_pie",
+                      e.target.checked || undefined
+                    )}
+                />
+                Show compliance gauge
+              </label>
+              <div class="editor-hint">
+                Adds a met/unmet donut below the state pie.
               </div>
             </div>`
           : nothing}
