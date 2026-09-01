@@ -564,6 +564,7 @@ const cardStyles = css`
   .pie-charts {
     display: flex;
     align-items: flex-start;
+    justify-content: center;
     gap: 24px;
     flex-wrap: wrap;
     padding-top: 8px;
@@ -574,6 +575,7 @@ const cardStyles = css`
   .pie-charts:has(.pie-frame) {
     flex-direction: column;
     flex-wrap: nowrap;
+    align-items: center;
   }
   .pie-frame {
     display: flex;
@@ -586,12 +588,15 @@ const cardStyles = css`
     padding-top: 16px;
   }
 
-  /* One chart column: caption, then the donut+legend group. */
+  /* One chart column: caption, then the donut+legend group. flex:0 0 auto so it
+     hugs its content inside a .pie-frame row instead of stretching to fill the
+     row and leaving a white gap to the right of the donut/legend. */
   .pie-chart {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    flex: 0 0 auto;
   }
 
   /* A solo (beside) chart left-aligns its column: when the row-legend wraps
