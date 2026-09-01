@@ -704,6 +704,18 @@ const cardStyles = css`
     font-weight: 700;
     margin-right: 3px;
   }
+
+  /* Frame rows carry the window totals; their state sub-rows sit beneath as a
+     drill-down. Weight the frame label and indent + lighten the sub-rows so the
+     nesting reads without a separate table. */
+  .frame-row td {
+    font-weight: 600;
+  }
+
+  .state-indent {
+    padding-left: 18px;
+    font-weight: 400;
+  }
 `;
 
 class EntityStateTrackerCard extends LitElement {
