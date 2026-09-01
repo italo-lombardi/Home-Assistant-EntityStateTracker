@@ -557,6 +557,23 @@ const cardStyles = css`
     padding-top: 8px;
   }
 
+  /* Multi-frame: frames stack vertically (one pie below the next). Each frame is
+     a .pie-frame row holding its donut + optional gauge side by side. */
+  .pie-charts:has(.pie-frame) {
+    flex-direction: column;
+    flex-wrap: nowrap;
+  }
+  .pie-frame {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .pie-frame + .pie-frame {
+    border-top: 1px solid var(--divider-color, #e0e0e0);
+    padding-top: 16px;
+  }
+
   /* One chart column: caption, then the donut+legend group. */
   .pie-chart {
     display: flex;
@@ -1420,8 +1437,9 @@ class EntityStateTrackerCard extends LitElement {
   // → in-state vs rest. Deterministic per-state color.
   // ---------------------------------------------------------------------------
   _renderPie(sensors) {
-    // One donut column (+ its optional compliance gauge) per frame, laid out by
-    // the .pie-charts flex. Solo frame keeps the legacy legend-beside look.
+    // One donut per frame. Solo → single donut (legacy legend-beside look);
+    // multi → frames stack vertically (one pie below the next), each frame's
+    // donut + optional gauge side by side in a .pie-frame row.
     const solo = sensors.length === 1;
     return html`
       ${this._metaHeader(sensors[0].attrs || {})}
@@ -1431,9 +1449,9 @@ class EntityStateTrackerCard extends LitElement {
     `;
   }
 
-  // Build one frame's donut column + optional compliance gauge (as flat
-  // .pie-charts children). `solo` puts the legend beside the donut (single-frame
-  // look); multi-frame stacks the legend below so columns stay narrow.
+  // Build one frame's donut column + optional compliance gauge. `solo` puts the
+  // legend beside the donut (single-frame look) and returns a flat column;
+  // multi-frame stacks the legend below and wraps in a .pie-frame row.
   _pieColumnFor(pick, solo) {
     const a = pick.attrs || {};
     // all-states reuses _breakdownSlices (sorted, gap-tailed); specific its own.
@@ -1505,8 +1523,8 @@ class EntityStateTrackerCard extends LitElement {
         : nothing}
     </div>`;
     // Legend beside only for a solo frame with no gauge (preserve single look);
-    // otherwise stack it below so multiple columns stay narrow and aligned.
-    return html`
+    // otherwise stack it below so multiple donuts stay narrow and aligned.
+    const column = html`
       ${this._pieColumn(
         stateCaption,
         paths,
@@ -1519,6 +1537,10 @@ class EntityStateTrackerCard extends LitElement {
       )}
       ${gauge}
     `;
+    // Multi-frame: wrap each frame's donut+gauge in a row so the frames stack
+    // vertically (one pie below the next) while a frame's own gauge stays beside
+    // its donut. Solo keeps the flat .pie-charts row (unchanged look).
+    return solo ? column : html`<div class="pie-frame">${column}</div>`;
   }
 
   // Build the donut <svg> as a real SVG-namespaced DOM node. Every element is
