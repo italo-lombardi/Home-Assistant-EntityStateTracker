@@ -1875,6 +1875,10 @@ class EntityStateTrackerCardEditor extends LitElement {
         (s) => s.frame
       )
     );
+    // Also surface any already-checked frame whose sensor has since been disabled
+    // in the tracker, so the checkbox stays visible (checked-but-unavailable)
+    // instead of silently vanishing on next editor open.
+    this._selectedFrames().forEach((f) => frames.add(f));
     if (frames.size > 0) return FRAME_ORDER.filter((f) => frames.has(f));
     return FRAME_ORDER;
   }
