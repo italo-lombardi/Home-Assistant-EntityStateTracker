@@ -202,7 +202,7 @@ async def test_get_version_with_card_appends_md5(hass: HomeAssistant) -> None:
     """When the card JS exists, the version gets an 8-char md5 suffix."""
     version = await hass.async_add_executor_job(_get_version)
     base, _, digest = version.partition("-")
-    assert base == "0.1.0"
+    assert base == "0.1.1"
     # The frontend card ships with the integration, so a hash is appended.
     assert len(digest) == 8
     assert all(c in "0123456789abcdef" for c in digest)
@@ -220,7 +220,7 @@ async def test_get_version_without_card(hass: HomeAssistant) -> None:
     with patch("pathlib.Path.exists", _fake_exists):
         version = await hass.async_add_executor_job(_get_version)
 
-    assert version == "0.1.0"
+    assert version == "0.1.1"
 
 
 # --------------------------------------------------------------------------- #
