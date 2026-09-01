@@ -365,8 +365,24 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         every visit survives — the common case, unchanged from before.
         """
         segments = split_visit_across_days(start, end, self.tz)
+        # Drop any segment on a day the backfill already baked wholesale
+        # (``day <= last_updated_day``). If HA restarts mid-visit, ``last_changed_ts``
+        # still points at the visit's real (pre-restart) start, so this fold spans
+        # local days the post-restart backfill already recomputed via
+        # ``replace_day`` — folding them again would ADD the pre-midnight seconds a
+        # second time, pushing a closed day's Σsecs past 86400 (the bucket-seam
+        # over-count L4 warns about). The backfill owns those days; the fold owns
+        # only days strictly after ``last_updated_day``.
+        true_start_day = segments[0][0] if segments else None
+        last_baked = ledger.last_updated_day
+        if last_baked is not None:
+            segments = [(day, secs) for day, secs in segments if day > last_baked]
         if not segments:
             return
+        # If the visit's true start day was dropped as already-backfilled, the
+        # surviving head is a continuation the backfill already counted — carry
+        # its seconds but open no new count on this day.
+        head_is_continuation = segments[0][0] != true_start_day
         total_secs = sum(secs for _, secs in segments)
 
         if self.min_state_duration > 0 and total_secs < self.min_state_duration:
@@ -392,8 +408,9 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             row = day_bucket.setdefault(state, {"secs": 0.0, "count": 0})
             row["secs"] = float(row["secs"]) + secs
             # Count the visit once, on the day it began (§6.2) — unless this
-            # visit coalesces into the preceding same-state visit.
-            if i == 0 and not coalesce:
+            # visit coalesces into the preceding same-state visit, or its true
+            # start day was already backfilled (head is a continuation).
+            if i == 0 and not coalesce and not head_is_continuation:
                 row["count"] = int(row["count"]) + 1
         # The predecessor for the next glitch is this visit's start-day bucket
         # (or the coalesced original, whose day we keep).
