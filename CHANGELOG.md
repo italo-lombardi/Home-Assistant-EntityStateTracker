@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2]
+
+### Added
+- **Editable tracked states** — the tracked-state set can now be changed after creation from the Edit Tracker (options) flow; history recomputes retroactively from the stored ledger, no migration.
+- **Per-state breakdown in specific mode** — the duration sensor now exposes a `breakdown_seconds` / `breakdown_pct` map for the tracked states, so the card's pie, bars, and table draw one slice/row per tracked state instead of a single summed slice.
+- **Chart tooltips** — hover (or tap) any bar segment, pie slice, or stacked region to see its state, duration, and percentage; edge-aware flipping keeps the tooltip on-screen.
+- **Table: frame totals + optional per-state breakdown** — the table now leads with a frame-total row per enabled frame (Frame · Duration · %, plus Compliance when a target is set). A new **Show per-state breakdown** option (off by default) adds a per-state table under each frame; a **Limit to 5 states per frame** option (on by default) folds surplus states into a "… N more" row.
+
+### Changed
+- **Stacked all-states bar** — the all-states bar is now stacked per observed state (each with its own tooltip) plus a derived "No data"/"In progress" tail for uncomputed time, instead of one dominant fill over a bare track.
+- **Zero-second state discovery** — a tracked state that opens a frame is seeded at zero seconds so it appears immediately, before any duration accrues.
+
 ## [0.1.1]
 
 ### Added

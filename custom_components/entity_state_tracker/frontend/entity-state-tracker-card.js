@@ -7,7 +7,7 @@
  * self-contained file, vanilla LitElement via the home-assistant-main prototype.
  */
 
-const CARD_VERSION = "0.1.0";
+const CARD_VERSION = "0.1.2";
 
 console.info(
   `%c ENTITY-STATE-TRACKER-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi `,
@@ -1602,38 +1602,61 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // ---------------------------------------------------------------------------
-  // Table — mode-aware, narrow by construction (never the old states×frames grid
-  // that overflowed):
-  //   * all-states  → rows = states of ONE frame (per-state is the story);
-  //                    cols State | Duration | %. Frame from config.frame.
-  //   * specific    → rows = every enabled FRAME (per-window is the story, same
-  //                    axis as the bars); cols Frame | Duration | %
-  //                    (+ Compliance when a target is set).
+  // Table — narrow by construction (never the old states×frames grid that
+  // overflowed). Always a frame-total table on top: one row per enabled frame
+  // (Frame | Duration | % [| Compliance when a specific target is set]) — the
+  // window-level story, same axis as the bars. Duration/% is the tracked total
+  // (specific) or the observed-state total = window − gap (all-states).
+  // Optionally, per-frame state groups below (config `show_states`, OFF by
+  // default): a heading + that frame's per-state rows via the mode's slice
+  // builder, states capped at 5 (`limit_states`, on unless false) with the rest
+  // folded into a "… N more" row.
   // ---------------------------------------------------------------------------
   _renderTable(sensors) {
     const isBreakdown = sensors.some((s) => this._isBreakdown(s));
-    return isBreakdown
-      ? this._renderStateTable(sensors)
-      : this._renderFrameTable(sensors);
-  }
-
-  // Specific mode: one row per enabled frame — the window comparison — followed
-  // by a per-state breakdown of ONE frame (the configured/first), so the table is
-  // as rich as the pie. Mode-aware: the frame comparison is unique to specific
-  // trackers; the per-state section mirrors the all-states state-table.
-  _renderFrameTable(sensors) {
-    const a0 = sensors[0]?.attrs || {};
     const hasCompliance = sensors.some(
       (s) => (s.attrs || {}).compliance_percent != null
     );
+    return html`
+      ${this._metaHeader(sensors[0]?.attrs || {})}
+      ${this._frameTotals(sensors, hasCompliance)}
+      ${this._config.show_states
+        ? sensors.map((s) =>
+            this._frameGroup(
+              s,
+              isBreakdown
+                ? this._breakdownSlices(s.attrs || {})
+                : this._specificSlices(s.attrs || {}, s)
+            )
+          )
+        : nothing}
+    `;
+  }
+
+  // Frame-total table: one row per frame. Total duration/% is the tracked total
+  // (specific: duration_seconds/percent) or the observed-state total for
+  // all-states (window − unaccounted, so "no data" time is excluded). Compliance
+  // column only when some frame carries a target.
+  _frameTotals(sensors, hasCompliance) {
     const rows = sensors.map((s) => {
       const a = s.attrs || {};
-      const secs =
-        a.duration_seconds != null ? Number(a.duration_seconds) : Number(s.state);
+      const isBd = this._isBreakdown(s);
+      let secs;
+      let pct;
+      if (isBd) {
+        const ws = Number(a.window_seconds) || 0;
+        const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
+        secs = Math.max(0, ws - gap);
+        pct = ws > 0 ? (secs / ws) * 100 : null;
+      } else {
+        secs =
+          (a.duration_seconds != null ? Number(a.duration_seconds) : Number(s.state)) || 0;
+        pct = a.percent;
+      }
       return {
         frame: s.frame,
-        secs: secs || 0,
-        pct: a.percent,
+        secs,
+        pct,
         compliance: a.compliance_percent,
         threshold: a.target_threshold,
         incomplete: this._incomplete(a),
@@ -1641,7 +1664,6 @@ class EntityStateTrackerCard extends LitElement {
       };
     });
     return html`
-      ${this._metaHeader(a0)}
       <table>
         <thead>
           <tr>
@@ -1674,8 +1696,7 @@ class EntityStateTrackerCard extends LitElement {
                     ${r.compliance != null && r.threshold != null
                       ? html`<span
                             class="compliance-mark"
-                            style="color:${Number(r.compliance) >=
-                            Number(r.threshold)
+                            style="color:${Number(r.compliance) >= Number(r.threshold)
                               ? "var(--success-color, #4caf50)"
                               : "var(--error-color, #f44336)"}"
                             >${Number(r.compliance) >= Number(r.threshold)
@@ -1689,26 +1710,72 @@ class EntityStateTrackerCard extends LitElement {
           })}
         </tbody>
       </table>
-      ${this._renderSpecificStateTable(sensors)}
     `;
   }
 
-  // Per-state breakdown of ONE frame for a specific tracker — the same story the
-  // pie tells (one row per tracked state + "other" + "No data"), rendered as a
-  // second table under the frame comparison. Rows/fillers computed identically to
-  // _renderPie's specific branch. Returns nothing when breakdown_seconds is absent
-  // (older backend / staged deploy) — the frame table alone still renders.
-  _renderSpecificStateTable(sensors) {
-    const pick = sensors.find((s) => s.frame === this._config.frame) || sensors[0];
-    const a = pick?.attrs || {};
-    if (a.breakdown_seconds == null) return nothing;
-    // Same slices as the pie (tracked states + "other" + "No data"), dust-filtered
-    // identically so a sub-second residue never renders a "0 s" row.
-    const rows = this._specificSlices(a, pick).filter((s) => s.secs >= 1 || !s.derived);
+  // Cap a frame's slices at 5 (unless limit_states is explicitly false). The
+  // derived tail ("other"/"No data"/"In progress") always stays visible — only
+  // real states are capped — so the overflow row folds surplus *states* into one
+  // "… (N more)" entry carrying their summed secs/pct, inserted before the tail.
+  _capSlices(slices) {
+    if (this._config.limit_states === false) return slices;
+    const CAP = 5;
+    const real = slices.filter((s) => !s.derived);
+    const tail = slices.filter((s) => s.derived);
+    if (real.length <= CAP) return slices;
+    const shown = real.slice(0, CAP);
+    const hidden = real.slice(CAP);
+    const secs = hidden.reduce((n, s) => n + (Number(s.secs) || 0), 0);
+    const pct = hidden.reduce((n, s) => n + (Number(s.pct) || 0), 0);
+    return [
+      ...shown,
+      {
+        state: `… ${hidden.length} more`,
+        secs,
+        pct,
+        color: "var(--est-bar-bg-alt)",
+        derived: true,
+      },
+      ...tail,
+    ];
+  }
 
+  // One frame's slices → <tr> per state (identical row markup across both modes).
+  // slices already dust-filtered + capped by the caller.
+  _stateRows(slices) {
+    return slices.map((s) => {
+      const { state, secs, pct, color } = s;
+      const w = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
+      const tint = `color-mix(in srgb, ${color} 22%, transparent)`;
+      const bar =
+        w > 0
+          ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
+          : "none";
+      return html`<tr>
+        <td class="state-col">
+          <span class="state-cell"
+            ><span class="legend-swatch" style="background:${color}"></span
+            >${state}</span
+          >
+        </td>
+        <td class="cell-primary">${fmtDuration(secs)}</td>
+        <td class="value-cell cell-secondary" style="--cell-bar:${bar}">
+          ${fmtPct(pct)}
+        </td>
+      </tr>`;
+    });
+  }
+
+  // One frame's per-state group: a heading (frame label + optional "since") then
+  // a State|Duration|% table of its (dust-filtered, capped) slices. Returns
+  // nothing for a frame with no breakdown data (staged-deploy guard).
+  _frameGroup(s, slices) {
+    const a = s.attrs || {};
+    const rows = this._capSlices(slices.filter((x) => x.secs >= 1 || !x.derived));
+    if (rows.length === 0) return nothing;
     return html`
       <div class="frame-picker">
-        ${FRAME_LABELS[pick.frame] || pick.frame}${this._incomplete(a) && a.data_start
+        ${FRAME_LABELS[s.frame] || s.frame}${this._incomplete(a) && a.data_start
           ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
           : nothing}
       </div>
@@ -1721,104 +1788,7 @@ class EntityStateTrackerCard extends LitElement {
           </tr>
         </thead>
         <tbody>
-          ${rows.map((s) => {
-            const { state, secs, pct, color } = s;
-            const w = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
-            const tint = `color-mix(in srgb, ${color} 22%, transparent)`;
-            const bar =
-              w > 0
-                ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
-                : "none";
-            return html`<tr>
-              <td class="state-col">
-                <span class="state-cell"
-                  ><span class="legend-swatch" style="background:${color}"></span
-                  >${state}</span
-                >
-              </td>
-              <td class="cell-primary">${fmtDuration(secs)}</td>
-              <td class="value-cell cell-secondary" style="--cell-bar:${bar}">
-                ${fmtPct(pct)}
-              </td>
-            </tr>`;
-          })}
-        </tbody>
-      </table>
-    `;
-  }
-
-  // All-states mode: one frame's per-state breakdown.
-  _renderStateTable(sensors) {
-    // Pick the configured frame, else the first available — identical to _renderPie.
-    const pick = sensors.find((s) => s.frame === this._config.frame) || sensors[0];
-    const a = pick.attrs || {};
-    const GAP_ROW = "__gap__"; // sentinel key, never a real state name
-
-    // Build (state → {secs, pct}) rows for this one frame.
-    const rowData = {};
-    const bs = a.breakdown_seconds || {};
-    const bp = a.breakdown_pct || {};
-    for (const st of Object.keys(bs)) rowData[st] = { secs: bs[st] || 0, pct: bp[st] };
-    // Trailing "No data" row for window time attributed to no state (mirrors the
-    // pie's grey slice), so the % column sums to ~100. Same >= 1s dust threshold
-    // as the pie's derived-slice filter, so a sub-second float residue never
-    // renders a "No data" row reading 0 s.
-    const gap = Number(a.unaccounted_seconds) || 0;
-    if (gap >= 1) {
-      const ws = Number(a.window_seconds) || 0;
-      rowData[GAP_ROW] = { secs: gap, pct: ws > 0 ? (gap / ws) * 100 : null };
-    }
-
-    // States by seconds desc; gap row always last.
-    const rows = Object.keys(rowData)
-      .filter((st) => st !== GAP_ROW)
-      .sort((x, y) => rowData[y].secs - rowData[x].secs);
-    if (rowData[GAP_ROW]) rows.push(GAP_ROW);
-    const rowLabel = (st) => (st === GAP_ROW ? "No data" : st);
-    const rowColor = (st) => (st === GAP_ROW ? "var(--est-bar-bg)" : stateColor(st));
-
-    return html`
-      ${this._metaHeader(a)}
-      <div class="frame-picker">
-        ${FRAME_LABELS[pick.frame] || pick.frame}${this._incomplete(a) &&
-        a.data_start
-          ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
-          : nothing}
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th class="state-col">State</th>
-            <th>Duration</th>
-            <th>%</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rows.map((st) => {
-            const { secs, pct } = rowData[st];
-            // Mini-bar behind the % cell: low-alpha state color, width = pct.
-            const w = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
-            const tint = `color-mix(in srgb, ${rowColor(st)} 22%, transparent)`;
-            const bar =
-              w > 0
-                ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
-                : "none";
-            return html`<tr>
-              <td class="state-col">
-                <span class="state-cell"
-                  ><span
-                    class="legend-swatch"
-                    style="background:${rowColor(st)}"
-                  ></span
-                  >${rowLabel(st)}</span
-                >
-              </td>
-              <td class="cell-primary">${fmtDuration(secs)}</td>
-              <td class="value-cell cell-secondary" style="--cell-bar:${bar}">
-                ${fmtPct(pct)}
-              </td>
-            </tr>`;
-          })}
+          ${this._stateRows(rows)}
         </tbody>
       </table>
     `;
@@ -1898,28 +1868,14 @@ class EntityStateTrackerCardEditor extends LitElement {
     );
   }
 
-  // True when the selected tracker is all-states mode. Keyed on tracked_states
-  // ABSENCE (mirrors _isBreakdown): specific-mode duration sensors now also carry
-  // breakdown_seconds, so that key no longer discriminates. The table frame picker
-  // only makes sense here: the all-states table shows ONE frame's states at a time,
-  // so it needs the picker; the specific-mode table renders every frame as its own
-  // row already.
-  _isAllStates() {
-    return trackerFrameSensors(this.hass, this._config?.tracker_id).some(
-      (s) => this.hass?.states?.[s.entity_id]?.attributes?.tracked_states == null
-    );
-  }
-
   render() {
     if (!this._config) return html``;
 
     const chart = this._config.chart || "bars";
-    // The `frame` picker charts ONE frame. Pie always breaks down one frame, so
-    // it always shows. The table is mode-aware: the all-states table lists one
-    // frame's states (needs the picker), but the specific-mode table renders
-    // every frame as a row (picker meaningless — hidden). Bars render every
-    // frame too, so no picker there either.
-    const showFrame = chart === "pie" || (chart === "table" && this._isAllStates());
+    // The `frame` picker charts ONE frame — only the pie does that. The table now
+    // groups every frame (states beneath each frame heading) and bars render every
+    // frame as a row, so neither needs the picker.
+    const showFrame = chart === "pie";
     const options = trackerOptions(this.hass);
 
     return html`
@@ -1963,7 +1919,7 @@ class EntityStateTrackerCardEditor extends LitElement {
           >
             <option value="bars" ?selected=${chart === "bars"}>Bars (one row per frame)</option>
             <option value="pie" ?selected=${chart === "pie"}>Pie (one frame's breakdown)</option>
-            <option value="table" ?selected=${chart === "table"}>Table (one frame's states)</option>
+            <option value="table" ?selected=${chart === "table"}>Table (states grouped by frame)</option>
           </select>
         </div>
         ${showFrame
@@ -2010,6 +1966,46 @@ class EntityStateTrackerCardEditor extends LitElement {
               <div class="editor-hint">
                 Adds a compliance-score gauge (green when the target is met,
                 red when not) beside the state pie.
+              </div>
+            </div>`
+          : nothing}
+        ${chart === "table"
+          ? html`<div class="editor-row">
+              <label>
+                <input
+                  type="checkbox"
+                  ?checked=${!!this._config.show_states}
+                  @change=${(e) =>
+                    this._updateConfig(
+                      "show_states",
+                      e.target.checked || undefined
+                    )}
+                />
+                Show per-state breakdown
+              </label>
+              <div class="editor-hint">
+                Adds a per-state table under each frame's total. Off by default —
+                the table shows frame totals only.
+              </div>
+            </div>`
+          : nothing}
+        ${chart === "table" && this._config.show_states
+          ? html`<div class="editor-row">
+              <label>
+                <input
+                  type="checkbox"
+                  ?checked=${this._config.limit_states !== false}
+                  @change=${(e) =>
+                    this._updateConfig(
+                      "limit_states",
+                      e.target.checked ? undefined : false
+                    )}
+                />
+                Limit to 5 states per frame
+              </label>
+              <div class="editor-hint">
+                Shows the top 5 states in each frame; the rest collapse into a
+                “… N more” row with their combined %.
               </div>
             </div>`
           : nothing}
