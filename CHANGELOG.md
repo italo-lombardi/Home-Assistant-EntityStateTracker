@@ -5,13 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1]
+
+### Added
+- **`last_week` and `last_month` frames** — the previous full Monday–Sunday week and the previous full calendar month, both closed windows (fixed start and end, ending at a past local midnight). Off by default; toggle per tracker in the config/options flow and the Lovelace card. Frame order pairs each with its to-date sibling: `week`, `last_week`, … `month`, `last_month`.
+
 ## [0.1.0]
 
 Initial release.
 
 ### Added
 - **Two tracking modes via config flow** — **specific-states** (pick the states to track) and **all-states** (auto-discover every state the entity visits). Selected from a menu; one entity per config entry. Multiple trackers on the same entity are allowed.
-- **Multi-frame output from one pick** — duration/breakdown sensors for `today`, `yesterday`, `24h`, `week`, `last_week`, `7d`, `30d`, `month`, `last_month`, and `year`, each toggleable. `today`, `yesterday`, `24h`, `7d` on by default; `week`, `last_week`, `30d`, `month`, `last_month`, `year` off by default (`week`/`last_week` to keep the default set lean, `30d`/`month`/`last_month`/`year` because they exceed recorder retention and fill in over time). `last_week` is the previous full Monday–Sunday week and `last_month` the previous full calendar month — both closed windows.
+- **Multi-frame output from one pick** — duration/breakdown sensors for `today`, `yesterday`, `24h`, `week`, `7d`, `30d`, `month`, and `year`, each toggleable. `today`, `yesterday`, `24h`, `7d` on by default; `week`, `30d`, `month`, `year` off by default (`week` to keep the default set lean, `30d`/`month`/`year` because they exceed recorder retention and fill in over time).
 - **Specific-states sensors** — a duration sensor per enabled frame (seconds, `device_class: duration`, `state_class: measurement`, suggested display in hours) with `percent`, `compliance_percent` (when a target is set), `tracked_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, and transition metrics as attributes.
 - **Compliance** (specific mode) — declare a target set of desired states, independent of the tracked states; the percentage becomes a compliance score. An optional 0–100 threshold spawns a `compliant` binary sensor that also exposes `compliance_percent`, `target`, `target_threshold`, and `frame` attributes.
 - **"In a Tracked State" binary sensor** — ON (On/Off) while the entity is in one of the tracked states.
