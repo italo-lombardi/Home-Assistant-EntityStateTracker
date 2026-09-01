@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import json
 import logging
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -11,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.setup import async_setup_component
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components import entity_state_tracker as _init_module
 from custom_components.entity_state_tracker import (
     _CARD_INSTALLED_KEY,
     CARD_URL,
@@ -24,6 +27,12 @@ from custom_components.entity_state_tracker import (
 from custom_components.entity_state_tracker.const import DOMAIN
 
 CARD_FILENAME = "entity-state-tracker-card.js"
+
+# Read the version straight from the manifest so a version bump never breaks
+# these tests (the point is to check _get_version reflects the manifest, not to
+# pin a literal). Same source _get_version reads.
+_MANIFEST = Path(_init_module.__file__).parent / "manifest.json"
+MANIFEST_VERSION = json.loads(_MANIFEST.read_text())["version"]
 
 
 @pytest.fixture(autouse=True)
@@ -202,7 +211,7 @@ async def test_get_version_with_card_appends_md5(hass: HomeAssistant) -> None:
     """When the card JS exists, the version gets an 8-char md5 suffix."""
     version = await hass.async_add_executor_job(_get_version)
     base, _, digest = version.partition("-")
-    assert base == "0.1.1"
+    assert base == MANIFEST_VERSION
     # The frontend card ships with the integration, so a hash is appended.
     assert len(digest) == 8
     assert all(c in "0123456789abcdef" for c in digest)
@@ -210,7 +219,7 @@ async def test_get_version_with_card_appends_md5(hass: HomeAssistant) -> None:
 
 async def test_get_version_without_card(hass: HomeAssistant) -> None:
     """When the card JS is missing, the bare manifest version is returned."""
-    real_exists = __import__("pathlib").Path.exists
+    real_exists = Path.exists
 
     def _fake_exists(self):
         if self.name == CARD_FILENAME:
@@ -220,7 +229,7 @@ async def test_get_version_without_card(hass: HomeAssistant) -> None:
     with patch("pathlib.Path.exists", _fake_exists):
         version = await hass.async_add_executor_job(_get_version)
 
-    assert version == "0.1.1"
+    assert version == MANIFEST_VERSION
 
 
 # --------------------------------------------------------------------------- #
