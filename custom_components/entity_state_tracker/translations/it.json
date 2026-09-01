@@ -100,7 +100,8 @@
           "year": "Quest'anno",
           "target": "Stato/i obiettivo",
           "target_threshold": "Soglia di conformità (%, opzionale)",
-          "min_state_duration": "Durata minima dello stato (secondi)"
+          "min_state_duration": "Durata minima dello stato (secondi)",
+          "states": "Stati da tracciare"
         },
         "data_description": {
           "today": "Dalla mezzanotte locale.",
@@ -115,13 +116,15 @@
           "year": "Dal 1° gennaio.",
           "target": "L'insieme degli stati considerati conformi. Trovarsi in uno qualsiasi di essi conta. Indipendente dagli stati monitorati: scegli qualsiasi stato che l'entità può assumere. Usato solo quando la valutazione della conformità è abilitata.",
           "target_threshold": "Se impostato, un sensore binario «Conforme» si attiva quando la percentuale di conformità raggiunge o supera questo valore. Lascia vuoto per saltare la soglia.",
-          "min_state_duration": "Se l'entità monitorata passa a uno stato e ne esce più velocemente di questo numero di secondi, quel breve momento viene ignorato — il suo tempo viene invece aggiunto allo stato precedente e non conta come cambiamento separato. Usalo per filtrare sensori che sfarfallano o rimbalzano. Imposta 0 per contare ogni cambiamento, per quanto breve."
+          "min_state_duration": "Se l'entità monitorata passa a uno stato e ne esce più velocemente di questo numero di secondi, quel breve momento viene ignorato — il suo tempo viene invece aggiunto allo stato precedente e non conta come cambiamento separato. Usalo per filtrare sensori che sfarfallano o rimbalzano. Imposta 0 per contare ogni cambiamento, per quanto breve.",
+          "states": "Gli stati dell'entità di cui vengono misurati durata e percentuale (es. on, heat, home). Precompilato con gli stati visti di recente."
         }
       }
     },
     "error": {
       "no_target_selected": "Seleziona almeno uno stato obiettivo, oppure disattiva il punteggio di conformità.",
-      "no_frames_selected": "Seleziona almeno un intervallo di tempo da tracciare."
+      "no_frames_selected": "Seleziona almeno un intervallo di tempo da tracciare.",
+      "no_states_selected": "Seleziona almeno uno stato da tracciare."
     }
   },
   "entity": {

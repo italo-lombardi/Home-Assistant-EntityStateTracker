@@ -100,7 +100,8 @@
           "year": "Bu yıl",
           "target": "Hedef durum(lar)",
           "target_threshold": "Uyumluluk eşiği (%, isteğe bağlı)",
-          "min_state_duration": "Minimum durum süresi (saniye)"
+          "min_state_duration": "Minimum durum süresi (saniye)",
+          "states": "İzlenecek durumlar"
         },
         "data_description": {
           "today": "Yerel gece yarısından itibaren.",
@@ -115,13 +116,15 @@
           "year": "1 Ocak'tan itibaren.",
           "target": "Uyumlu kabul edilen durumlar kümesi. Bunlardan herhangi birinde bulunmak sayılır. İzlenen durumlardan bağımsızdır — varlığın olabileceği herhangi bir durumu seçin. Yalnızca uyumluluk puanlaması etkinken kullanılır.",
           "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya bu değeri aştığında \"Uyumlu\" ikili sensörü açılır. Eşiği atlamak için boş bırakın.",
-          "min_state_duration": "İzlenen varlık bir duruma girip bu saniye sayısından daha hızlı çıkarsa, o kısa an yok sayılır — süresi bunun yerine önceki duruma eklenir ve ayrı bir değişiklik olarak sayılmaz. Titreşen veya zıplayan sensörleri filtrelemek için kullanın. Ne kadar kısa olursa olsun her değişikliği saymak için 0 olarak ayarlayın."
+          "min_state_duration": "İzlenen varlık bir duruma girip bu saniye sayısından daha hızlı çıkarsa, o kısa an yok sayılır — süresi bunun yerine önceki duruma eklenir ve ayrı bir değişiklik olarak sayılmaz. Titreşen veya zıplayan sensörleri filtrelemek için kullanın. Ne kadar kısa olursa olsun her değişikliği saymak için 0 olarak ayarlayın.",
+          "states": "Süresi ve yüzdesi ölçülen varlık durumları (örn. on, heat, home). Yakın zamanda görülen durumlarla önceden doldurulur."
         }
       }
     },
     "error": {
       "no_target_selected": "En az bir hedef durum seçin veya uyumluluk puanlamasını kapatın.",
-      "no_frames_selected": "İzlenecek en az bir zaman aralığı seçin."
+      "no_frames_selected": "İzlenecek en az bir zaman aralığı seçin.",
+      "no_states_selected": "İzlenecek en az bir durum seçin."
     }
   },
   "entity": {

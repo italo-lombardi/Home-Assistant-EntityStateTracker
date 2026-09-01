@@ -406,9 +406,11 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
 class EntityStateTrackerOptionsFlow(OptionsFlow):
     """Handle options for Entity State Tracker — within-mode edits only.
 
-    Editable: frames, min_state_duration, and (when compliance is enabled)
-    target / target_threshold. Entity, mode and the tracked-states set are
-    fixed — changing those means a new tracker.
+    Editable: frames, min_state_duration, the tracked-states set (specific mode),
+    and (when compliance is enabled) target / target_threshold. Entity and mode
+    are fixed — changing those means a new tracker. Editing tracked states
+    recomputes history retroactively (the ledger stores every state's duration;
+    tracked_states is only a read-time filter).
     """
 
     async def async_step_init(
@@ -426,6 +428,13 @@ class EntityStateTrackerOptionsFlow(OptionsFlow):
 
             if not any(flags.values()):
                 errors["base"] = "no_frames_selected"
+
+            if tracked:  # specific mode: tracked states are editable + required
+                states = [s.lower() for s in user_input.get(CONF_STATES, [])]
+                if not states:
+                    errors[CONF_STATES] = "no_states_selected"
+                else:
+                    options[CONF_STATES] = list(dict.fromkeys(states))
 
             if has_compliance:
                 target = [s.lower() for s in user_input.get(CONF_TARGET, [])]
@@ -456,6 +465,15 @@ class EntityStateTrackerOptionsFlow(OptionsFlow):
                 {frame: frame in DEFAULT_FRAMES for frame in FRAMES}, frame_current
             )
         )
+
+        if tracked:  # specific mode — all-states entries have no tracked set.
+            # Offer the current tracked set as options; custom_value=True still
+            # lets the user type any state not currently tracked. Editing this
+            # recomputes history retroactively (the ledger stores every state;
+            # tracked_states is only a read-time filter).
+            schema[vol.Optional(CONF_STATES, default=tracked)] = _seen_states_schema(
+                tracked
+            )
 
         if has_compliance:
             # The saved target may include states that are not tracked (the

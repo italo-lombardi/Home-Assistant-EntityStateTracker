@@ -100,7 +100,8 @@
           "year": "Enguany",
           "target": "Estat(s) objectiu",
           "target_threshold": "Llindar de compliment (%, opcional)",
-          "min_state_duration": "Durada mínima d'estat (segons)"
+          "min_state_duration": "Durada mínima d'estat (segons)",
+          "states": "Estats a seguir"
         },
         "data_description": {
           "today": "Des de la mitjanit local.",
@@ -115,13 +116,15 @@
           "year": "Des de l'1 de gener.",
           "target": "El conjunt d'estats considerats conformes. Estar en qualsevol d'ells compta. Independents dels estats seguits: trieu qualsevol estat en què pugui estar l'entitat. Només s'utilitza quan la puntuació de compliment està activada.",
           "target_threshold": "Si s'estableix, un sensor binari «Conforme» s'activa quan el percentatge de compliment assoleix o supera aquest valor. Deixeu-ho buit per ometre el llindar.",
-          "min_state_duration": "Si l'entitat seguida canvia a un estat i en surt més ràpid que aquest nombre de segons, aquest breu moment s'ignora — el seu temps s'afegeix a l'estat anterior i no compta com a canvi separat. Utilitzeu-ho per filtrar sensors que parpellegen o reboten. Poseu 0 per comptar cada canvi, per breu que sigui."
+          "min_state_duration": "Si l'entitat seguida canvia a un estat i en surt més ràpid que aquest nombre de segons, aquest breu moment s'ignora — el seu temps s'afegeix a l'estat anterior i no compta com a canvi separat. Utilitzeu-ho per filtrar sensors que parpellegen o reboten. Poseu 0 per comptar cada canvi, per breu que sigui.",
+          "states": "Els estats de l'entitat la durada i el percentatge dels quals es mesuren (p. ex. on, heat, home). Preomplert amb els estats vistos recentment."
         }
       }
     },
     "error": {
       "no_target_selected": "Seleccioneu almenys un estat objectiu, o desactiveu la puntuació de compliment.",
-      "no_frames_selected": "Seleccioneu almenys un període de temps a seguir."
+      "no_frames_selected": "Seleccioneu almenys un període de temps a seguir.",
+      "no_states_selected": "Seleccioneu almenys un estat a seguir."
     }
   },
   "entity": {

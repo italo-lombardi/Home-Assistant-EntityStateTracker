@@ -638,6 +638,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
                 target_states=self.target_states,
                 prior_dominant=prior_dominant,
                 ledger_upper_local_day=ledger_upper_local_day,
+                open_state=ledger.last_state,
             )
             self._warn_overflow(frame_key, result)
             frames[frame_key] = result

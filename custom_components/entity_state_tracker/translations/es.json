@@ -100,7 +100,8 @@
           "year": "Este año",
           "target": "Estado(s) objetivo",
           "target_threshold": "Umbral de cumplimiento (%, opcional)",
-          "min_state_duration": "Duración mínima de estado (segundos)"
+          "min_state_duration": "Duración mínima de estado (segundos)",
+          "states": "Estados a rastrear"
         },
         "data_description": {
           "today": "Desde la medianoche local.",
@@ -115,13 +116,15 @@
           "year": "Desde el 1 de enero.",
           "target": "El conjunto de estados considerados conformes. Estar en cualquiera de ellos cuenta. Independiente de los estados rastreados: elige cualquier estado que la entidad pueda tener. Solo se usa cuando la puntuación de cumplimiento está habilitada.",
           "target_threshold": "Si se establece, un sensor binario «Conforme» se activa cuando el porcentaje de cumplimiento alcanza o supera este valor. Déjalo vacío para omitir el umbral.",
-          "min_state_duration": "Si la entidad seguida cambia a un estado y sale de él más rápido que este número de segundos, ese breve momento se ignora — su tiempo se añade al estado anterior y no cuenta como un cambio separado. Úsalo para filtrar sensores que parpadean o rebotan. Ponlo en 0 para contar cada cambio, por breve que sea."
+          "min_state_duration": "Si la entidad seguida cambia a un estado y sale de él más rápido que este número de segundos, ese breve momento se ignora — su tiempo se añade al estado anterior y no cuenta como un cambio separado. Úsalo para filtrar sensores que parpadean o rebotan. Ponlo en 0 para contar cada cambio, por breve que sea.",
+          "states": "Los estados de la entidad cuya duración y porcentaje se miden (p. ej. on, heat, home). Precargados con los estados vistos recientemente."
         }
       }
     },
     "error": {
       "no_target_selected": "Selecciona al menos un estado objetivo, o desactiva la puntuación de cumplimiento.",
-      "no_frames_selected": "Selecciona al menos un periodo para rastrear."
+      "no_frames_selected": "Selecciona al menos un periodo para rastrear.",
+      "no_states_selected": "Selecciona al menos un estado para rastrear."
     }
   },
   "entity": {

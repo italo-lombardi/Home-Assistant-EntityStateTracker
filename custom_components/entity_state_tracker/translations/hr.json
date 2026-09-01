@@ -100,7 +100,8 @@
           "year": "Ove godine",
           "target": "Ciljno stanje (stanja)",
           "target_threshold": "Prag usklađenosti (%, neobavezno)",
-          "min_state_duration": "Najmanje trajanje stanja (sekunde)"
+          "min_state_duration": "Najmanje trajanje stanja (sekunde)",
+          "states": "Stanja za praćenje"
         },
         "data_description": {
           "today": "Od lokalne ponoći.",
@@ -115,13 +116,15 @@
           "year": "Od 1. siječnja.",
           "target": "Skup stanja koja se smatraju usklađenima. Boravak u bilo kojem od njih se broji. Neovisna o praćenim stanjima — odaberite bilo koje stanje u kojem entitet može biti. Koristi se samo kada je uključeno bodovanje usklađenosti.",
           "target_threshold": "Ako je postavljeno, binarni senzor „Usklađeno” uključuje se kada postotak usklađenosti dosegne ili premaši ovu vrijednost. Ostavi prazno za preskakanje praga.",
-          "min_state_duration": "Ako praćeni entitet prijeđe u stanje i izađe iz njega brže od ovoga broja sekundi, taj se kratki trenutak zanemaruje — njegovo se vrijeme umjesto toga dodaje prethodnom stanju i ne računa se kao zasebna promjena. Upotrijebite to za filtriranje treperavih ili poskakujućih senzora. Postavite na 0 da se broji svaka promjena, koliko god kratka bila."
+          "min_state_duration": "Ako praćeni entitet prijeđe u stanje i izađe iz njega brže od ovoga broja sekundi, taj se kratki trenutak zanemaruje — njegovo se vrijeme umjesto toga dodaje prethodnom stanju i ne računa se kao zasebna promjena. Upotrijebite to za filtriranje treperavih ili poskakujućih senzora. Postavite na 0 da se broji svaka promjena, koliko god kratka bila.",
+          "states": "Stanja entiteta čije se trajanje i postotak mjere (npr. on, heat, home). Unaprijed popunjeno nedavno viđenim stanjima."
         }
       }
     },
     "error": {
       "no_target_selected": "Odaberi barem jedno ciljno stanje ili isključi bodovanje usklađenosti.",
-      "no_frames_selected": "Odaberi barem jedno vremensko razdoblje za praćenje."
+      "no_frames_selected": "Odaberi barem jedno vremensko razdoblje za praćenje.",
+      "no_states_selected": "Odaberi barem jedno stanje za praćenje."
     }
   },
   "entity": {

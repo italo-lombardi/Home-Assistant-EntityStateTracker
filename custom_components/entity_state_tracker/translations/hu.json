@@ -100,7 +100,8 @@
           "year": "Ez az év",
           "target": "Célállapot(ok)",
           "target_threshold": "Megfelelőségi küszöb (%, opcionális)",
-          "min_state_duration": "Minimális állapotidőtartam (másodperc)"
+          "min_state_duration": "Minimális állapotidőtartam (másodperc)",
+          "states": "Követendő állapotok"
         },
         "data_description": {
           "today": "Helyi éjféltől.",
@@ -115,13 +116,15 @@
           "year": "Január 1-jétől.",
           "target": "A megfelelőnek tekintett állapotok halmaza. A bármelyikükben tartózkodás beleszámít. Függetlenek a követett állapotoktól — válasszon bármely állapotot, amelyben az entitás lehet. Csak akkor használatos, ha a megfelelőségpontozás engedélyezve van.",
           "target_threshold": "Ha be van állítva, egy „Megfelelő” bináris érzékelő bekapcsol, amikor a megfelelőségi százalék eléri vagy meghaladja ezt az értéket. Hagyja üresen a küszöb kihagyásához.",
-          "min_state_duration": "Ha a követett entitás gyorsabban vált egy állapotba és ki belőle, mint ennyi másodperc, ez a rövid pillanat figyelmen kívül marad — ideje a korábbi állapothoz adódik hozzá, és nem számít külön változásnak. Használja villódzó vagy pattogó érzékelők szűrésére. Állítsa 0-ra, hogy minden változás számítson, bármilyen rövid is."
+          "min_state_duration": "Ha a követett entitás gyorsabban vált egy állapotba és ki belőle, mint ennyi másodperc, ez a rövid pillanat figyelmen kívül marad — ideje a korábbi állapothoz adódik hozzá, és nem számít külön változásnak. Használja villódzó vagy pattogó érzékelők szűrésére. Állítsa 0-ra, hogy minden változás számítson, bármilyen rövid is.",
+          "states": "Az entitás állapotai, amelyek időtartamát és százalékát mérjük (pl. on, heat, home). Előre kitöltve a közelmúltban látott állapotokkal."
         }
       }
     },
     "error": {
       "no_target_selected": "Válasszon legalább egy célállapotot, vagy kapcsolja ki a megfelelőségi pontozást.",
-      "no_frames_selected": "Válasszon legalább egy követendő időszakot."
+      "no_frames_selected": "Válasszon legalább egy követendő időszakot.",
+      "no_states_selected": "Válasszon legalább egy követendő állapotot."
     }
   },
   "entity": {

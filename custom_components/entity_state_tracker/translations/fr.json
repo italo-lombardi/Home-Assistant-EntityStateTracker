@@ -100,7 +100,8 @@
           "year": "Cette année",
           "target": "État(s) cible(s)",
           "target_threshold": "Seuil de conformité (%, facultatif)",
-          "min_state_duration": "Durée d'état minimale (secondes)"
+          "min_state_duration": "Durée d'état minimale (secondes)",
+          "states": "États à suivre"
         },
         "data_description": {
           "today": "Depuis minuit local.",
@@ -115,13 +116,15 @@
           "year": "Depuis le 1er janvier.",
           "target": "L'ensemble des états considérés comme conformes. Se trouver dans l'un d'eux compte. Indépendant des états suivis — choisissez n'importe quel état que l'entité peut prendre. Utilisé uniquement lorsque l'évaluation de conformité est activée.",
           "target_threshold": "Si défini, un capteur binaire « Conforme » s'active lorsque le pourcentage de conformité atteint ou dépasse cette valeur. Laissez vide pour ignorer le seuil.",
-          "min_state_duration": "Si l'entité suivie passe dans un état puis en ressort plus vite que ce nombre de secondes, ce bref instant est ignoré — son temps est ajouté à l'état précédent et il ne compte pas comme un changement distinct. Utilisez-le pour filtrer les capteurs qui scintillent ou rebondissent. Réglez sur 0 pour compter chaque changement, aussi bref soit-il."
+          "min_state_duration": "Si l'entité suivie passe dans un état puis en ressort plus vite que ce nombre de secondes, ce bref instant est ignoré — son temps est ajouté à l'état précédent et il ne compte pas comme un changement distinct. Utilisez-le pour filtrer les capteurs qui scintillent ou rebondissent. Réglez sur 0 pour compter chaque changement, aussi bref soit-il.",
+          "states": "Les états d'entité dont la durée et le pourcentage sont mesurés (par ex. on, heat, home). Prérempli avec les états vus récemment."
         }
       }
     },
     "error": {
       "no_target_selected": "Sélectionnez au moins un état cible, ou désactivez le score de conformité.",
-      "no_frames_selected": "Sélectionnez au moins une période à suivre."
+      "no_frames_selected": "Sélectionnez au moins une période à suivre.",
+      "no_states_selected": "Sélectionnez au moins un état à suivre."
     }
   },
   "entity": {

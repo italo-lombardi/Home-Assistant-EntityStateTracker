@@ -100,7 +100,8 @@
           "year": "I år",
           "target": "Måltilstand(er)",
           "target_threshold": "Samsvarsterskel (%, valgfritt)",
-          "min_state_duration": "Minste tilstandsvarighet (sekunder)"
+          "min_state_duration": "Minste tilstandsvarighet (sekunder)",
+          "states": "Tilstander å spore"
         },
         "data_description": {
           "today": "Siden lokal midnatt.",
@@ -115,13 +116,15 @@
           "year": "Siden 1. januar.",
           "target": "Settet med tilstander som regnes som samsvarende. Å være i en av dem teller. Uavhengige av de sporede tilstandene — velg en hvilken som helst tilstand entiteten kan være i. Brukes bare når scoring av samsvar er aktivert.",
           "target_threshold": "Hvis satt, slås en binærsensor «Samsvarende» på når samsvarsprosenten når eller overstiger denne verdien. La stå tom for å hoppe over terskelen.",
-          "min_state_duration": "Hvis den sporede enheten går inn i en tilstand og ut igjen raskere enn dette antallet sekunder, ignoreres dette korte øyeblikket — tiden legges i stedet til den forrige tilstanden, og det teller ikke som en separat endring. Bruk det til å filtrere flimrende eller sprettende sensorer. Sett til 0 for å telle hver endring, uansett hvor kort."
+          "min_state_duration": "Hvis den sporede enheten går inn i en tilstand og ut igjen raskere enn dette antallet sekunder, ignoreres dette korte øyeblikket — tiden legges i stedet til den forrige tilstanden, og det teller ikke som en separat endring. Bruk det til å filtrere flimrende eller sprettende sensorer. Sett til 0 for å telle hver endring, uansett hvor kort.",
+          "states": "Enhetstilstandene hvis varighet og prosent måles (f.eks. on, heat, home). Forhåndsutfylt med tilstander som nylig er sett."
         }
       }
     },
     "error": {
       "no_target_selected": "Velg minst én måltilstand, eller slå av samsvarsscore.",
-      "no_frames_selected": "Velg minst ett tidsrom å spore."
+      "no_frames_selected": "Velg minst ett tidsrom å spore.",
+      "no_states_selected": "Velg minst én tilstand å spore."
     }
   },
   "entity": {

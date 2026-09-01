@@ -100,7 +100,8 @@
           "year": "I år",
           "target": "Måltillstånd",
           "target_threshold": "Efterlevnadströskel (%, valfritt)",
-          "min_state_duration": "Minsta tillståndslängd (sekunder)"
+          "min_state_duration": "Minsta tillståndslängd (sekunder)",
+          "states": "Tillstånd att spåra"
         },
         "data_description": {
           "today": "Sedan lokal midnatt.",
@@ -115,13 +116,15 @@
           "year": "Sedan den 1 januari.",
           "target": "Uppsättningen tillstånd som anses efterlevande. Att vara i något av dem räknas. Oberoende av de spårade tillstånden — välj vilket tillstånd som helst som entiteten kan vara i. Används endast när efterlevnadspoängsättning är aktiverad.",
           "target_threshold": "Om angivet slås en binär sensor ”Efterlevande” på när efterlevnadsprocenten når eller överstiger detta värde. Lämna tomt för att hoppa över tröskeln.",
-          "min_state_duration": "Om den spårade entiteten växlar till ett tillstånd och ut igen snabbare än detta antal sekunder ignoreras det korta ögonblicket — dess tid läggs istället till det föregående tillståndet och räknas inte som en separat ändring. Använd det för att filtrera flimrande eller studsande sensorer. Ställ in på 0 för att räkna varje ändring, hur kort den än är."
+          "min_state_duration": "Om den spårade entiteten växlar till ett tillstånd och ut igen snabbare än detta antal sekunder ignoreras det korta ögonblicket — dess tid läggs istället till det föregående tillståndet och räknas inte som en separat ändring. Använd det för att filtrera flimrande eller studsande sensorer. Ställ in på 0 för att räkna varje ändring, hur kort den än är.",
+          "states": "Entitetstillstånden vars varaktighet och procent mäts (t.ex. on, heat, home). Förifyllt med nyligen sedda tillstånd."
         }
       }
     },
     "error": {
       "no_target_selected": "Välj minst ett måltillstånd, eller stäng av efterlevnadspoäng.",
-      "no_frames_selected": "Välj minst en tidsperiod att spåra."
+      "no_frames_selected": "Välj minst en tidsperiod att spåra.",
+      "no_states_selected": "Välj minst ett tillstånd att spåra."
     }
   },
   "entity": {

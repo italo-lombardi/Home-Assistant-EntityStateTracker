@@ -100,7 +100,8 @@
           "year": "Šiais metais",
           "target": "Tikslinė (-ės) būsena (-os)",
           "target_threshold": "Atitikties slenkstis (%, neprivaloma)",
-          "min_state_duration": "Mažiausia būsenos trukmė (sekundės)"
+          "min_state_duration": "Mažiausia būsenos trukmė (sekundės)",
+          "states": "Sekamos būsenos"
         },
         "data_description": {
           "today": "Nuo vietinio vidurnakčio.",
@@ -115,13 +116,15 @@
           "year": "Nuo sausio 1 dienos.",
           "target": "Atitinkančiomis laikomų būsenų rinkinys. Buvimas bet kurioje iš jų įskaičiuojamas. Nepriklauso nuo sekamų būsenų — pasirinkite bet kurią būseną, kurioje objektas gali būti. Naudojama tik įjungus atitikties vertinimą.",
           "target_threshold": "Jei nustatyta, dvejetainis jutiklis „Atitinka“ įsijungia, kai atitikties procentas pasiekia arba viršija šią vertę. Palikite tuščią, kad praleistumėte slenkstį.",
-          "min_state_duration": "Jei stebimas objektas pereina į būseną ir iš jos išeina greičiau nei per tiek sekundžių, ta trumpa akimirka ignoruojama — jos laikas pridedamas prie ankstesnės būsenos ir neskaičiuojamas kaip atskiras pokytis. Naudokite tai mirgantiems arba šokinėjantiems jutikliams filtruoti. Nustatykite 0, kad būtų skaičiuojamas kiekvienas pokytis, kad ir koks trumpas."
+          "min_state_duration": "Jei stebimas objektas pereina į būseną ir iš jos išeina greičiau nei per tiek sekundžių, ta trumpa akimirka ignoruojama — jos laikas pridedamas prie ankstesnės būsenos ir neskaičiuojamas kaip atskiras pokytis. Naudokite tai mirgantiems arba šokinėjantiems jutikliams filtruoti. Nustatykite 0, kad būtų skaičiuojamas kiekvienas pokytis, kad ir koks trumpas.",
+          "states": "Objekto būsenos, kurių trukmė ir procentas matuojami (pvz., on, heat, home). Iš anksto užpildyta neseniai matytomis būsenomis."
         }
       }
     },
     "error": {
       "no_target_selected": "Pasirinkite bent vieną tikslinę būseną arba išjunkite atitikties vertinimą.",
-      "no_frames_selected": "Pasirinkite bent vieną stebimą laiko tarpsnį."
+      "no_frames_selected": "Pasirinkite bent vieną stebimą laiko tarpsnį.",
+      "no_states_selected": "Pasirinkite bent vieną stebimą būseną."
     }
   },
   "entity": {

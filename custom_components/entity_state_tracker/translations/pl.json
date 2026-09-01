@@ -100,7 +100,8 @@
           "year": "Ten rok",
           "target": "Stan(y) docelowy(e)",
           "target_threshold": "Próg zgodności (%, opcjonalnie)",
-          "min_state_duration": "Minimalny czas trwania stanu (sekundy)"
+          "min_state_duration": "Minimalny czas trwania stanu (sekundy)",
+          "states": "Stany do śledzenia"
         },
         "data_description": {
           "today": "Od lokalnej północy.",
@@ -115,13 +116,15 @@
           "year": "Od 1 stycznia.",
           "target": "Zbiór stanów uznawanych za zgodne. Przebywanie w którymkolwiek z nich jest liczone. Niezależne od stanów śledzonych — wybierz dowolny stan, w którym encja może się znajdować. Używane tylko, gdy włączone jest punktowanie zgodności.",
           "target_threshold": "Jeśli ustawiono, czujnik binarny „Zgodny” włącza się, gdy procent zgodności osiągnie tę wartość lub ją przekroczy. Pozostaw puste, aby pominąć próg.",
-          "min_state_duration": "Jeśli śledzona encja przechodzi w stan i wychodzi z niego szybciej niż ta liczba sekund, ta krótka chwila jest ignorowana — jej czas jest zamiast tego dodawany do poprzedniego stanu i nie liczy się jako osobna zmiana. Użyj tego do filtrowania migoczących lub odbijających czujników. Ustaw 0, aby liczyć każdą zmianę, jakkolwiek krótką."
+          "min_state_duration": "Jeśli śledzona encja przechodzi w stan i wychodzi z niego szybciej niż ta liczba sekund, ta krótka chwila jest ignorowana — jej czas jest zamiast tego dodawany do poprzedniego stanu i nie liczy się jako osobna zmiana. Użyj tego do filtrowania migoczących lub odbijających czujników. Ustaw 0, aby liczyć każdą zmianę, jakkolwiek krótką.",
+          "states": "Stany encji, których czas trwania i procent są mierzone (np. on, heat, home). Wstępnie wypełnione stanami widzianymi niedawno."
         }
       }
     },
     "error": {
       "no_target_selected": "Wybierz co najmniej jeden stan docelowy lub wyłącz ocenę zgodności.",
-      "no_frames_selected": "Wybierz co najmniej jeden przedział czasowy do śledzenia."
+      "no_frames_selected": "Wybierz co najmniej jeden przedział czasowy do śledzenia.",
+      "no_states_selected": "Wybierz co najmniej jeden stan do śledzenia."
     }
   },
   "entity": {

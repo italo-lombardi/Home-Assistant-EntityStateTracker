@@ -100,7 +100,8 @@
           "year": "This year",
           "target": "Target state(s)",
           "target_threshold": "Compliance threshold (%, optional)",
-          "min_state_duration": "Minimum state duration (seconds)"
+          "min_state_duration": "Minimum state duration (seconds)",
+          "states": "States to track"
         },
         "data_description": {
           "today": "Since local midnight.",
@@ -115,13 +116,15 @@
           "year": "Since 1 January.",
           "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
           "target_threshold": "If set, a 'Compliant' binary sensor turns on when the compliance percentage meets or exceeds this value. Leave empty to skip the threshold.",
-          "min_state_duration": "If the tracked entity flips into a state and back out again faster than this many seconds, that brief moment is ignored — its time is added to the previous state instead, and it does not count as a separate change. Use it to filter flickering or bouncing sensors. Set to 0 to count every change, however short."
+          "min_state_duration": "If the tracked entity flips into a state and back out again faster than this many seconds, that brief moment is ignored — its time is added to the previous state instead, and it does not count as a separate change. Use it to filter flickering or bouncing sensors. Set to 0 to count every change, however short.",
+          "states": "The entity states whose duration and percentage are measured (e.g. on, heat, home). Prefilled with states seen recently."
         }
       }
     },
     "error": {
       "no_target_selected": "Select at least one target state, or turn off compliance scoring.",
-      "no_frames_selected": "Select at least one time frame to track."
+      "no_frames_selected": "Select at least one time frame to track.",
+      "no_states_selected": "Select at least one state to track."
     }
   },
   "entity": {

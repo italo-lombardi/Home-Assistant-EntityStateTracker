@@ -396,6 +396,7 @@ def compute_frame(
     target_states: list[str] | None,
     prior_dominant: str | None,
     ledger_upper_local_day: str | None = None,
+    open_state: str | None = None,
 ) -> FrameResult:
     """Combine recorder (recent) + ledger (long) into one :class:`FrameResult`.
 
@@ -452,6 +453,16 @@ def compute_frame(
         _ledger_days_before(ledger_daily, window_start_local_day, upper_local_day),
     )
     _merge_block_maps(combined, {k: dict(v) for k, v in recent_blocks.items()})
+
+    # Seed the live open state at zero seconds so a JUST-discovered state renders
+    # a (0s) slice the instant it appears, instead of vanishing until it accrues
+    # measurable time — its open block spans [now, now) and accumulate_blocks
+    # drops the zero-width block, so it never reaches ``combined`` on its own.
+    # Only on frames whose window reaches now (end_utc == now for open-ended
+    # frames); a closed frame (yesterday/last_week/…) must not gain a phantom
+    # current-state slice. setdefault never overwrites a real accrued value.
+    if open_state is not None and end_utc >= now:
+        combined.setdefault(open_state, {"secs": 0.0, "count": 0})
 
     breakdown_seconds = {name: row["secs"] for name, row in combined.items()}
     counts = {name: int(row["count"]) for name, row in combined.items()}
