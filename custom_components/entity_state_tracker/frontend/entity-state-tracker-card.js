@@ -1602,68 +1602,24 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // ---------------------------------------------------------------------------
-  // Table — narrow by construction (never the old states×frames grid that
-  // overflowed). Always a frame-total table on top: one row per enabled frame
-  // (Frame | Duration | % [| Compliance when a specific target is set]) — the
-  // window-level story, same axis as the bars. Duration/% is the tracked total
-  // (specific) or the observed-state total = window − gap (all-states).
-  // Optionally, per-frame state groups below (config `show_states`, OFF by
-  // default): a heading + that frame's per-state rows via the mode's slice
-  // builder, states capped at 5 (`limit_states`, on unless false) with the rest
-  // folded into a "… N more" row.
+  // Table — one narrow table, one row per enabled frame (Frame | Duration | %
+  // [| Compliance when a specific target is set]) — the window-level story, same
+  // axis as the bars. Duration/% is the tracked total (specific) or the
+  // observed-state total = window − gap (all-states).
+  // With `show_states` on (OFF by default), each frame row is immediately
+  // followed by indented per-state sub-rows in the SAME table — that frame's
+  // states drilled down beneath it. States come from the mode's slice builder,
+  // capped at 5 per frame (`limit_states`, on unless false) with the rest folded
+  // into a "… N more" row.
   // ---------------------------------------------------------------------------
   _renderTable(sensors) {
     const isBreakdown = sensors.some((s) => this._isBreakdown(s));
     const hasCompliance = sensors.some(
       (s) => (s.attrs || {}).compliance_percent != null
     );
+    const showStates = !!this._config.show_states;
     return html`
       ${this._metaHeader(sensors[0]?.attrs || {})}
-      ${this._frameTotals(sensors, hasCompliance)}
-      ${this._config.show_states
-        ? sensors.map((s) =>
-            this._frameGroup(
-              s,
-              isBreakdown
-                ? this._breakdownSlices(s.attrs || {})
-                : this._specificSlices(s.attrs || {}, s)
-            )
-          )
-        : nothing}
-    `;
-  }
-
-  // Frame-total table: one row per frame. Total duration/% is the tracked total
-  // (specific: duration_seconds/percent) or the observed-state total for
-  // all-states (window − unaccounted, so "no data" time is excluded). Compliance
-  // column only when some frame carries a target.
-  _frameTotals(sensors, hasCompliance) {
-    const rows = sensors.map((s) => {
-      const a = s.attrs || {};
-      const isBd = this._isBreakdown(s);
-      let secs;
-      let pct;
-      if (isBd) {
-        const ws = Number(a.window_seconds) || 0;
-        const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
-        secs = Math.max(0, ws - gap);
-        pct = ws > 0 ? (secs / ws) * 100 : null;
-      } else {
-        secs =
-          (a.duration_seconds != null ? Number(a.duration_seconds) : Number(s.state)) || 0;
-        pct = a.percent;
-      }
-      return {
-        frame: s.frame,
-        secs,
-        pct,
-        compliance: a.compliance_percent,
-        threshold: a.target_threshold,
-        incomplete: this._incomplete(a),
-        since: a.data_start,
-      };
-    });
-    return html`
       <table>
         <thead>
           <tr>
@@ -1674,43 +1630,74 @@ class EntityStateTrackerCard extends LitElement {
           </tr>
         </thead>
         <tbody>
-          ${rows.map((r) => {
-            const w = r.pct == null ? 0 : Math.max(0, Math.min(100, Number(r.pct)));
-            const tint = `color-mix(in srgb, var(--est-accent) 22%, transparent)`;
-            const bar =
-              w > 0
-                ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
-                : "none";
-            return html`<tr>
-              <td class="state-col">
-                ${FRAME_LABELS[r.frame] || r.frame}${r.incomplete && r.since
-                  ? html`<span class="since">since ${fmtDate(r.since)}</span>`
-                  : nothing}
-              </td>
-              <td class="cell-primary">${fmtDuration(r.secs)}</td>
-              <td class="value-cell cell-secondary" style="--cell-bar:${bar}">
-                ${fmtPct(r.pct)}
-              </td>
-              ${hasCompliance
-                ? html`<td class="cell-secondary">
-                    ${r.compliance != null && r.threshold != null
-                      ? html`<span
-                            class="compliance-mark"
-                            style="color:${Number(r.compliance) >= Number(r.threshold)
-                              ? "var(--success-color, #4caf50)"
-                              : "var(--error-color, #f44336)"}"
-                            >${Number(r.compliance) >= Number(r.threshold)
-                              ? "✓"
-                              : "✗"}</span
-                          >${fmtPct(r.compliance)}`
-                      : fmtPct(r.compliance)}
-                  </td>`
-                : nothing}
-            </tr>`;
+          ${sensors.map((s) => {
+            const stateRows = showStates
+              ? this._capSlices(
+                  (isBreakdown
+                    ? this._breakdownSlices(s.attrs || {})
+                    : this._specificSlices(s.attrs || {}, s)
+                  ).filter((x) => x.secs >= 1 || !x.derived)
+                )
+              : [];
+            return html`${this._frameRow(s, hasCompliance)}${this._stateSubRows(
+              stateRows,
+              hasCompliance
+            )}`;
           })}
         </tbody>
       </table>
     `;
+  }
+
+  // One frame's total row. Total duration/% is the tracked total (specific:
+  // duration_seconds/percent) or the observed-state total for all-states
+  // (window − unaccounted, so "no data" time is excluded).
+  _frameRow(s, hasCompliance) {
+    const a = s.attrs || {};
+    let secs;
+    let pct;
+    if (this._isBreakdown(s)) {
+      const ws = Number(a.window_seconds) || 0;
+      const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
+      secs = Math.max(0, ws - gap);
+      pct = ws > 0 ? (secs / ws) * 100 : null;
+    } else {
+      secs =
+        (a.duration_seconds != null ? Number(a.duration_seconds) : Number(s.state)) || 0;
+      pct = a.percent;
+    }
+    const compliance = a.compliance_percent;
+    const threshold = a.target_threshold;
+    const w = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
+    const tint = `color-mix(in srgb, var(--est-accent) 22%, transparent)`;
+    const bar =
+      w > 0
+        ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
+        : "none";
+    return html`<tr class="frame-row">
+      <td class="state-col">
+        ${FRAME_LABELS[s.frame] || s.frame}${this._incomplete(a) && a.data_start
+          ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
+          : nothing}
+      </td>
+      <td class="cell-primary">${fmtDuration(secs)}</td>
+      <td class="value-cell cell-secondary" style="--cell-bar:${bar}">
+        ${fmtPct(pct)}
+      </td>
+      ${hasCompliance
+        ? html`<td class="cell-secondary">
+            ${compliance != null && threshold != null
+              ? html`<span
+                    class="compliance-mark"
+                    style="color:${Number(compliance) >= Number(threshold)
+                      ? "var(--success-color, #4caf50)"
+                      : "var(--error-color, #f44336)"}"
+                    >${Number(compliance) >= Number(threshold) ? "✓" : "✗"}</span
+                  >${fmtPct(compliance)}`
+              : fmtPct(compliance)}
+          </td>`
+        : nothing}
+    </tr>`;
   }
 
   // Cap a frame's slices at 5 (unless limit_states is explicitly false). The
@@ -1740,9 +1727,11 @@ class EntityStateTrackerCard extends LitElement {
     ];
   }
 
-  // One frame's slices → <tr> per state (identical row markup across both modes).
-  // slices already dust-filtered + capped by the caller.
-  _stateRows(slices) {
+  // A frame's state slices → indented sub-rows in the SAME table (a drill-down
+  // beneath the frame row). Same three/four columns as the frame row; the state
+  // name is indented + swatched so it reads as nested. slices already
+  // dust-filtered + capped by the caller.
+  _stateSubRows(slices, hasCompliance) {
     return slices.map((s) => {
       const { state, secs, pct, color } = s;
       const w = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
@@ -1751,9 +1740,9 @@ class EntityStateTrackerCard extends LitElement {
         w > 0
           ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
           : "none";
-      return html`<tr>
+      return html`<tr class="state-subrow">
         <td class="state-col">
-          <span class="state-cell"
+          <span class="state-cell state-indent"
             ><span class="legend-swatch" style="background:${color}"></span
             >${state}</span
           >
@@ -1762,36 +1751,9 @@ class EntityStateTrackerCard extends LitElement {
         <td class="value-cell cell-secondary" style="--cell-bar:${bar}">
           ${fmtPct(pct)}
         </td>
+        ${hasCompliance ? html`<td></td>` : nothing}
       </tr>`;
     });
-  }
-
-  // One frame's per-state group: a heading (frame label + optional "since") then
-  // a State|Duration|% table of its (dust-filtered, capped) slices. Returns
-  // nothing for a frame with no breakdown data (staged-deploy guard).
-  _frameGroup(s, slices) {
-    const a = s.attrs || {};
-    const rows = this._capSlices(slices.filter((x) => x.secs >= 1 || !x.derived));
-    if (rows.length === 0) return nothing;
-    return html`
-      <div class="frame-picker">
-        ${FRAME_LABELS[s.frame] || s.frame}${this._incomplete(a) && a.data_start
-          ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
-          : nothing}
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th class="state-col">State</th>
-            <th>Duration</th>
-            <th>%</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${this._stateRows(rows)}
-        </tbody>
-      </table>
-    `;
   }
 }
 
