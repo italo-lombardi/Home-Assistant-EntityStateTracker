@@ -108,6 +108,18 @@ function sortStates(states) {
   });
 }
 
+// Effective frame selection for a card config: the `frames` array, or the legacy
+// single `frame` string, normalized to FRAME_ORDER. Empty = all frames. Shared by
+// the card renderer and the editor so the two never drift.
+function selectedFrames(config) {
+  const raw = Array.isArray(config.frames)
+    ? config.frames
+    : config.frame
+      ? [config.frame]
+      : [];
+  return FRAME_ORDER.filter((f) => raw.includes(f));
+}
+
 // -----------------------------------------------------------------------------
 // Deterministic per-state color.
 //
@@ -823,16 +835,9 @@ class EntityStateTrackerCard extends LitElement {
     return out;
   }
 
-  // Frames the card is configured to show: the new multi-select `frames` array,
-  // or the legacy single `frame` string (back-compat), else none = all frames.
-  // Kept in FRAME_ORDER so render/label order is stable regardless of click order.
+  // Frames the card is configured to show (see module-level selectedFrames).
   _selectedFrames() {
-    const raw = Array.isArray(this._config.frames)
-      ? this._config.frames
-      : this._config.frame
-        ? [this._config.frame]
-        : [];
-    return FRAME_ORDER.filter((f) => raw.includes(f));
+    return selectedFrames(this._config);
   }
 
   _framesToShow(sensors) {
@@ -1440,6 +1445,8 @@ class EntityStateTrackerCard extends LitElement {
     // One donut per frame. Solo → single donut (legacy legend-beside look);
     // multi → frames stack vertically (one pie below the next), each frame's
     // donut + optional gauge side by side in a .pie-frame row.
+    // solo is on the POST-filter count: one frame checked out of many → solo
+    // (legend beside, flat), same as a tracker that only has one frame enabled.
     const solo = sensors.length === 1;
     return html`
       ${this._metaHeader(sensors[0].attrs || {})}
@@ -1875,12 +1882,7 @@ class EntityStateTrackerCardEditor extends LitElement {
   // Effective selected frames: the multi-select `frames` array, or the legacy
   // single `frame` string (back-compat), else none = all. FRAME_ORDER-normalized.
   _selectedFrames() {
-    const raw = Array.isArray(this._config.frames)
-      ? this._config.frames
-      : this._config.frame
-        ? [this._config.frame]
-        : [];
-    return FRAME_ORDER.filter((f) => raw.includes(f));
+    return selectedFrames(this._config);
   }
 
   // Toggle one frame in the selection, write it back as `frames`, and drop the
@@ -1890,8 +1892,8 @@ class EntityStateTrackerCardEditor extends LitElement {
     const next = this._selectedFrames().filter((x) => x !== f);
     if (on) next.push(f);
     const ordered = FRAME_ORDER.filter((x) => next.includes(x));
-    this._config = { ...this._config, frame: undefined };
-    this._updateConfig("frames", ordered.length ? ordered : undefined);
+    // One update: write `frames` and drop the legacy `frame` key together.
+    this._updateConfig({ frames: ordered.length ? ordered : undefined, frame: undefined });
   }
 
   // True when the selected tracker has a compliance target — the gauge is
@@ -2047,9 +2049,12 @@ class EntityStateTrackerCardEditor extends LitElement {
     `;
   }
 
+  // key,value for one field, or a patch object for several at once (undefined
+  // values are stripped either way).
   _updateConfig(key, value) {
     if (!this._config) return;
-    const newConfig = { ...this._config, [key]: value };
+    const patch = typeof key === "object" ? key : { [key]: value };
+    const newConfig = { ...this._config, ...patch };
     Object.keys(newConfig).forEach((k) => {
       if (newConfig[k] === undefined) delete newConfig[k];
     });
