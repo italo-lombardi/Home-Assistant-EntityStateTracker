@@ -1752,7 +1752,7 @@ class EntityStateTrackerCard extends LitElement {
         w > 0
           ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
           : "none";
-      return html`<tr class="state-subrow">
+      return html`<tr>
         <td class="state-col">
           <span class="state-cell state-indent"
             ><span class="legend-swatch" style="background:${color}"></span
