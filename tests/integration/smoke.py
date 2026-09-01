@@ -28,7 +28,7 @@ own config entries via the REST config-flow — no hardcoded entity IDs from the
 live HA. Every EST entity is discovered via the entity-registry websocket by its
 predictable unique_id (``<entry_id>_<frame>_<metric>``), so no entity_id guessing.
 
-Edge cases covered (EC1-EC16, plus sub-checks). See tests/integration/README.md.
+Edge cases covered (EC1-EC27, plus sub-checks). See tests/integration/README.md.
 """
 
 from __future__ import annotations
@@ -2216,6 +2216,159 @@ def ec25_count_once_live_fold():
     return entry, eid
 
 
+def ec26_editable_tracked_states():
+    """EC26: options flow edits the tracked-state SET (specific mode) and history
+    recomputes retroactively (PR #20 editable tracked states).
+
+    EC22 covers editing the compliance target set + min_state_duration; the
+    tracked-state set edit is otherwise untested. Track only 'on', dwell in both
+    'on' and 'off', then options-flow add 'off' to the tracked set. After reload
+    the duration sensor's `tracked_states` attr includes 'off' AND its
+    tracked-only `breakdown_seconds` gains an 'off' key computed from the stored
+    ledger (retroactive — 'off' time dwelt BEFORE the edit is now attributed),
+    proving the recompute is not merely forward-looking.
+    """
+    print(
+        "\n=== EC26: options flow edits tracked-state set → retroactive recompute ===",
+        flush=True,
+    )
+    eid = make_entity("edstates", "on")
+    entry = create_tracker(
+        eid, "specific_states", states=["on"], frames={"today": True}
+    )
+    reg = wait_entities(entry, min_count=1)
+    dur = eid_for(entry, "today", M_DURATION, reg)
+    chk("EC26 duration sensor exists before edit", dur is not None, True)
+
+    # Dwell in 'off' (untracked) for a bit, then back to 'on'. This 'off' time is
+    # recorded but NOT attributed while 'off' is untracked.
+    ss(eid, "off")
+    time.sleep(5 if FAST else 8)
+    ss(eid, "on")
+    time.sleep(2)
+
+    # Before edit: 'off' is not a tracked-breakdown key.
+    before = gs(dur).get("attributes", {}).get("breakdown_seconds", {})
+    chk(
+        "EC26 'off' absent from tracked breakdown before edit",
+        "off" in before,
+        False,
+        f"breakdown_seconds={before}",
+    )
+
+    # Options flow: add 'off' to the tracked set (keep 'today').
+    r = api("POST", "/api/config/config_entries/options/flow", {"handler": entry})
+    fid = r["flow_id"]
+    assert r.get("step_id") == "init", f"expected init step, got {r}"
+    body = {
+        "today": True,
+        "yesterday": False,
+        "24h": False,
+        "7d": False,
+        "30d": False,
+        "week": False,
+        "last_week": False,
+        "month": False,
+        "last_month": False,
+        "year": False,
+        "min_state_duration": 0,
+        "states": ["on", "off"],
+    }
+    r2 = api("POST", f"/api/config/config_entries/options/flow/{fid}", body)
+    chk("EC26 options flow created entry", r2.get("type"), "create_entry")
+
+    # After reload: tracked_states includes 'off'. Re-resolve eid each poll — a
+    # reload can rename the entity.
+    def _tracked():
+        e = eid_for(entry, "today", M_DURATION)
+        st = (gs_safe(e) if e else None) or {}
+        return sorted(st.get("attributes", {}).get("tracked_states") or [])
+
+    got = wait_for(_tracked, ["off", "on"], timeout=WAIT_FOR_TIMEOUT)
+    chk("EC26 tracked_states updated to [off, on]", got, ["off", "on"])
+
+    # Retroactive: 'off' now appears as a tracked-breakdown key with the ledger's
+    # pre-edit 'off' seconds attributed (>= 0; key presence is the guarantee).
+    def _has_off():
+        e = eid_for(entry, "today", M_DURATION)
+        st = (gs_safe(e) if e else None) or {}
+        return "off" in (st.get("attributes", {}).get("breakdown_seconds") or {})
+
+    has_off = wait_until(_has_off, timeout=WAIT_FOR_TIMEOUT)
+    e = eid_for(entry, "today", M_DURATION)
+    after = (gs_safe(e) or {}).get("attributes", {}).get("breakdown_seconds", {})
+    chk(
+        "EC26 'off' present in tracked breakdown after edit (retroactive recompute)",
+        has_off,
+        True,
+        f"breakdown_seconds={after}",
+    )
+
+
+def ec27_specific_breakdown_all_tracked_keyed():
+    """EC27: specific duration sensor exposes a tracked-only breakdown_seconds /
+    breakdown_pct map keyed by EVERY tracked state — including states not yet
+    visited, seeded at zero (PR #20 zero-second discovery + PR #21 per-state
+    specific breakdown).
+
+    A specific tracker on states [on, off] whose entity has only ever been 'on'
+    must still list 'off' as a breakdown key (value 0), so the card draws one
+    slice per tracked state from first render instead of the key popping in only
+    once the state is first entered.
+    """
+    print(
+        "\n=== EC27: specific breakdown_seconds keyed for all tracked states (zero-seed) ===",
+        flush=True,
+    )
+    eid = make_entity("specbd", "on")
+    entry = create_tracker(
+        eid, "specific_states", states=["on", "off"], frames={"today": True}
+    )
+    reg = wait_entities(entry, min_count=1)
+    dur = eid_for(entry, "today", M_DURATION, reg)
+    chk("EC27 duration sensor exists", dur is not None, True)
+
+    # Dwell only in 'on'; never enter 'off'.
+    time.sleep(4 if FAST else 6)
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
+
+    def _keys():
+        return sorted(
+            (gs(dur).get("attributes", {}).get("breakdown_seconds") or {}).keys()
+        )
+
+    keys = wait_for(_keys, ["off", "on"], timeout=WAIT_FOR_TIMEOUT)
+    attrs = gs(dur).get("attributes", {})
+    bd = attrs.get("breakdown_seconds", {})
+    bp = attrs.get("breakdown_pct", {})
+    chk(
+        "EC27 breakdown_seconds keyed for all tracked states [off, on]",
+        keys,
+        ["off", "on"],
+        f"breakdown_seconds={bd}",
+    )
+    chk(
+        "EC27 unvisited 'off' seeded at zero seconds",
+        int(bd.get("off", -1)),
+        0,
+        f"breakdown_seconds={bd}",
+    )
+    chk(
+        "EC27 breakdown_pct keyed for all tracked states too",
+        sorted(bp.keys()),
+        ["off", "on"],
+        f"breakdown_pct={bp}",
+    )
+    # breakdown_seconds must be tracked-only — never leak a non-tracked state.
+    chk(
+        "EC27 breakdown_seconds is tracked-only (no extra keys)",
+        set(bd.keys()) <= {"on", "off"},
+        True,
+        f"breakdown_seconds={bd}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -2276,6 +2429,12 @@ def main():
 
         if ec_enabled(25):
             ec25_count_once_live_fold()
+
+        if ec_enabled(26):
+            ec26_editable_tracked_states()
+
+        if ec_enabled(27):
+            ec27_specific_breakdown_all_tracked_keyed()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
