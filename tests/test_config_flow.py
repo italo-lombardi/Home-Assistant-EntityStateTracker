@@ -642,7 +642,11 @@ async def test_options_no_compliance_edit(hass: HomeAssistant) -> None:
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        _frames_input("today", "7d", **{CONF_MIN_STATE_DURATION: 30, CONF_STATES: ["heat", "auto"]}),
+        _frames_input(
+            "today",
+            "7d",
+            **{CONF_MIN_STATE_DURATION: 30, CONF_STATES: ["heat", "auto"]},
+        ),
     )
     assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
     opts = result["data"]
@@ -710,7 +714,14 @@ async def test_options_compliance_fields_and_edit(hass: HomeAssistant) -> None:
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        _frames_input("today", **{CONF_TARGET: ["Auto"], CONF_TARGET_THRESHOLD: 90, CONF_STATES: ["heat", "auto"]}),
+        _frames_input(
+            "today",
+            **{
+                CONF_TARGET: ["Auto"],
+                CONF_TARGET_THRESHOLD: 90,
+                CONF_STATES: ["heat", "auto"],
+            },
+        ),
     )
     assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_TARGET] == ["auto"]  # lowercased
@@ -727,7 +738,8 @@ async def test_options_compliance_no_threshold_default(hass: HomeAssistant) -> N
     assert CONF_TARGET_THRESHOLD in keys
 
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], _frames_input("today", **{CONF_TARGET: ["heat"], CONF_STATES: ["heat"]})
+        result["flow_id"],
+        _frames_input("today", **{CONF_TARGET: ["heat"], CONF_STATES: ["heat"]}),
     )
     assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_TARGET] == ["heat"]
@@ -740,7 +752,8 @@ async def test_options_compliance_empty_target_error(hass: HomeAssistant) -> Non
     entry.add_to_hass(hass)
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], _frames_input("today", **{CONF_TARGET: [], CONF_STATES: ["heat"]})
+        result["flow_id"],
+        _frames_input("today", **{CONF_TARGET: [], CONF_STATES: ["heat"]}),
     )
     assert result["step_id"] == "init"
     assert result["errors"] == {CONF_TARGET: "no_target_selected"}
@@ -755,7 +768,9 @@ async def test_options_no_frames_and_no_target_both_error(
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        _frames_input(**{CONF_TARGET: [], CONF_STATES: ["heat"]}),  # no frames, no target
+        _frames_input(
+            **{CONF_TARGET: [], CONF_STATES: ["heat"]}
+        ),  # no frames, no target
     )
     assert result["step_id"] == "init"
     assert result["errors"]["base"] == "no_frames_selected"
