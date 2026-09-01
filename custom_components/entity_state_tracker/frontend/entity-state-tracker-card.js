@@ -1468,7 +1468,7 @@ class EntityStateTrackerCard extends LitElement {
     // (legend beside, flat), same as a tracker that only has one frame enabled.
     const solo = sensors.length === 1;
     return html`
-      ${this._metaHeader(sensors[0].attrs || {})}
+      ${this._metaHeader(sensors[0]?.attrs || {})}
       <div class="pie-charts">
         ${sensors.map((s) => this._pieColumnFor(s, solo))}
       </div>
