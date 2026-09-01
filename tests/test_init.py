@@ -219,7 +219,7 @@ async def test_get_version_with_card_appends_md5(hass: HomeAssistant) -> None:
 
 async def test_get_version_without_card(hass: HomeAssistant) -> None:
     """When the card JS is missing, the bare manifest version is returned."""
-    real_exists = __import__("pathlib").Path.exists
+    real_exists = Path.exists
 
     def _fake_exists(self):
         if self.name == CARD_FILENAME:
