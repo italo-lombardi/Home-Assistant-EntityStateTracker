@@ -607,7 +607,11 @@ async def test_live_fold_splits_across_midnight_counts_once(
     ledger = c._ledger
     assert ledger is not None
     # Visit "on" from 06:30Z (23:30 06-09 PDT) to 07:30Z (00:30 06-10 PDT) —
-    # straddling the 07:00Z local midnight, 3600 s each side.
+    # straddling the 07:00Z local midnight, 1800 s each side.
+    # No backfill seam (last_updated_day None): the fold owns both days, so it
+    # writes each half. (When backfill HAS baked the start day, the fold skips it
+    # — see test_live_fold_skips_already_backfilled_days.)
+    ledger.last_updated_day = None
     ledger.last_state = "on"
     ledger.last_changed_ts = _utc(2026, 6, 10, 6, 30).isoformat()
 
@@ -621,6 +625,44 @@ async def test_live_fold_splits_across_midnight_counts_once(
     assert ledger.daily["2026-06-10"]["on"]["count"] == 0  # continuation
     assert ledger.daily["2026-06-09"]["on"]["secs"] == pytest.approx(1800.0)
     assert ledger.daily["2026-06-10"]["on"]["secs"] == pytest.approx(1800.0)
+    await hass.async_block_till_done()
+    await c.async_shutdown()
+
+
+async def test_live_fold_skips_already_backfilled_days(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """Restart mid-straddle: the pre-restart day is backfilled, so the fold must
+    NOT re-add its seconds (the bucket-seam over-count L4 warned about).
+
+    ``last_changed_ts`` still points at the visit's real pre-restart start, but
+    ``last_updated_day`` shows the backfill already baked 2026-06-09 wholesale.
+    The fold owns only 2026-06-10 forward: 06-09 keeps its backfilled value
+    untouched, 06-10 gets the post-midnight seconds with no new count.
+    """
+    now = _utc(2026, 6, 10, 8, 0)
+    c = await _prime(hass, all_states_config_entry, now, patch_recorder)
+    ledger = c._ledger
+    assert ledger is not None
+    # Backfill already owns 06-09 (recorder value: on = 3600 s pre-midnight, 1 visit).
+    ledger.last_updated_day = "2026-06-09"
+    ledger.daily["2026-06-09"] = {"on": {"secs": 3600.0, "count": 1}}
+    # Same visit as the straddle test: 06:30Z→07:30Z, 1800 s each side of 07:00Z.
+    ledger.last_state = "on"
+    ledger.last_changed_ts = _utc(2026, 6, 10, 6, 30).isoformat()
+
+    event = _state_event("binary_sensor.front_door", "off", _utc(2026, 6, 10, 7, 30))
+    with patch.object(c._debouncer, "async_call", new_callable=AsyncMock):
+        c._handle_state_change(event)
+
+    # 06-09 untouched (no double count of the pre-midnight seconds).
+    assert ledger.daily["2026-06-09"]["on"]["secs"] == pytest.approx(3600.0)
+    assert ledger.daily["2026-06-09"]["on"]["count"] == 1
+    # 06-10 gets only the post-midnight tail, as a continuation (count 0).
+    assert ledger.daily["2026-06-10"]["on"]["secs"] == pytest.approx(1800.0)
+    assert ledger.daily["2026-06-10"]["on"]["count"] == 0
     await hass.async_block_till_done()
     await c.async_shutdown()
 
