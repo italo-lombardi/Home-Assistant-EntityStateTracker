@@ -2256,7 +2256,9 @@ def ec26_editable_tracked_states():
         f"breakdown_seconds={before}",
     )
 
-    # Options flow: add 'off' to the tracked set (keep 'today').
+    # Options flow: set the tracked set to [on, off]. The frame body is a full
+    # reset (today on, every other frame off) — the assertions only need the
+    # today duration sensor, so the other frames' on/off state is irrelevant.
     r = api("POST", "/api/config/config_entries/options/flow", {"handler": entry})
     fid = r["flow_id"]
     assert r.get("step_id") == "init", f"expected init step, got {r}"
@@ -2328,9 +2330,9 @@ def ec27_specific_breakdown_all_tracked_keyed():
     dur = eid_for(entry, "today", M_DURATION, reg)
     chk("EC27 duration sensor exists", dur is not None, True)
 
-    # Dwell only in 'on'; never enter 'off'.
+    # Dwell only in 'on'; never enter 'off'. wait_for below polls the sensor, so
+    # no explicit update_entity is needed — the coordinator refreshes on its own.
     time.sleep(4 if FAST else 6)
-    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
 
     def _keys():
         return sorted(
