@@ -1208,7 +1208,9 @@ def ec11_options_flow_frame_toggle():
         "24h": True,
         "7d": True,
         "30d": False,
+        "last_week": False,
         "month": False,
+        "last_month": False,
         "year": False,
         "min_state_duration": 0,
     }
@@ -1707,9 +1709,11 @@ _FRAME_SLUG_TAIL = {
     "today": "today",
     "yesterday": "yesterday",
     "24h": "last_24_hours",
+    "last_week": "last_week",
     "7d": "last_7_days",
     "30d": "last_30_days",
     "month": "this_month",
+    "last_month": "last_month",
     "year": "this_year",
 }
 

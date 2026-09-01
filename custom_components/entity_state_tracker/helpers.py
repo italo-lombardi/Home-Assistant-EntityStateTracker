@@ -28,9 +28,11 @@ _FRAME_LABELS: dict[str, str] = {
     "yesterday": "Yesterday",
     "24h": "Last 24 hours",
     "week": "This week",
+    "last_week": "Last week",
     "7d": "Last 7 days",
     "30d": "Last 30 days",
     "month": "This month",
+    "last_month": "Last month",
     "year": "This year",
 }
 
