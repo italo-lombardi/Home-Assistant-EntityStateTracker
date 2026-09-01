@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3]
+
+### Added
+- **Multi-frame picker on every card type** — the card editor now has a **Frames** checklist (pick any subset of the tracker's frames), applied to bars, pie, and table alike. Pie draws one donut per selected frame; bars/table limit their rows to the picked frames. No selection = all frames. Replaces the pie-only single-frame dropdown; a card still carrying the legacy `frame:` key keeps working and migrates on first edit.
+
+### Changed
+- **Table/pie/bars states sorted by share, descending** — per-state rows and slices now lead with the biggest state instead of sorting alphabetically, so the table reads top-down by percentage and the table's top-5 cap keeps the states that actually matter.
+
 ## [0.1.2]
 
 ### Added

@@ -7,7 +7,7 @@
  * self-contained file, vanilla LitElement via the home-assistant-main prototype.
  */
 
-const CARD_VERSION = "0.1.2";
+const CARD_VERSION = "0.1.3";
 
 console.info(
   `%c ENTITY-STATE-TRACKER-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi `,
@@ -806,9 +806,21 @@ class EntityStateTrackerCard extends LitElement {
     return out;
   }
 
+  // Frames the card is configured to show: the new multi-select `frames` array,
+  // or the legacy single `frame` string (back-compat), else none = all frames.
+  // Kept in FRAME_ORDER so render/label order is stable regardless of click order.
+  _selectedFrames() {
+    const raw = Array.isArray(this._config.frames)
+      ? this._config.frames
+      : this._config.frame
+        ? [this._config.frame]
+        : [];
+    return FRAME_ORDER.filter((f) => raw.includes(f));
+  }
+
   _framesToShow(sensors) {
-    const filter = this._config.frames;
-    if (!Array.isArray(filter) || filter.length === 0) return sensors;
+    const filter = this._selectedFrames();
+    if (filter.length === 0) return sensors;
     return sensors.filter((s) => filter.includes(s.frame));
   }
 
@@ -1331,14 +1343,18 @@ class EntityStateTrackerCard extends LitElement {
     const inSecs = Object.values(bs).reduce((n, v) => n + (Number(v) || 0), 0);
     const denom = ws > 0 ? ws : inSecs + gap;
     const pctOf = (secs) => (denom > 0 ? (secs / denom) * 100 : null);
-    const slices = sortStates(Object.keys(bs)).map((state) => ({
-      state,
-      secs: Number(bs[state]) || 0,
-      pct: bp[state] != null ? bp[state] : pctOf(Number(bs[state]) || 0),
-      color: stateColor(state),
-      count: counts[state] != null ? counts[state] : null,
-      avg: avgs[state] != null ? avgs[state] : null,
-    }));
+    const slices = Object.keys(bs)
+      .map((state) => ({
+        state,
+        secs: Number(bs[state]) || 0,
+        pct: bp[state] != null ? bp[state] : pctOf(Number(bs[state]) || 0),
+        color: stateColor(state),
+        count: counts[state] != null ? counts[state] : null,
+        avg: avgs[state] != null ? avgs[state] : null,
+      }))
+      // Biggest first, so the table/pie/bars lead with the dominant state and
+      // the top-5 cap keeps the states that actually matter.
+      .sort((x, y) => y.secs - x.secs);
     if (gap > 0) {
       slices.push({
         state: a.has_gap ? "No data" : "In progress",
@@ -1359,11 +1375,14 @@ class EntityStateTrackerCard extends LitElement {
     let inSlices;
     let inSecs;
     if (bs != null) {
-      inSlices = sortStates(tracked).map((state) => ({
-        state,
-        secs: Number(bs[state]) || 0,
-        color: stateColor(state),
-      }));
+      inSlices = tracked
+        .map((state) => ({
+          state,
+          secs: Number(bs[state]) || 0,
+          color: stateColor(state),
+        }))
+        // Biggest first (see _breakdownSlices) — % descending in the table.
+        .sort((x, y) => y.secs - x.secs);
       inSecs = inSlices.reduce((n, s) => n + s.secs, 0);
     } else {
       // pick.state is unit-converted to hours by HA (unit-ambiguous); prefer the
@@ -1397,47 +1416,34 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // ---------------------------------------------------------------------------
-  // Pie/donut: one frame's breakdown. all-states → every state; specific →
-  // in-state vs rest. Deterministic per-state color.
+  // Pie/donut: one donut per selected frame. all-states → every state; specific
+  // → in-state vs rest. Deterministic per-state color.
   // ---------------------------------------------------------------------------
   _renderPie(sensors) {
-    // Pick the configured frame, else the first available.
-    const pick =
-      sensors.find((s) => s.frame === this._config.frame) || sensors[0];
+    // One donut column (+ its optional compliance gauge) per frame, laid out by
+    // the .pie-charts flex. Solo frame keeps the legacy legend-beside look.
+    const solo = sensors.length === 1;
+    return html`
+      ${this._metaHeader(sensors[0].attrs || {})}
+      <div class="pie-charts">
+        ${sensors.map((s) => this._pieColumnFor(s, solo))}
+      </div>
+    `;
+  }
+
+  // Build one frame's donut column + optional compliance gauge (as flat
+  // .pie-charts children). `solo` puts the legend beside the donut (single-frame
+  // look); multi-frame stacks the legend below so columns stay narrow.
+  _pieColumnFor(pick, solo) {
     const a = pick.attrs || {};
-    let slices;
-    if (this._isBreakdown(pick)) {
-      const bs = a.breakdown_seconds || {};
-      slices = Object.keys(bs).map((state) => ({
-        state,
-        secs: bs[state],
-        pct: (a.breakdown_pct || {})[state],
-        color: stateColor(state),
-      }));
-      // Trailing grey slice for window time attributed to no state, so the
-      // donut visibly sums to 100. "No data" when the window predates our
-      // history, else "In progress" (a transient open-state lag). Guarded on
-      // the attr being present (falsy/absent on older backends). Same NaN-safe
-      // coercion as the specific-mode branch (Math.max(0, …||0)).
-      const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
-      if (gap > 0) {
-        const ws = Number(a.window_seconds) || 0;
-        slices.push({
-          state: a.has_gap ? "No data" : "In progress",
-          secs: gap,
-          pct: ws > 0 ? (gap / ws) * 100 : null,
-          color: "var(--est-bar-bg)",
-          derived: true, // computed filler, not a recorded state → dust-filterable
-        });
-      }
-    } else {
-      slices = this._specificSlices(a, pick);
-    }
+    // all-states reuses _breakdownSlices (sorted, gap-tailed); specific its own.
+    let slices = this._isBreakdown(pick)
+      ? this._breakdownSlices(a)
+      : this._specificSlices(a, pick);
     // Drop sub-second DERIVED slices (other / no-data): the engine counts the
     // current open state up to `now`, so a fully-covered window leaves only
     // floating-point residue there (e.g. 0.4s) — a dust slice that rounds to
-    // "0 s" and clutters the legend. Real state slices are never dropped: a
-    // genuine sub-second occupancy still shows.
+    // "0 s" and clutters the legend. Real state slices are never dropped.
     slices = slices.filter((s) => s.secs >= 1 || !s.derived);
     const total = slices.reduce((n, s) => n + s.secs, 0) || 1;
 
@@ -1498,21 +1504,20 @@ class EntityStateTrackerCard extends LitElement {
         ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
         : nothing}
     </div>`;
+    // Legend beside only for a solo frame with no gauge (preserve single look);
+    // otherwise stack it below so multiple columns stay narrow and aligned.
     return html`
-      ${this._metaHeader(a)}
-      <div class="pie-charts">
-        ${this._pieColumn(
-          stateCaption,
-          paths,
-          slices.map((s) => ({
-            color: s.color,
-            label: s.state,
-            value: html`${fmtDuration(s.secs)} · ${fmtPct(s.pct)}`,
-          })),
-          gauge === nothing // solo → legend beside; with gauge → legend below
-        )}
-        ${gauge}
-      </div>
+      ${this._pieColumn(
+        stateCaption,
+        paths,
+        slices.map((s) => ({
+          color: s.color,
+          label: s.state,
+          value: html`${fmtDuration(s.secs)} · ${fmtPct(s.pct)}`,
+        })),
+        solo && gauge === nothing
+      )}
+      ${gauge}
     `;
   }
 
@@ -1812,6 +1817,18 @@ class EntityStateTrackerCardEditor extends LitElement {
         color: var(--secondary-text-color, #727272);
         margin-top: 4px;
       }
+      .frame-checklist {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+      }
+      .frame-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 400;
+        margin-bottom: 0;
+      }
     `;
   }
 
@@ -1833,6 +1850,28 @@ class EntityStateTrackerCardEditor extends LitElement {
     return FRAME_ORDER;
   }
 
+  // Effective selected frames: the multi-select `frames` array, or the legacy
+  // single `frame` string (back-compat), else none = all. FRAME_ORDER-normalized.
+  _selectedFrames() {
+    const raw = Array.isArray(this._config.frames)
+      ? this._config.frames
+      : this._config.frame
+        ? [this._config.frame]
+        : [];
+    return FRAME_ORDER.filter((f) => raw.includes(f));
+  }
+
+  // Toggle one frame in the selection, write it back as `frames`, and drop the
+  // legacy `frame` key so a picked card migrates cleanly. Empty selection clears
+  // `frames` (undefined → stripped by _updateConfig) = all frames.
+  _toggleFrame(f, on) {
+    const next = this._selectedFrames().filter((x) => x !== f);
+    if (on) next.push(f);
+    const ordered = FRAME_ORDER.filter((x) => next.includes(x));
+    this._config = { ...this._config, frame: undefined };
+    this._updateConfig("frames", ordered.length ? ordered : undefined);
+  }
+
   // True when the selected tracker has a compliance target — the gauge is
   // meaningless without one, so the checkbox only appears then. Read off any
   // frame sensor's live attrs (target_threshold rides on the duration sensor).
@@ -1846,10 +1885,6 @@ class EntityStateTrackerCardEditor extends LitElement {
     if (!this._config) return html``;
 
     const chart = this._config.chart || "bars";
-    // The `frame` picker charts ONE frame — only the pie does that. The table now
-    // groups every frame (states beneath each frame heading) and bars render every
-    // frame as a row, so neither needs the picker.
-    const showFrame = chart === "pie";
     const options = trackerOptions(this.hass);
 
     return html`
@@ -1892,37 +1927,30 @@ class EntityStateTrackerCardEditor extends LitElement {
             @change=${(e) => this._updateConfig("chart", e.target.value)}
           >
             <option value="bars" ?selected=${chart === "bars"}>Bars (one row per frame)</option>
-            <option value="pie" ?selected=${chart === "pie"}>Pie (one frame's breakdown)</option>
+            <option value="pie" ?selected=${chart === "pie"}>Pie (a donut per frame)</option>
             <option value="table" ?selected=${chart === "table"}>Table (states grouped by frame)</option>
           </select>
         </div>
-        ${showFrame
-          ? html`<div class="editor-row">
-              <label>Frame</label>
-              <select
-                .value=${this._config.frame || ""}
-                @change=${(e) =>
-                  this._updateConfig("frame", e.target.value || undefined)}
-              >
-                <option value="" ?selected=${!this._config.frame}>
-                  First available
-                </option>
-                ${this._frameOptions().map(
-                  (f) => html`<option
-                    value=${f}
-                    ?selected=${this._config.frame === f}
-                  >
-                    ${FRAME_LABELS[f] || f}
-                  </option>`
-                )}
-              </select>
-              <div class="editor-hint">
-                ${chart === "pie"
-                  ? "Which frame the pie breaks down."
-                  : "Which frame the table lists states for."}
-              </div>
-            </div>`
-          : nothing}
+        <div class="editor-row">
+          <label>Frames</label>
+          <div class="frame-checklist">
+            ${this._frameOptions().map((f) => {
+              const on = this._selectedFrames().includes(f);
+              return html`<label class="frame-check">
+                <input
+                  type="checkbox"
+                  ?checked=${on}
+                  @change=${(e) => this._toggleFrame(f, e.target.checked)}
+                />
+                ${FRAME_LABELS[f] || f}
+              </label>`;
+            })}
+          </div>
+          <div class="editor-hint">
+            Which frames to show (pie draws one donut each). None checked = all
+            frames.
+          </div>
+        </div>
         ${chart === "pie" && this._hasTarget()
           ? html`<div class="editor-row">
               <label>
