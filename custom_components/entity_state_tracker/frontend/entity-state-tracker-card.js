@@ -1456,9 +1456,9 @@ class EntityStateTrackerCard extends LitElement {
     `;
   }
 
-  // Build one frame's donut column + optional compliance gauge. `solo` puts the
-  // legend beside the donut (single-frame look) and returns a flat column;
-  // multi-frame stacks the legend below and wraps in a .pie-frame row.
+  // Build one frame's donut column + optional compliance gauge. `solo` (single
+  // frame) returns a flat column; multi-frame wraps in a .pie-frame row so frames
+  // stack vertically. Legend placement is independent of solo (see below).
   _pieColumnFor(pick, solo) {
     const a = pick.attrs || {};
     // all-states reuses _breakdownSlices (sorted, gap-tailed); specific its own.
@@ -1529,8 +1529,9 @@ class EntityStateTrackerCard extends LitElement {
         ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
         : nothing}
     </div>`;
-    // Legend beside only for a solo frame with no gauge (preserve single look);
-    // otherwise stack it below so multiple donuts stay narrow and aligned.
+    // Legend beside the donut whenever the beside slot is free. Frames stack
+    // vertically (one .pie-frame row each), so each donut has room beside it
+    // regardless of frame count; only a compliance gauge takes that slot.
     const column = html`
       ${this._pieColumn(
         stateCaption,
@@ -1540,7 +1541,7 @@ class EntityStateTrackerCard extends LitElement {
           label: s.state,
           value: html`${fmtDuration(s.secs)} · ${fmtPct(s.pct)}`,
         })),
-        solo && gauge === nothing
+        gauge === nothing
       )}
       ${gauge}
     `;
