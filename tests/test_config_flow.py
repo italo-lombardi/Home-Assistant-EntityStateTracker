@@ -642,7 +642,11 @@ async def test_options_no_compliance_edit(hass: HomeAssistant) -> None:
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        _frames_input("today", "7d", **{CONF_MIN_STATE_DURATION: 30}),
+        _frames_input(
+            "today",
+            "7d",
+            **{CONF_MIN_STATE_DURATION: 30, CONF_STATES: ["heat", "auto"]},
+        ),
     )
     assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
     opts = result["data"]
@@ -677,7 +681,7 @@ async def test_options_no_frames_error(hass: HomeAssistant) -> None:
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        _frames_input(),  # all frames False
+        _frames_input(**{CONF_STATES: ["heat"]}),  # all frames False; states OK
     )
     assert result["step_id"] == "init"
     assert result["errors"] == {"base": "no_frames_selected"}
@@ -710,7 +714,14 @@ async def test_options_compliance_fields_and_edit(hass: HomeAssistant) -> None:
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        _frames_input("today", **{CONF_TARGET: ["Auto"], CONF_TARGET_THRESHOLD: 90}),
+        _frames_input(
+            "today",
+            **{
+                CONF_TARGET: ["Auto"],
+                CONF_TARGET_THRESHOLD: 90,
+                CONF_STATES: ["heat", "auto"],
+            },
+        ),
     )
     assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_TARGET] == ["auto"]  # lowercased
@@ -727,7 +738,8 @@ async def test_options_compliance_no_threshold_default(hass: HomeAssistant) -> N
     assert CONF_TARGET_THRESHOLD in keys
 
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], _frames_input("today", **{CONF_TARGET: ["heat"]})
+        result["flow_id"],
+        _frames_input("today", **{CONF_TARGET: ["heat"], CONF_STATES: ["heat"]}),
     )
     assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
     assert result["data"][CONF_TARGET] == ["heat"]
@@ -740,7 +752,8 @@ async def test_options_compliance_empty_target_error(hass: HomeAssistant) -> Non
     entry.add_to_hass(hass)
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
-        result["flow_id"], _frames_input("today", **{CONF_TARGET: []})
+        result["flow_id"],
+        _frames_input("today", **{CONF_TARGET: [], CONF_STATES: ["heat"]}),
     )
     assert result["step_id"] == "init"
     assert result["errors"] == {CONF_TARGET: "no_target_selected"}
@@ -755,11 +768,63 @@ async def test_options_no_frames_and_no_target_both_error(
     result = await hass.config_entries.options.async_init(entry.entry_id)
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
-        _frames_input(**{CONF_TARGET: []}),  # no frames, no target
+        _frames_input(
+            **{CONF_TARGET: [], CONF_STATES: ["heat"]}
+        ),  # no frames, no target
     )
     assert result["step_id"] == "init"
     assert result["errors"]["base"] == "no_frames_selected"
     assert result["errors"][CONF_TARGET] == "no_target_selected"
+
+
+async def test_options_states_field_present(hass: HomeAssistant) -> None:
+    """Specific-mode options expose the tracked-states field, prefilled + editable."""
+    entry = _entry()
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    schema = result["data_schema"].schema
+    states_key = next(k for k in schema if str(k.schema) == CONF_STATES)
+    # Offers the current tracked set as default + options (custom_value adds more).
+    assert states_key.default() == ["heat", "auto"]
+    assert schema[states_key].config["options"] == ["heat", "auto"]
+
+
+async def test_options_edit_tracked_states(hass: HomeAssistant) -> None:
+    """Editing tracked states round-trips lowercased + deduped into options."""
+    entry = _entry()
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"],
+        _frames_input("today", **{CONF_STATES: ["Heat", "cool", "cool"]}),
+    )
+    assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
+    assert result["data"][CONF_STATES] == ["heat", "cool"]
+
+
+async def test_options_empty_states_error(hass: HomeAssistant) -> None:
+    """Clearing every tracked state re-shows init with a states error."""
+    entry = _entry()
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    result = await hass.config_entries.options.async_configure(
+        result["flow_id"], _frames_input("today", **{CONF_STATES: []})
+    )
+    assert result["step_id"] == "init"
+    assert result["errors"] == {CONF_STATES: "no_states_selected"}
+
+
+async def test_options_all_states_no_states_field(hass: HomeAssistant) -> None:
+    """An all-states entry never exposes the tracked-states field."""
+    entry = _all_states_entry()
+    entry.add_to_hass(hass)
+
+    result = await hass.config_entries.options.async_init(entry.entry_id)
+    keys = {str(k.schema) for k in result["data_schema"].schema}
+    assert CONF_STATES not in keys
 
 
 async def test_get_options_flow_returns_handler() -> None:

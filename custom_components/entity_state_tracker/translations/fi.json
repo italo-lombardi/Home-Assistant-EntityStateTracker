@@ -100,7 +100,8 @@
           "year": "Tänä vuonna",
           "target": "Kohdetila(t)",
           "target_threshold": "Vaatimustenmukaisuuskynnys (%, valinnainen)",
-          "min_state_duration": "Tilan vähimmäiskesto (sekuntia)"
+          "min_state_duration": "Tilan vähimmäiskesto (sekuntia)",
+          "states": "Seurattavat tilat"
         },
         "data_description": {
           "today": "Paikallisesta keskiyöstä.",
@@ -115,13 +116,15 @@
           "year": "1. tammikuuta alkaen.",
           "target": "Vaatimukset täyttäviksi katsottujen tilojen joukko. Missä tahansa niistä oleminen lasketaan. Riippumattomia seuratuista tiloista — valitse mikä tahansa tila, jossa entiteetti voi olla. Käytetään vain, kun vaatimustenmukaisuuden pisteytys on käytössä.",
           "target_threshold": "Jos asetettu, binäärianturi ”Vaatimusten mukainen” kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen.",
-          "min_state_duration": "Jos seurattu entiteetti siirtyy tilaan ja pois siitä nopeammin kuin tämä sekuntimäärä, tämä lyhyt hetki ohitetaan — sen aika lisätään sen sijaan edelliseen tilaan, eikä sitä lasketa erilliseksi muutokseksi. Käytä tätä välkkyvien tai pomppivien antureiden suodattamiseen. Aseta arvoksi 0 laskeaksesi jokaisen muutoksen, olipa se kuinka lyhyt tahansa."
+          "min_state_duration": "Jos seurattu entiteetti siirtyy tilaan ja pois siitä nopeammin kuin tämä sekuntimäärä, tämä lyhyt hetki ohitetaan — sen aika lisätään sen sijaan edelliseen tilaan, eikä sitä lasketa erilliseksi muutokseksi. Käytä tätä välkkyvien tai pomppivien antureiden suodattamiseen. Aseta arvoksi 0 laskeaksesi jokaisen muutoksen, olipa se kuinka lyhyt tahansa.",
+          "states": "Entiteetin tilat, joiden kesto ja prosenttiosuus mitataan (esim. on, heat, home). Esitäytetty äskettäin nähdyillä tiloilla."
         }
       }
     },
     "error": {
       "no_target_selected": "Valitse vähintään yksi kohdetila tai poista vaatimustenmukaisuuspisteytys käytöstä.",
-      "no_frames_selected": "Valitse vähintään yksi seurattava aikajakso."
+      "no_frames_selected": "Valitse vähintään yksi seurattava aikajakso.",
+      "no_states_selected": "Valitse vähintään yksi seurattava tila."
     }
   },
   "entity": {

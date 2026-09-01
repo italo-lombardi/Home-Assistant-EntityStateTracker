@@ -100,7 +100,8 @@
           "year": "I år",
           "target": "Måltilstand(e)",
           "target_threshold": "Overholdelsestærskel (%, valgfrit)",
-          "min_state_duration": "Mindste tilstandsvarighed (sekunder)"
+          "min_state_duration": "Mindste tilstandsvarighed (sekunder)",
+          "states": "Tilstande at spore"
         },
         "data_description": {
           "today": "Siden lokal midnat.",
@@ -115,13 +116,15 @@
           "year": "Siden 1. januar.",
           "target": "Sættet af tilstande, der betragtes som overholdende. At være i en af dem tæller. Uafhængige af de sporede tilstande — vælg enhver tilstand, enheden kan være i. Bruges kun, når scoring af overholdelse er aktiveret.",
           "target_threshold": "Hvis angivet, tændes en binær sensor „Overholdende“, når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over.",
-          "min_state_duration": "Hvis den sporede enhed skifter til en tilstand og ud igen hurtigere end dette antal sekunder, ignoreres dette korte øjeblik — dets tid lægges i stedet til den forrige tilstand, og det tæller ikke som en separat ændring. Brug det til at filtrere flimrende eller hoppende sensorer. Sæt til 0 for at tælle hver ændring, uanset hvor kort."
+          "min_state_duration": "Hvis den sporede enhed skifter til en tilstand og ud igen hurtigere end dette antal sekunder, ignoreres dette korte øjeblik — dets tid lægges i stedet til den forrige tilstand, og det tæller ikke som en separat ændring. Brug det til at filtrere flimrende eller hoppende sensorer. Sæt til 0 for at tælle hver ændring, uanset hvor kort.",
+          "states": "Entitetstilstandene, hvis varighed og procent måles (f.eks. on, heat, home). Forudfyldt med tilstande set for nylig."
         }
       }
     },
     "error": {
       "no_target_selected": "Vælg mindst én måltilstand, eller slå overholdelsesscore fra.",
-      "no_frames_selected": "Vælg mindst ét tidsrum at spore."
+      "no_frames_selected": "Vælg mindst ét tidsrum at spore.",
+      "no_states_selected": "Vælg mindst én tilstand at spore."
     }
   },
   "entity": {

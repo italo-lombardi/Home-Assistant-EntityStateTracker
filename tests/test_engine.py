@@ -313,6 +313,56 @@ def test_r1_continuously_on_is_100pct(
 # --------------------------------------------------------------------------- #
 
 
+def test_open_state_seeds_zero_second_slice_on_open_frame() -> None:
+    # A just-discovered live state must render a 0s slice the instant it appears
+    # (its open block spans [now, now) and is dropped by accumulate_blocks), so
+    # compute_frame seeds it at zero on frames whose window reaches now.
+    now = dt.datetime(2026, 1, 15, 12, 0, tzinfo=NY)
+    recent = {"on": {"secs": 3600.0, "count": 1}}
+    fr = E.compute_frame(
+        "today",
+        now,
+        NY,
+        recent,
+        {},
+        None,
+        mode="all_states",
+        tracked_states=None,
+        target_states=None,
+        prior_dominant=None,
+        open_state="44.0",
+    )
+    assert fr.breakdown_seconds["44.0"] == 0.0
+    assert fr.counts["44.0"] == 0
+    assert fr.avg_duration["44.0"] is None
+    # A real accrued state still wins dominant over the 0s newcomer.
+    assert fr.dominant == "on"
+
+
+def test_open_state_not_seeded_on_closed_frame() -> None:
+    # A closed frame (yesterday) must NOT gain a phantom current-state slice.
+    now = dt.datetime(2026, 1, 15, 12, 0, tzinfo=NY)
+    fr = E.compute_frame(
+        "yesterday",
+        now,
+        NY,
+        {},
+        {"2026-01-14": {"on": {"secs": 86400.0, "count": 1}}},
+        None,
+        mode="all_states",
+        tracked_states=None,
+        target_states=None,
+        prior_dominant=None,
+        open_state="44.0",
+    )
+    assert "44.0" not in fr.breakdown_seconds
+
+
+# --------------------------------------------------------------------------- #
+# split_visit_across_days
+# --------------------------------------------------------------------------- #
+
+
 def test_split_reversed_interval_empty() -> None:
     a = _utc(2026, 1, 2)
     b = _utc(2026, 1, 1)

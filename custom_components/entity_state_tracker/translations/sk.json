@@ -100,7 +100,8 @@
           "year": "Tento rok",
           "target": "Cieľový stav (stavy)",
           "target_threshold": "Prah zhody (%, voliteľné)",
-          "min_state_duration": "Minimálna doba trvania stavu (sekundy)"
+          "min_state_duration": "Minimálna doba trvania stavu (sekundy)",
+          "states": "Stavy na sledovanie"
         },
         "data_description": {
           "today": "Od miestnej polnoci.",
@@ -115,13 +116,15 @@
           "year": "Od 1. januára.",
           "target": "Množina stavov považovaných za vyhovujúce. Počíta sa pobyt v ktoromkoľvek z nich. Nezávislé od sledovaných stavov — zvoľte ľubovoľný stav, v ktorom entita môže byť. Používa sa iba pri zapnutom hodnotení zhody.",
           "target_threshold": "Ak je nastavené, binárny senzor „V zhode“ sa zapne, keď percento zhody dosiahne túto hodnotu alebo ju prekročí. Ponechajte prázdne na preskočenie prahu.",
-          "min_state_duration": "Ak sledovaná entita prejde do stavu a zase z neho rýchlejšie ako za tento počet sekúnd, tento krátky okamih sa ignoruje — jeho čas sa namiesto toho pripočíta k predchádzajúcemu stavu a nepočíta sa ako samostatná zmena. Použite to na filtrovanie blikajúcich alebo poskakujúcich senzorov. Nastavte na 0, aby sa počítala každá zmena, akokoľvek krátka."
+          "min_state_duration": "Ak sledovaná entita prejde do stavu a zase z neho rýchlejšie ako za tento počet sekúnd, tento krátky okamih sa ignoruje — jeho čas sa namiesto toho pripočíta k predchádzajúcemu stavu a nepočíta sa ako samostatná zmena. Použite to na filtrovanie blikajúcich alebo poskakujúcich senzorov. Nastavte na 0, aby sa počítala každá zmena, akokoľvek krátka.",
+          "states": "Stavy entity, ktorých doba trvania a percento sa merajú (napr. on, heat, home). Predvyplnené nedávno pozorovanými stavmi."
         }
       }
     },
     "error": {
       "no_target_selected": "Vyberte aspoň jeden cieľový stav, alebo vypnite hodnotenie zhody.",
-      "no_frames_selected": "Vyberte aspoň jedno časové obdobie na sledovanie."
+      "no_frames_selected": "Vyberte aspoň jedno časové obdobie na sledovanie.",
+      "no_states_selected": "Vyberte aspoň jeden stav na sledovanie."
     }
   },
   "entity": {

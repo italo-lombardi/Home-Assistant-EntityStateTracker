@@ -100,7 +100,8 @@
           "year": "Dieses Jahr",
           "target": "Zielzustand/-zustände",
           "target_threshold": "Konformitätsschwelle (%, optional)",
-          "min_state_duration": "Mindestzustandsdauer (Sekunden)"
+          "min_state_duration": "Mindestzustandsdauer (Sekunden)",
+          "states": "Zu verfolgende Zustände"
         },
         "data_description": {
           "today": "Seit lokaler Mitternacht.",
@@ -115,13 +116,15 @@
           "year": "Seit dem 1. Januar.",
           "target": "Die Menge der als konform geltenden Zustände. Sich in einem davon zu befinden zählt. Unabhängig von den verfolgten Zuständen – wähle einen beliebigen Zustand, den die Entität annehmen kann. Wird nur verwendet, wenn die Konformitätsbewertung aktiviert ist.",
           "target_threshold": "Wenn gesetzt, schaltet sich ein Binärsensor „Konform“ ein, wenn der Konformitätsprozentsatz diesen Wert erreicht oder überschreitet. Leer lassen, um den Schwellenwert zu überspringen.",
-          "min_state_duration": "Wenn die verfolgte Entität schneller als diese Anzahl von Sekunden in einen Zustand und wieder heraus wechselt, wird dieser kurze Moment ignoriert — seine Zeit wird stattdessen zum vorherigen Zustand addiert und zählt nicht als separate Änderung. Verwende dies, um flackernde oder prellende Sensoren zu filtern. Auf 0 setzen, um jede Änderung zu zählen, egal wie kurz."
+          "min_state_duration": "Wenn die verfolgte Entität schneller als diese Anzahl von Sekunden in einen Zustand und wieder heraus wechselt, wird dieser kurze Moment ignoriert — seine Zeit wird stattdessen zum vorherigen Zustand addiert und zählt nicht als separate Änderung. Verwende dies, um flackernde oder prellende Sensoren zu filtern. Auf 0 setzen, um jede Änderung zu zählen, egal wie kurz.",
+          "states": "Die Entitätszustände, deren Dauer und Prozentsatz gemessen werden (z. B. on, heat, home). Vorausgefüllt mit kürzlich beobachteten Zuständen."
         }
       }
     },
     "error": {
       "no_target_selected": "Wähle mindestens einen Zielzustand oder deaktiviere die Konformitätsbewertung.",
-      "no_frames_selected": "Wähle mindestens einen zu verfolgenden Zeitraum."
+      "no_frames_selected": "Wähle mindestens einen zu verfolgenden Zeitraum.",
+      "no_states_selected": "Wähle mindestens einen zu verfolgenden Zustand."
     }
   },
   "entity": {

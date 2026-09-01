@@ -384,6 +384,17 @@ def test_duration_attributes_without_target() -> None:
     assert "last_seen" not in attrs
 
 
+def test_duration_attributes_breakdown_tracked_only() -> None:
+    """breakdown_seconds/pct expose the per-state slice, tracked states only."""
+    coord = _duration_coord(tracked=("heat", "auto"))
+    sensor = DurationSensor(coord, "today")
+    attrs = sensor.extra_state_attributes
+    # off (1200) is recorded but not tracked → excluded; ints, tracked keys only.
+    assert attrs["breakdown_seconds"] == {"heat": 1800, "auto": 600}
+    assert all(isinstance(v, int) for v in attrs["breakdown_seconds"].values())
+    assert set(attrs["breakdown_pct"]) == {"heat", "auto"}
+
+
 def test_duration_attributes_with_target_adds_compliance() -> None:
     """A target set surfaces compliance_percent."""
     coord = _duration_coord(tracked=("heat", "auto"), target=("heat",))
@@ -489,6 +500,8 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
         "percent",
         "compliance_percent",
         "duration_seconds",
+        "breakdown_seconds",
+        "breakdown_pct",
         "window_start",
         "data_start",
         "window_coverage",

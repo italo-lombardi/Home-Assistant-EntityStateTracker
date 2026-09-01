@@ -100,7 +100,8 @@
           "year": "Anul acesta",
           "target": "Stare (stări) țintă",
           "target_threshold": "Prag de conformitate (%, opțional)",
-          "min_state_duration": "Durată minimă de stare (secunde)"
+          "min_state_duration": "Durată minimă de stare (secunde)",
+          "states": "Stări de urmărit"
         },
         "data_description": {
           "today": "De la miezul nopții local.",
@@ -115,13 +116,15 @@
           "year": "De la 1 ianuarie.",
           "target": "Setul de stări considerate conforme. Aflarea în oricare dintre ele contează. Independente de stările urmărite — alegeți orice stare în care poate fi entitatea. Folosit doar când punctarea conformității este activată.",
           "target_threshold": "Dacă este setat, un senzor binar „Conform” se activează atunci când procentul de conformitate atinge sau depășește această valoare. Lasă gol pentru a omite pragul.",
-          "min_state_duration": "Dacă entitatea urmărită intră într-o stare și iese din ea mai repede decât acest număr de secunde, acel moment scurt este ignorat — timpul său este adăugat în schimb la starea anterioară și nu contează ca o schimbare separată. Folosește-l pentru a filtra senzorii care pâlpâie sau ricoșează. Setează la 0 pentru a număra fiecare schimbare, oricât de scurtă."
+          "min_state_duration": "Dacă entitatea urmărită intră într-o stare și iese din ea mai repede decât acest număr de secunde, acel moment scurt este ignorat — timpul său este adăugat în schimb la starea anterioară și nu contează ca o schimbare separată. Folosește-l pentru a filtra senzorii care pâlpâie sau ricoșează. Setează la 0 pentru a număra fiecare schimbare, oricât de scurtă.",
+          "states": "Stările entității a căror durată și procent sunt măsurate (de ex. on, heat, home). Precompletat cu stările observate recent."
         }
       }
     },
     "error": {
       "no_target_selected": "Selectează cel puțin o stare-țintă sau dezactivează scorul de conformitate.",
-      "no_frames_selected": "Selectează cel puțin un interval de timp de urmărit."
+      "no_frames_selected": "Selectează cel puțin un interval de timp de urmărit.",
+      "no_states_selected": "Selectează cel puțin o stare de urmărit."
     }
   },
   "entity": {

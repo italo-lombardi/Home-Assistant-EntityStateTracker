@@ -100,7 +100,8 @@
           "year": "Šogad",
           "target": "Mērķa stāvoklis (-ļi)",
           "target_threshold": "Atbilstības slieksnis (%, neobligāts)",
-          "min_state_duration": "Minimālais stāvokļa ilgums (sekundes)"
+          "min_state_duration": "Minimālais stāvokļa ilgums (sekundes)",
+          "states": "Sekojamie stāvokļi"
         },
         "data_description": {
           "today": "Kopš vietējās pusnakts.",
@@ -115,13 +116,15 @@
           "year": "Kopš 1. janvāra.",
           "target": "Par atbilstošiem uzskatīto stāvokļu kopa. Atrašanās jebkurā no tiem tiek ieskaitīta. Neatkarīgi no sekojamajiem stāvokļiem — izvēlieties jebkuru stāvokli, kādā entītija var būt. Izmanto tikai tad, kad ir iespējota atbilstības vērtēšana.",
           "target_threshold": "Ja iestatīts, binārais sensors „Atbilstošs” ieslēdzas, kad atbilstības procents sasniedz vai pārsniedz šo vērtību. Atstājiet tukšu, lai izlaistu slieksni.",
-          "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā iziet ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu."
+          "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā iziet ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu.",
+          "states": "Entītijas stāvokļi, kuru ilgums un procenti tiek mērīti (piem., on, heat, home). Iepriekš aizpildīts ar nesen redzētiem stāvokļiem."
         }
       }
     },
     "error": {
       "no_target_selected": "Atlasiet vismaz vienu mērķa stāvokli vai izslēdziet atbilstības vērtēšanu.",
-      "no_frames_selected": "Atlasiet vismaz vienu sekojamo laika posmu."
+      "no_frames_selected": "Atlasiet vismaz vienu sekojamo laika posmu.",
+      "no_states_selected": "Atlasiet vismaz vienu sekojamo stāvokli."
     }
   },
   "entity": {

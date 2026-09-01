@@ -109,49 +109,52 @@ function sortStates(states) {
 }
 
 // -----------------------------------------------------------------------------
-// Deterministic per-state color (§5.3).
+// Deterministic per-state color.
 //
-// The backend (helpers.state_color) hashes the state name with md5 → hue, HSL
-// 0.55/0.55. md5 has no sync browser API, and the task brief says md5 in JS is
-// overkill: what matters is that a state ALWAYS maps to the same color and a new
-// slice never recolors the existing ones. So we use a stable FNV-1a string hash
-// → hue with the SAME fixed S=0.55 / L=0.55. Deterministic and documented; the
-// exact hue may differ from the backend but is consistent within the card.
+// A state ALWAYS maps to the same color and a new slice never recolors existing
+// ones. Common states get a SEMANTIC color (on=green, off=slate, home=green,
+// away/off-ish=slate, unavailable/unknown=muted grey) so binary-sensor charts
+// read intuitively; every other state hash-indexes into a fixed high-contrast
+// categorical PALETTE (colorblind-friendly, no muddy red/blue pairs). Shared by
+// pie, table and stacked bars, so all three agree.
 // -----------------------------------------------------------------------------
-function stateHue(state) {
+const STATE_PALETTE = [
+  "#4c8bf5", // blue
+  "#f5a623", // amber
+  "#7b61ff", // violet
+  "#2ecc71", // green
+  "#ff6b6b", // coral
+  "#00b8a9", // teal
+  "#e056fd", // magenta
+  "#f9c80e", // yellow
+  "#5f6caf", // indigo
+  "#e17055", // burnt orange
+];
+const SEMANTIC_COLORS = {
+  on: "#2ecc71",
+  off: "#5c6b7a",
+  home: "#2ecc71",
+  away: "#5c6b7a",
+  open: "#2ecc71",
+  closed: "#5c6b7a",
+  unavailable: "#9aa4ad",
+  unknown: "#c2c8cf",
+};
+
+function stateHashIndex(state, mod) {
   let h = 0x811c9dc5;
   const str = String(state);
   for (let i = 0; i < str.length; i++) {
     h ^= str.charCodeAt(i);
     h = Math.imul(h, 0x01000193);
   }
-  // >>> 0 → unsigned; divide by 2^32 for a stable 0..1 hue.
-  return (h >>> 0) / 4294967296;
-}
-
-function hueToRgb(p, q, t) {
-  t %= 1.0;
-  if (t < 0) t += 1.0;
-  if (t < 1 / 6) return p + (q - p) * 6 * t;
-  if (t < 1 / 2) return q;
-  if (t < 2 / 3) return p + (q - p) * (2 / 3 - t) * 6;
-  return p;
+  return (h >>> 0) % mod;
 }
 
 function stateColor(state) {
-  const h = stateHue(state);
-  const s = 0.55;
-  const l = 0.55;
-  const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-  const p = 2 * l - q;
-  const r = hueToRgb(p, q, h + 1 / 3);
-  const g = hueToRgb(p, q, h);
-  const b = hueToRgb(p, q, h - 1 / 3);
-  const hex = (x) =>
-    Math.round(x * 255)
-      .toString(16)
-      .padStart(2, "0");
-  return `#${hex(r)}${hex(g)}${hex(b)}`;
+  const key = String(state).toLowerCase();
+  if (key in SEMANTIC_COLORS) return SEMANTIC_COLORS[key];
+  return STATE_PALETTE[stateHashIndex(key, STATE_PALETTE.length)];
 }
 
 // -----------------------------------------------------------------------------
@@ -432,13 +435,67 @@ const cardStyles = css`
     overflow: hidden;
   }
 
-  .bar-fill {
+  /* Stacked track: segments laid side by side — one per state (+ other/no-data),
+     for both all-states and specific mode, instead of one absolute fill. */
+  .bar-track-stacked {
+    display: flex;
+  }
+
+  .bar-seg {
+    height: 100%;
+  }
+
+  /* Positioning context for the hover/tap tooltip (absolute within the card). */
+  .card-body-wrap {
+    position: relative;
+  }
+
+  /* Styled hover/tap tooltip for pie slices + bar segments — themed, instant,
+     touch-friendly (matches the HA / apexcharts-card norm, unlike OS title). */
+  .est-tooltip {
     position: absolute;
-    top: 0;
-    left: 0;
-    bottom: 0;
-    border-radius: 5px;
-    background: var(--est-accent);
+    z-index: 5;
+    pointer-events: none;
+    min-width: 96px;
+    max-width: 220px;
+    padding: 6px 9px;
+    border-radius: 6px;
+    background: var(--card-background-color, #fff);
+    color: var(--primary-text-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
+    border: 1px solid var(--divider-color, rgba(0, 0, 0, 0.12));
+    font-size: 12px;
+    line-height: 1.35;
+  }
+
+  .est-tooltip-head {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+  }
+
+  .est-tooltip-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
+
+  .est-tooltip-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .est-tooltip-metric {
+    margin-top: 2px;
+  }
+
+  .est-tooltip-sub {
+    margin-top: 1px;
+    color: var(--secondary-text-color);
+    font-size: 11px;
   }
 
   /* Compliance status chip: met vs not-met symbol + score/target text, in place
@@ -654,6 +711,7 @@ class EntityStateTrackerCard extends LitElement {
     return {
       hass: { attribute: false },
       _config: { state: true },
+      _tip: { state: true },
     };
   }
 
@@ -678,6 +736,22 @@ class EntityStateTrackerCard extends LitElement {
   constructor() {
     super();
     this._config = {};
+    // Dismiss a pinned (tapped) tooltip when the user taps anywhere else.
+    // Bound once so add/removeEventListener pair up.
+    this._onDocPointer = (e) => {
+      if (!this._tip || !this._tip.pinned) return;
+      if (!e.composedPath().includes(this)) this._hideTip();
+    };
+  }
+
+  connectedCallback() {
+    super.connectedCallback();
+    document.addEventListener("click", this._onDocPointer);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    document.removeEventListener("click", this._onDocPointer);
   }
 
   setConfig(config) {
@@ -761,7 +835,10 @@ class EntityStateTrackerCard extends LitElement {
           ${this._renderSourceContext(sensors)}
         </div>
       </div>
-      <div class="body">${body}</div>
+      <div class="card-body-wrap">
+        <div class="body">${body}</div>
+        ${this._renderTip()}
+      </div>
     </ha-card>`;
   }
 
@@ -821,7 +898,80 @@ class EntityStateTrackerCard extends LitElement {
     );
   }
 
-  // The frame's Compliant binary sensor id (same device, translation_key
+  // ---------------------------------------------------------------------------
+  // Shared hover/tap tooltip for pie slices + bar segments (matches the HA /
+  // apexcharts-card norm — a styled, instant, themed tooltip, not the OS `title`
+  // box which never appears on touch). One reactive `_tip` slot; the tooltip div
+  // is rendered once at the card root and positioned to the pointer.
+  //
+  // Mobile: pointer events fire for mouse AND pen; touch has no hover, so a
+  // segment TAP pins the tooltip and stops the row's more-info click from also
+  // firing. A document click outside dismisses it. Desktop hover just tracks the
+  // pointer and clears on leave.
+  // ---------------------------------------------------------------------------
+  _showTip(e, info) {
+    // Position relative to the card so the tooltip stays put on scroll and is
+    // clamped inside the card box (no viewport spill on a narrow phone).
+    const card = this.renderRoot?.querySelector(".card-body-wrap");
+    const rect = card
+      ? card.getBoundingClientRect()
+      : { left: 0, top: 0, width: 9999, height: 9999 };
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    this._tip = { ...info, x, y, w: rect.width, h: rect.height };
+  }
+
+  _hideTip() {
+    if (this._tip) this._tip = null;
+  }
+
+  // Tap pins on touch: show + swallow the click so the row more-info doesn't also
+  // open. On a subsequent tap of the SAME segment, toggle off.
+  _tapTip(e, info) {
+    e.stopPropagation();
+    if (this._tip && this._tip.label === info.label && this._tip.pinned) {
+      this._hideTip();
+      return;
+    }
+    this._showTip(e, info);
+    this._tip = { ...this._tip, pinned: true };
+  }
+
+  _renderTip() {
+    const t = this._tip;
+    if (!t) return nothing;
+    // Anchor to the pointer and flip on both axes near the card edges so the
+    // tooltip is never clipped: past the vertical midline it grows LEFT
+    // (translateX -100%), in the bottom band it grows UP (translateY -100%).
+    // CSS transforms do the sizing, so no width/height measurement is needed.
+    const w = t.w || 9999;
+    const flipX = t.x > w / 2;
+    const flipY = t.h != null && t.y + 96 > t.h;
+    const left = flipX ? t.x - 12 : t.x + 12;
+    const top = flipY ? t.y - 12 : t.y + 12;
+    const tx = flipX ? "-100%" : "0";
+    const ty = flipY ? "-100%" : "0";
+    return html`<div
+      class="est-tooltip"
+      style="left:${left}px;top:${top}px;transform:translate(${tx}, ${ty});"
+      role="tooltip"
+    >
+      <div class="est-tooltip-head">
+        <span class="est-tooltip-dot" style="background:${t.color}"></span>
+        <span class="est-tooltip-label">${t.label}</span>
+      </div>
+      <div class="est-tooltip-metric">
+        ${fmtDuration(t.secs)} · ${fmtPct(t.pct)}
+      </div>
+      ${t.count != null
+        ? html`<div class="est-tooltip-sub">
+            ${t.count} ${t.count === 1 ? "visit" : "visits"}${t.avg != null
+              ? html` · avg ${fmtDuration(t.avg)}`
+              : nothing}
+          </div>`
+        : nothing}
+    </div>`;
+  }
   // "compliant", matching frame), or null. Keyed off the bar sensor's OWN
   // device_id so it works no matter how the tracker was configured, and never
   // parses an entity_id string (rename-safe).
@@ -852,10 +1002,12 @@ class EntityStateTrackerCard extends LitElement {
     );
   }
 
-  // A sensor is a breakdown (all-states) sensor when it carries the breakdown
-  // dicts; otherwise it's a specific-mode duration sensor.
+  // A sensor is a breakdown (all-states) sensor when it has NO tracked_states
+  // set. Specific-mode duration sensors ALWAYS carry tracked_states (and now a
+  // tracked-only breakdown_seconds too), so we cannot key off breakdown_seconds
+  // presence — that would misroute specific sensors into the all-states branch.
   _isBreakdown(s) {
-    return s.attrs && s.attrs.breakdown_seconds != null;
+    return s.attrs && s.attrs.tracked_states == null;
   }
 
   _incomplete(attrs) {
@@ -887,7 +1039,6 @@ class EntityStateTrackerCard extends LitElement {
           a.duration_seconds != null ? Number(a.duration_seconds) : Number(s.state);
         pct = a.percent;
       }
-      const pctNum = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
       const incomplete = this._incomplete(a);
       const label = this._isBreakdown(s) ? `${s.state}` : "";
       const compliantId = this._frameCompliantId(s);
@@ -919,13 +1070,32 @@ class EntityStateTrackerCard extends LitElement {
               : nothing}</span
           >
         </div>
-        <div class="bar-track">
-          <div
-            class="bar-fill ${incomplete ? "incomplete" : ""}"
-            style="width:${pctNum}%;${this._isBreakdown(s)
-              ? `background:${stateColor(s.state)};`
-              : ""}"
-          ></div>
+        <div class="bar-track bar-track-stacked">
+          ${(this._isBreakdown(s) ? this._breakdownSlices(a) : this._specificSlices(a, s))
+            .filter((seg) => seg.secs >= 1 || !seg.derived)
+            .map((seg) => {
+              // Stacked segment per state (+ other / no-data), width = its share
+              // of the window, same colors as pie/table. Real states carry
+              // count/avg; derived fillers don't.
+              const w =
+                seg.pct == null ? 0 : Math.max(0, Math.min(100, Number(seg.pct)));
+              const info = {
+                label: seg.state,
+                secs: seg.secs,
+                pct: seg.pct,
+                color: seg.color,
+                count: seg.count != null ? seg.count : null,
+                avg: seg.avg != null ? seg.avg : null,
+              };
+              return html`<div
+                class="bar-seg ${incomplete && !seg.derived ? "incomplete" : ""}"
+                style="width:${w}%;background:${seg.color};"
+                @pointerenter=${(e) => this._showTip(e, info)}
+                @pointermove=${(e) => this._showTip(e, info)}
+                @pointerleave=${() => this._hideTip()}
+                @click=${(e) => this._tapTip(e, info)}
+              ></div>`;
+            })}
         </div>
         ${a.compliance_percent != null
           ? this._complianceStatus(a, compliantId)
@@ -1121,6 +1291,99 @@ class EntityStateTrackerCard extends LitElement {
     `;
   }
 
+  // Specific mode: one slice per TRACKED STATE from the sensor's tracked-only
+  // breakdown_seconds (each its own deterministic color, same as all-states),
+  // plus derived filler slices so the set sums to 100:
+  //   other   = window_seconds - in-state total - no-data
+  //   no-data = unaccounted_seconds  ("No data" past window / "In progress")
+  // Never blank at 0% in-state, never mislabels absence of data as a non-tracked
+  // state. Falls back to a single summed "in-state" slice when breakdown_seconds
+  // is absent (older backend / staged deploy). Shared by the pie and the stacked
+  // bar. Returns [{state, secs, pct, color, derived?}]; NOT dust-filtered (each
+  // caller filters as it needs).
+  // All-states stacked-bar slices: one segment per observed state (each enriched
+  // with visit count + avg-duration), plus a derived "No data"/"In progress" tail
+  // for uncomputed time. On long frames (last_7_days, last_30_days) that tail is
+  // the window portion predating our recorded history ("No data"); on the current
+  // frame it's a transient open-state lag ("In progress"). Every state is tracked
+  // here, so there is no non-tracked "other" — only states + the gap. Percentages
+  // are of window_seconds so the bar sums to 100. Returns [{state, secs, pct,
+  // color, count?, avg?, derived?}]; NOT dust-filtered (caller filters).
+  _breakdownSlices(a) {
+    const bs = a.breakdown_seconds || {};
+    const bp = a.breakdown_pct || {};
+    const counts = a.counts || {};
+    const avgs = a.avg_duration_seconds || {};
+    const ws = Number(a.window_seconds) || 0;
+    const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
+    const inSecs = Object.values(bs).reduce((n, v) => n + (Number(v) || 0), 0);
+    const denom = ws > 0 ? ws : inSecs + gap;
+    const pctOf = (secs) => (denom > 0 ? (secs / denom) * 100 : null);
+    const slices = sortStates(Object.keys(bs)).map((state) => ({
+      state,
+      secs: Number(bs[state]) || 0,
+      pct: bp[state] != null ? bp[state] : pctOf(Number(bs[state]) || 0),
+      color: stateColor(state),
+      count: counts[state] != null ? counts[state] : null,
+      avg: avgs[state] != null ? avgs[state] : null,
+    }));
+    if (gap > 0) {
+      slices.push({
+        state: a.has_gap ? "No data" : "In progress",
+        secs: gap,
+        pct: pctOf(gap),
+        color: "var(--est-bar-bg)",
+        derived: true,
+      });
+    }
+    return slices;
+  }
+
+  _specificSlices(a, pick) {
+    const ws = Number(a.window_seconds) || 0;
+    const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
+    const bs = a.breakdown_seconds;
+    const tracked = a.tracked_states || [];
+    let inSlices;
+    let inSecs;
+    if (bs != null) {
+      inSlices = sortStates(tracked).map((state) => ({
+        state,
+        secs: Number(bs[state]) || 0,
+        color: stateColor(state),
+      }));
+      inSecs = inSlices.reduce((n, s) => n + s.secs, 0);
+    } else {
+      // pick.state is unit-converted to hours by HA (unit-ambiguous); prefer the
+      // raw seconds attr.
+      inSecs =
+        (a.duration_seconds != null ? Number(a.duration_seconds) : Number(pick.state)) || 0;
+      const label = tracked.join(", ") || "tracked";
+      inSlices = [{ state: label, secs: inSecs, color: stateColor(label) }];
+    }
+    const other = ws > 0 ? Math.max(0, ws - inSecs - gap) : 0;
+    const denom = ws > 0 ? ws : inSecs + other + gap;
+    const pctOf = (secs) => (denom > 0 ? (secs / denom) * 100 : null);
+    const slices = inSlices.map((s) => ({ ...s, pct: pctOf(s.secs) }));
+    slices.push({
+      state: "other",
+      secs: other,
+      pct: pctOf(other),
+      color: "var(--est-bar-bg-alt)",
+      derived: true,
+    });
+    if (gap > 0) {
+      slices.push({
+        state: a.has_gap ? "No data" : "In progress",
+        secs: gap,
+        pct: pctOf(gap),
+        color: "var(--est-bar-bg)",
+        derived: true, // computed filler, not real occupancy → dust-filterable
+      });
+    }
+    return slices;
+  }
+
   // ---------------------------------------------------------------------------
   // Pie/donut: one frame's breakdown. all-states → every state; specific →
   // in-state vs rest. Deterministic per-state color.
@@ -1156,41 +1419,7 @@ class EntityStateTrackerCard extends LitElement {
         });
       }
     } else {
-      // Specific mode: build three REAL-seconds slices from the DurationSensor's
-      // attrs — identical shape to all-states breakdown — so the donut is never
-      // blank (a full grey ring at 0% in-state) and never mislabels absence of
-      // data as time in a non-tracked state:
-      //   in-state = duration_seconds
-      //   other    = window_seconds - duration_seconds - unaccounted_seconds
-      //   no-data  = unaccounted_seconds  ("No data" past window / "In progress")
-      // The gap slice's label is best-effort: unaccounted_seconds can bundle BOTH
-      // a pre-history gap (has_gap=True) AND an in-progress tail (frame spans past
-      // `now`). We label by has_gap, so a frame with both shows the merged slice
-      // as "No data" — the in-progress portion is folded in. Accepted: the goal
-      // (never conflate no-data with a non-tracked state) still holds.
-      // Prefer the raw seconds attr; pick.state is unit-converted to hours by HA
-      // and thus unit-ambiguous.
-      const inSecs =
-        (a.duration_seconds != null ? Number(a.duration_seconds) : Number(pick.state)) || 0;
-      const ws = Number(a.window_seconds) || 0;
-      const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
-      const other = ws > 0 ? Math.max(0, ws - inSecs - gap) : 0;
-      const denom = ws > 0 ? ws : inSecs + other + gap;
-      const pctOf = (secs) => (denom > 0 ? (secs / denom) * 100 : null);
-      const tracked = (a.tracked_states || []).join(", ") || "tracked";
-      slices = [
-        { state: tracked, secs: inSecs, pct: pctOf(inSecs), color: stateColor(tracked) },
-        { state: "other", secs: other, pct: pctOf(other), color: "var(--est-bar-bg-alt)", derived: true },
-      ];
-      if (gap > 0) {
-        slices.push({
-          state: a.has_gap ? "No data" : "In progress",
-          secs: gap,
-          pct: pctOf(gap),
-          color: "var(--est-bar-bg)",
-          derived: true, // computed filler, not real occupancy → dust-filterable
-        });
-      }
+      slices = this._specificSlices(a, pick);
     }
     // Drop sub-second DERIVED slices (other / no-data): the engine counts the
     // current open state up to `now`, so a fully-covered window leaves only
@@ -1216,11 +1445,23 @@ class EntityStateTrackerCard extends LitElement {
     // geometry renders; Lit renders a returned Node value in place as-is.
     const paths = slices.map((s) => {
       const frac = s.secs / total;
+      // Per-slice tooltip meta (real states enriched with count/avg; derived
+      // other/no-data slices carry only duration/pct).
+      const count = s.derived ? null : (a.counts || {})[s.state];
+      const avg = s.derived ? null : (a.avg_duration_seconds || {})[s.state];
+      const tip = {
+        label: s.state,
+        secs: s.secs,
+        pct: s.pct,
+        color: s.color,
+        count: count != null ? count : null,
+        avg: avg != null ? avg : null,
+      };
       // A full-circle slice (only slice, or frac≈1) has coincident arc
       // endpoints → a zero-length, INVISIBLE path. Draw a donut RING (outer
       // circle + inner hole punched via even-odd fill) instead.
       if (single || frac >= 0.9999) {
-        return { d: this._ring(cx, cy, r, inner), color: s.color, evenodd: true };
+        return { d: this._ring(cx, cy, r, inner), color: s.color, evenodd: true, tip };
       }
       const a0 = angle;
       const a1 = angle + frac * 2 * Math.PI;
@@ -1229,6 +1470,7 @@ class EntityStateTrackerCard extends LitElement {
         d: this._arc(cx, cy, r, inner, a0, a1),
         color: s.color,
         evenodd: false,
+        tip,
       };
     });
 
@@ -1275,13 +1517,26 @@ class EntityStateTrackerCard extends LitElement {
     el.setAttribute("width", "100");
     el.setAttribute("height", "100");
     el.setAttribute("viewBox", "0 0 100 100");
+    let hasTip = false;
     for (const p of paths) {
       const path = document.createElementNS(NS, "path");
       path.setAttribute("d", p.d);
       path.setAttribute("fill", p.color);
       if (p.evenodd) path.setAttribute("fill-rule", "evenodd");
+      // Hover/tap tooltip: same info + behaviour as the bar segments. Guarded on
+      // `p.tip` so the compliance gauge (no tip) stays inert. pointerleave is on
+      // the <svg> (below), not per-path — a per-path leave misses when the pointer
+      // exits through a transparent gap between slices, leaving the tip stuck.
+      if (p.tip) {
+        hasTip = true;
+        path.style.cursor = "pointer";
+        path.addEventListener("pointerenter", (e) => this._showTip(e, p.tip));
+        path.addEventListener("pointermove", (e) => this._showTip(e, p.tip));
+        path.addEventListener("click", (e) => this._tapTip(e, p.tip));
+      }
       el.appendChild(path);
     }
+    if (hasTip) el.addEventListener("pointerleave", () => this._hideTip());
     // Optional center label (gauge): a big value + small glyph in the hole.
     if (center) {
       const val = document.createElementNS(NS, "text");
@@ -1362,7 +1617,10 @@ class EntityStateTrackerCard extends LitElement {
       : this._renderFrameTable(sensors);
   }
 
-  // Specific mode: one row per enabled frame — the window comparison.
+  // Specific mode: one row per enabled frame — the window comparison — followed
+  // by a per-state breakdown of ONE frame (the configured/first), so the table is
+  // as rich as the pie. Mode-aware: the frame comparison is unique to specific
+  // trackers; the per-state section mirrors the all-states state-table.
   _renderFrameTable(sensors) {
     const a0 = sensors[0]?.attrs || {};
     const hasCompliance = sensors.some(
@@ -1427,6 +1685,61 @@ class EntityStateTrackerCard extends LitElement {
                       : fmtPct(r.compliance)}
                   </td>`
                 : nothing}
+            </tr>`;
+          })}
+        </tbody>
+      </table>
+      ${this._renderSpecificStateTable(sensors)}
+    `;
+  }
+
+  // Per-state breakdown of ONE frame for a specific tracker — the same story the
+  // pie tells (one row per tracked state + "other" + "No data"), rendered as a
+  // second table under the frame comparison. Rows/fillers computed identically to
+  // _renderPie's specific branch. Returns nothing when breakdown_seconds is absent
+  // (older backend / staged deploy) — the frame table alone still renders.
+  _renderSpecificStateTable(sensors) {
+    const pick = sensors.find((s) => s.frame === this._config.frame) || sensors[0];
+    const a = pick?.attrs || {};
+    if (a.breakdown_seconds == null) return nothing;
+    // Same slices as the pie (tracked states + "other" + "No data"), dust-filtered
+    // identically so a sub-second residue never renders a "0 s" row.
+    const rows = this._specificSlices(a, pick).filter((s) => s.secs >= 1 || !s.derived);
+
+    return html`
+      <div class="frame-picker">
+        ${FRAME_LABELS[pick.frame] || pick.frame}${this._incomplete(a) && a.data_start
+          ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
+          : nothing}
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="state-col">State</th>
+            <th>Duration</th>
+            <th>%</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rows.map((s) => {
+            const { state, secs, pct, color } = s;
+            const w = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
+            const tint = `color-mix(in srgb, ${color} 22%, transparent)`;
+            const bar =
+              w > 0
+                ? `linear-gradient(90deg, ${tint} 0 ${w}%, transparent ${w}% 100%)`
+                : "none";
+            return html`<tr>
+              <td class="state-col">
+                <span class="state-cell"
+                  ><span class="legend-swatch" style="background:${color}"></span
+                  >${state}</span
+                >
+              </td>
+              <td class="cell-primary">${fmtDuration(secs)}</td>
+              <td class="value-cell cell-secondary" style="--cell-bar:${bar}">
+                ${fmtPct(pct)}
+              </td>
             </tr>`;
           })}
         </tbody>
@@ -1585,13 +1898,15 @@ class EntityStateTrackerCardEditor extends LitElement {
     );
   }
 
-  // True when the selected tracker is all-states mode (breakdown sensors carry
-  // breakdown_seconds). The table frame picker only makes sense here: the
-  // all-states table shows ONE frame's states at a time, so it needs the picker;
-  // the specific-mode table renders every frame as its own row already.
+  // True when the selected tracker is all-states mode. Keyed on tracked_states
+  // ABSENCE (mirrors _isBreakdown): specific-mode duration sensors now also carry
+  // breakdown_seconds, so that key no longer discriminates. The table frame picker
+  // only makes sense here: the all-states table shows ONE frame's states at a time,
+  // so it needs the picker; the specific-mode table renders every frame as its own
+  // row already.
   _isAllStates() {
     return trackerFrameSensors(this.hass, this._config?.tracker_id).some(
-      (s) => this.hass?.states?.[s.entity_id]?.attributes?.breakdown_seconds != null
+      (s) => this.hass?.states?.[s.entity_id]?.attributes?.tracked_states == null
     );
   }
 

@@ -204,6 +204,10 @@ class DurationSensor(_FrameSensor):
             "percent",
             "compliance_percent",
             "duration_seconds",
+            # Per-state breakdown churns every tick like the all-states
+            # BreakdownSensor's dicts — strip from the recorder (§5.3).
+            "breakdown_seconds",
+            "breakdown_pct",
             "window_start",
             "data_start",
             "window_coverage",
@@ -244,14 +248,25 @@ class DurationSensor(_FrameSensor):
             "window_coverage": result.window_coverage,
             "has_gap": result.has_gap,
             # Total frame span + the slice no recorded state covers (partial
-            # window / in-progress today). The card needs both to build the
-            # specific-mode pie as three real-seconds slices — in-state / other /
-            # no-data — identical to all-states breakdown, instead of deriving a
-            # "rest" from percent (which collapses to a blank ring at 0% and
-            # mislabels no-data time as time in a non-tracked state, §5.1/§5.2).
+            # window / in-progress today). The card builds the specific-mode pie
+            # from the tracked-only breakdown_seconds below (one slice per tracked
+            # state), plus "other" (non-tracked time) and "no-data"/"in-progress"
+            # derived from window_seconds - in-state - unaccounted, instead of
+            # deriving a "rest" from percent (§5.1/§5.2).
             "window_seconds": result.window_seconds,
             "unaccounted_seconds": result.unaccounted_seconds,
         }
+        # Per-state seconds/pct sliced to the tracked set (the card draws one
+        # slice per tracked state). Kept tracked-only — a "specific" sensor must
+        # not leak non-tracked states. tracked_states is None only for a
+        # never-configured entry (impossible for a created specific tracker), and
+        # its presence is also the card's specific-vs-all-states discriminator.
+        tracked = self.coordinator.tracked_states
+        if tracked is not None:
+            attrs["breakdown_seconds"] = {
+                s: int(result.breakdown_seconds.get(s, 0.0)) for s in tracked
+            }
+            attrs["breakdown_pct"] = {s: result.breakdown_pct.get(s) for s in tracked}
         if self.coordinator.target_states:
             attrs["compliance_percent"] = result.compliance_percent
             attrs["target_threshold"] = self.coordinator.target_threshold

@@ -100,7 +100,8 @@
           "year": "Dit jaar",
           "target": "Doeltoestand(en)",
           "target_threshold": "Nalevingsdrempel (%, optioneel)",
-          "min_state_duration": "Minimale toestandsduur (seconden)"
+          "min_state_duration": "Minimale toestandsduur (seconden)",
+          "states": "Te volgen toestanden"
         },
         "data_description": {
           "today": "Sinds lokale middernacht.",
@@ -115,13 +116,15 @@
           "year": "Sinds 1 januari.",
           "target": "De verzameling toestanden die als conform gelden. In een van deze toestanden zijn telt mee. Los van de gevolgde toestanden — kies elke toestand die de entiteit kan hebben. Alleen gebruikt wanneer nalevingsscore is ingeschakeld.",
           "target_threshold": "Indien ingesteld, gaat een binaire sensor „Conform” aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan.",
-          "min_state_duration": "Als de gevolgde entiteit sneller dan dit aantal seconden in een toestand komt en er weer uit gaat, wordt dat korte moment genegeerd — de tijd ervan wordt in plaats daarvan bij de vorige toestand opgeteld en telt niet als een aparte wijziging. Gebruik het om flikkerende of stuiterende sensoren te filteren. Stel in op 0 om elke wijziging te tellen, hoe kort ook."
+          "min_state_duration": "Als de gevolgde entiteit sneller dan dit aantal seconden in een toestand komt en er weer uit gaat, wordt dat korte moment genegeerd — de tijd ervan wordt in plaats daarvan bij de vorige toestand opgeteld en telt niet als een aparte wijziging. Gebruik het om flikkerende of stuiterende sensoren te filteren. Stel in op 0 om elke wijziging te tellen, hoe kort ook.",
+          "states": "De entiteitstoestanden waarvan duur en percentage worden gemeten (bijv. on, heat, home). Vooraf ingevuld met recent geziene toestanden."
         }
       }
     },
     "error": {
       "no_target_selected": "Selecteer ten minste één doeltoestand, of schakel de nalevingsscore uit.",
-      "no_frames_selected": "Selecteer ten minste één tijdvak om te volgen."
+      "no_frames_selected": "Selecteer ten minste één tijdvak om te volgen.",
+      "no_states_selected": "Selecteer ten minste één toestand om te volgen."
     }
   },
   "entity": {
