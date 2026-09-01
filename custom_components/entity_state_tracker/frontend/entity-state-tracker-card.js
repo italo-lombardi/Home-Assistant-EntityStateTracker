@@ -69,15 +69,17 @@ const css =
   })();
 
 // Canonical frame order + labels, mirroring helpers.py `_FRAME_LABELS`.
-const FRAME_ORDER = ["today", "yesterday", "24h", "week", "7d", "30d", "month", "year"];
+const FRAME_ORDER = ["today", "yesterday", "24h", "week", "last_week", "7d", "30d", "month", "last_month", "year"];
 const FRAME_LABELS = {
   today: "Today",
   yesterday: "Yesterday",
   "24h": "Last 24 hours",
   week: "This week",
+  last_week: "Last week",
   "7d": "Last 7 days",
   "30d": "Last 30 days",
   month: "This month",
+  last_month: "Last month",
   year: "This year",
 };
 

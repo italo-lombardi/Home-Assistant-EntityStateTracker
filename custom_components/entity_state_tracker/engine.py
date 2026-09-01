@@ -65,9 +65,12 @@ def resolve_frame_bounds(
     midnight/1st/Jan-1. ``end_utc`` is ``now`` for every open-ended window and
     the local-midnight edge for closed calendar frames (``yesterday``).
 
-    * calendar — ``today``/``yesterday``/``week``/``month``/``year`` snap to
-      local boundaries; ``end`` is ``now`` (or the closing midnight for
-      ``yesterday``). ``week`` starts at local Monday 00:00 (week-to-date).
+    * calendar — ``today``/``yesterday``/``week``/``last_week``/``month``/
+      ``last_month``/``year`` snap to local boundaries; ``end`` is ``now`` (or the
+      closing midnight for the closed frames ``yesterday``/``last_week``/
+      ``last_month``). ``week`` starts at local Monday 00:00 (week-to-date);
+      ``last_week`` is the previous full Monday-anchored week; ``last_month`` is
+      the previous full calendar month.
     * rolling — ``24h``/``7d`` are ``now − delta → now``.
     * ``30d`` — "last 30 whole local days": ``[today_midnight − 30 days,
       today_midnight)`` (§6.4), so the tail day is queryable-complete and the
@@ -112,6 +115,25 @@ def resolve_frame_bounds(
     if frame_key == "month":
         start = today_midnight_local.replace(day=1)
         return start.astimezone(dt.UTC), now_utc
+
+    if frame_key == "last_week":
+        # Previous FULL Monday-anchored week (closed): last-last Monday 00:00 →
+        # this-past Monday 00:00. Exactly 7 local days. Mirrors `week` but shifted
+        # one whole week back and closed at this week's Monday midnight (not now).
+        end = _rewind_local_days(today_midnight_local, local_now.weekday(), tz)
+        start = _rewind_local_days(today_midnight_local, local_now.weekday() + 7, tz)
+        return start.astimezone(dt.UTC), end.astimezone(dt.UTC)
+
+    if frame_key == "last_month":
+        # Previous FULL calendar month (closed): 1st of previous month 00:00 →
+        # 1st of this month 00:00. Handles Jan→Dec year rollback. `end` already has
+        # day=1, so replace(month=...) cannot overflow a short month.
+        end = today_midnight_local.replace(day=1)
+        if end.month == 1:
+            start = end.replace(year=end.year - 1, month=12)
+        else:
+            start = end.replace(month=end.month - 1)
+        return start.astimezone(dt.UTC), end.astimezone(dt.UTC)
 
     # year
     start = today_midnight_local.replace(month=1, day=1)
@@ -381,10 +403,11 @@ def compute_frame(
     recent portion arrives via ``recent_blocks``. The seam between them is
     ``ledger_upper_local_day`` — the local day at which the recorder takes over.
 
-    * **Calendar frames** (``today``/``yesterday``/``30d``/``month``/``year``)
-      start on a local midnight, so their windows are whole local days and the
-      seam is ``today_local_day`` (the default): the ledger owns every closed
-      day and the recorder recomputes the open day.
+    * **Calendar frames** (``today``/``yesterday``/``30d``/``last_week``/
+      ``month``/``last_month``/``year``) start on a local midnight, so their
+      windows are whole local days and the seam is ``today_local_day`` (the
+      default): the ledger owns every closed day and the recorder recomputes the
+      open day.
     * **Rolling frames** (``24h``/``7d``) start MID-DAY. The caller anchors the
       recorder query at ``recorder_floor`` and passes that day here as
       ``ledger_upper_local_day``, so the ledger fills only WHOLE days strictly

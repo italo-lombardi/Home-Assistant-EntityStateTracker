@@ -1250,7 +1250,7 @@ async def test_update_data_queries_recorder_once_per_tick(
     c = await _make_coordinator(hass, entry)
     with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
         await _first_refresh(hass, c)
-        assert len(c.enabled_frames) == 8  # all frames on
+        assert len(c.enabled_frames) == 10  # all frames on
         patch_recorder.mock.reset_mock()  # type: ignore[attr-defined]
         await c._async_update_data()
     # ≤2 per the contract; the shared-slice design makes it exactly 1.
@@ -2107,7 +2107,7 @@ async def test_rolling_regression_calendar_frames_unchanged(
         }
         with _patch_retention(30):
             data = await c._async_update_data()
-    calendar = ("today", "yesterday", "30d", "month", "year")
+    calendar = ("today", "yesterday", "30d", "last_week", "month", "last_month", "year")
     for key in calendar:
         fr = data.frames[key]
         assert sum(fr.breakdown_seconds.values()) <= fr.window_seconds + 1.0

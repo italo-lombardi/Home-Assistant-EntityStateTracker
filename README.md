@@ -14,14 +14,14 @@
 
 **Track how long any entity spends in each of its states — across many time frames at once — and keep those numbers even after the recorder purges its history.**
 
-Point Entity State Tracker at one entity, pick a mode, and it produces a bundle of duration, percentage, compliance, and transition sensors for `today`, `yesterday`, `24h`, `week`, `7d`, `30d`, `month`, and `year` — all from a single config-flow pick. It keeps its own persisted daily-bucket ledger, so a `30d`, `month`, or `year` window stays correct **past the recorder's ~10-day retention** instead of silently going incomplete. A custom Lovelace card renders it as bars, a pie/donut, or a dense multi-frame table.
+Point Entity State Tracker at one entity, pick a mode, and it produces a bundle of duration, percentage, compliance, and transition sensors for `today`, `yesterday`, `24h`, `week`, `last_week`, `7d`, `30d`, `month`, `last_month`, and `year` — all from a single config-flow pick. It keeps its own persisted daily-bucket ledger, so a `30d`, `month`, or `year` window stays correct **past the recorder's ~10-day retention** instead of silently going incomplete. A custom Lovelace card renders it as bars, a pie/donut, or a dense multi-frame table.
 
 ---
 
 ## Features
 
 - **Two modes, one config flow** — **specific-states** (pick the states you care about → duration + % + optional compliance score) or **all-states** (auto-discovers every state the entity visits → per-state breakdown). Choose from a menu; no YAML.
-- **Many frames from one pick** — `today`, `yesterday`, `24h`, `week`, `7d`, `30d`, `month`, `year`. Toggle each on or off; the [Frames](#frames) table below notes which are calendar-aligned vs rolling.
+- **Many frames from one pick** — `today`, `yesterday`, `24h`, `week`, `last_week`, `7d`, `30d`, `month`, `last_month`, `year`. Toggle each on or off; the [Frames](#frames) table below notes which are calendar-aligned vs rolling.
 - **Survives recorder purge** — a self-managed daily-bucket ledger (via HA `Store`) accumulates closed days, so long windows keep working past the recorder's default ~10-day retention. Data-since-date and gap flags mean a partial window is never silently wrong.
 - **Compliance** (specific mode) — declare a *target* set of desired states (`heat` **or** `auto`), and the percentage becomes a compliance score with an optional threshold that spawns a `compliant` binary sensor.
 - **Transitions** — per-state entry count, average visit duration, last-seen, and previous-state — riding the same event stream, near-zero extra machinery.
@@ -115,7 +115,7 @@ No state pick and no compliance — every state is discovered automatically.
 
 | Field | Default | Description |
 |-------|---------|-------------|
-| Frames | `today`, `yesterday`, `24h`, `7d` on | Toggle each frame on or off. `week` is off by default to keep the default set lean; `30d`, `month`, and `year` are off by default because they exceed recorder retention and fill in over time via the ledger. |
+| Frames | `today`, `yesterday`, `24h`, `7d` on | Toggle each frame on or off. `week` and `last_week` are off by default to keep the default set lean; `30d`, `month`, `last_month`, and `year` are off by default because they exceed recorder retention and fill in over time via the ledger. |
 | Minimum state duration (seconds) | `0` (disabled) | Glitch filter. Contiguous visits shorter than this merge into the preceding block, so momentary flaps don't count as real visits or inflate transition counts. |
 
 ![Shared tail: frames and glitch filter](assets/04_frames.png)
@@ -186,9 +186,11 @@ Every duration/breakdown sensor exists per **enabled frame**:
 | `yesterday` | calendar | previous local midnight → local midnight |
 | `24h` | rolling | now − 24h → now |
 | `week` | calendar | local Monday 00:00 → now (week-to-date) |
+| `last_week` | calendar | previous full Monday–Sunday week (closed) |
 | `7d` | rolling | now − 7d → now |
 | `30d` | rolling* | last 30 whole local days |
 | `month` | calendar | 1st of the local month → now |
+| `last_month` | calendar | previous full calendar month (closed) |
 | `year` | calendar | Jan 1 local → now |
 
 \* Windows longer than the recorder's retention can't be *truly* rolling (the tail day is no longer queryable), so `30d` is defined as "the last 30 whole local days" and labelled as such. `24h` and `7d` are true-rolling because they fit inside retention.

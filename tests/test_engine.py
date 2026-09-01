@@ -38,7 +38,7 @@ def _utc(*args: int) -> dt.datetime:
 
 
 # --------------------------------------------------------------------------- #
-# resolve_frame_bounds — all 8 frames + the ValueError guard
+# resolve_frame_bounds — all 10 frames + the ValueError guard
 # --------------------------------------------------------------------------- #
 
 
@@ -73,6 +73,31 @@ def test_resolve_frame_bounds_yesterday_is_closed() -> None:
     assert start.astimezone(NY) == dt.datetime(2026, 1, 14, 0, 0, tzinfo=NY)
     # Ends at today's local midnight, NOT now.
     assert end.astimezone(NY) == dt.datetime(2026, 1, 15, 0, 0, tzinfo=NY)
+
+
+def test_resolve_frame_bounds_last_week_is_closed_prev_full_week() -> None:
+    # Thursday 2026-01-15: prev full Monday-anchored week is 01-05 .. 01-12.
+    now = dt.datetime(2026, 1, 15, 9, 30, tzinfo=NY)
+    start, end = E.resolve_frame_bounds("last_week", now, NY)
+    assert start.astimezone(NY) == dt.datetime(2026, 1, 5, 0, 0, tzinfo=NY)
+    # Closed at this week's Monday midnight, NOT now.
+    assert end.astimezone(NY) == dt.datetime(2026, 1, 12, 0, 0, tzinfo=NY)
+    assert (end - start).total_seconds() == 7 * 86400  # no DST in this span
+
+
+def test_resolve_frame_bounds_last_month_is_closed_prev_full_month() -> None:
+    now = dt.datetime(2026, 2, 15, 9, 30, tzinfo=NY)
+    start, end = E.resolve_frame_bounds("last_month", now, NY)
+    assert start.astimezone(NY) == dt.datetime(2026, 1, 1, 0, 0, tzinfo=NY)
+    # Closed at the 1st of this month, NOT now.
+    assert end.astimezone(NY) == dt.datetime(2026, 2, 1, 0, 0, tzinfo=NY)
+
+
+def test_resolve_frame_bounds_last_month_january_rolls_back_to_december() -> None:
+    now = dt.datetime(2026, 1, 15, 9, 30, tzinfo=NY)  # January → prev month is Dec 2025
+    start, end = E.resolve_frame_bounds("last_month", now, NY)
+    assert start.astimezone(NY) == dt.datetime(2025, 12, 1, 0, 0, tzinfo=NY)
+    assert end.astimezone(NY) == dt.datetime(2026, 1, 1, 0, 0, tzinfo=NY)
 
 
 @pytest.mark.parametrize(
@@ -158,6 +183,32 @@ def test_resolve_frame_bounds_week_starts_local_monday(
         # 30d — today 2026-11-20 rewinds 30 days to 10-21 ACROSS fall-back 11-01
         # (absolute rewind would land 10-21 23:00).
         pytest.param("30d", (2026, 11, 20, 12, 0), (2026, 10, 21, 0, 0), id="30d-fall"),
+        # last_week — spring-forward Sun 2026-03-08 lies inside the PREVIOUS week:
+        # now Thu 2026-03-12 → prev week Mon 03-02 .. Mon 03-09 (contains 03-08).
+        pytest.param(
+            "last_week", (2026, 3, 12, 12, 0), (2026, 3, 2, 0, 0), id="last_week-spring"
+        ),
+        # last_week — fall-back Sun 2026-11-01 inside prev week: now Thu 2026-11-05
+        # → prev week Mon 10-26 .. Mon 11-02 (contains 11-01).
+        pytest.param(
+            "last_week", (2026, 11, 5, 12, 0), (2026, 10, 26, 0, 0), id="last_week-fall"
+        ),
+        # last_month — now Apr 2026 → prev month March (contains spring-forward
+        # 03-08); start is the 1st of the prev month.
+        pytest.param(
+            "last_month",
+            (2026, 4, 15, 12, 0),
+            (2026, 3, 1, 0, 0),
+            id="last_month-spring",
+        ),
+        # last_month — now Dec 2026 → prev month November (contains fall-back
+        # 11-01 at 02:00, inside [11-01 00:00, 12-01 00:00)).
+        pytest.param(
+            "last_month",
+            (2026, 12, 15, 12, 0),
+            (2026, 11, 1, 0, 0),
+            id="last_month-fall",
+        ),
     ],
 )
 def test_resolve_frame_bounds_dst_crossing_start_stays_local_midnight(
@@ -1516,8 +1567,19 @@ def test_f3_compliance_percent_unchanged_window_denominator() -> None:
 # (the fix for the 24h/7d partial-oldest-day over-count).
 # --------------------------------------------------------------------------- #
 
-# All seven frame keys — the frame-agnostic invariant runs across every one.
-_ALL_FRAMES = ("today", "yesterday", "24h", "7d", "30d", "month", "year")
+# The frame keys the frame-agnostic invariant runs across (week omitted: its
+# open week-to-date slice behaves like today/month/year).
+_ALL_FRAMES = (
+    "today",
+    "yesterday",
+    "24h",
+    "last_week",
+    "7d",
+    "30d",
+    "month",
+    "last_month",
+    "year",
+)
 
 
 @pytest.mark.parametrize("frame", _ALL_FRAMES)
@@ -1566,7 +1628,7 @@ def test_frame_agnostic_breakdown_never_exceeds_window(
     if frame in ("24h", "7d"):
         recent = {"on": {"secs": (now - start_utc).total_seconds(), "count": 0}}
         upper = window_start_local_day
-    elif frame in ("yesterday", "30d"):
+    elif frame in ("yesterday", "30d", "last_week", "last_month"):
         recent = {}
         upper = None
     else:  # today / month / year — open calendar, recent = today slice

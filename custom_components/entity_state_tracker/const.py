@@ -25,9 +25,11 @@ FRAMES: dict[str, FrameKind] = {
     "yesterday": "calendar",
     "24h": "rolling",
     "week": "calendar",
+    "last_week": "calendar",
     "7d": "rolling",
     "30d": "rolling",
     "month": "calendar",
+    "last_month": "calendar",
     "year": "calendar",
 }
 

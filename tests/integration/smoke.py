@@ -1208,7 +1208,9 @@ def ec11_options_flow_frame_toggle():
         "24h": True,
         "7d": True,
         "30d": False,
+        "last_week": False,
         "month": False,
+        "last_month": False,
         "year": False,
         "min_state_duration": 0,
     }
@@ -1707,9 +1709,11 @@ _FRAME_SLUG_TAIL = {
     "today": "today",
     "yesterday": "yesterday",
     "24h": "last_24_hours",
+    "last_week": "last_week",
     "7d": "last_7_days",
     "30d": "last_30_days",
     "month": "this_month",
+    "last_month": "last_month",
     "year": "this_year",
 }
 
@@ -2011,6 +2015,207 @@ def ec23_week_frame_starts_monday():
     return entry, eid
 
 
+def ec24_last_week_last_month_frames():
+    """EC24: `last_week` / `last_month` are CLOSED prior-period calendar windows.
+
+    Both are off by default, so this is the only EC that enables them. Unlike
+    `week`/`month` (to-date, still open, include now), these are the *completed*
+    prior period: their window is fully in the past, so window_end is a past
+    local midnight (not now) and no live accrual can land in them — the closed
+    siblings of `yesterday`/`30d`. The smoke harness cannot backfill recorder
+    rows (POST /api/states ignores client last_changed), so a real duration
+    cannot be fabricated in a closed past window; this EC asserts the window
+    BOUNDS instead, which is what the frame contract actually guarantees:
+
+      last_week  = previous full Monday-anchored week:
+                   [Monday 00:00 of last week, Monday 00:00 of this week)
+                   → window_start weekday()==0 (Monday), 00:00:00,
+                     exactly 7*86400 s wide, window_end == this week's Monday.
+      last_month = previous full calendar month:
+                   [1st 00:00 of prev month, 1st 00:00 of this month)
+                   → window_start day==1, 00:00:00, month == prev month,
+                     window_end day==1 (1st of this month).
+
+    Bounds are computed in HA's OWN configured tz (from /api/config), not the
+    host's, since the container tz may differ. A true accrued-duration check on
+    these closed windows belongs in the pytest unit suite (which can mock tz and
+    call resolve_frame_bounds directly), not the live smoke suite.
+    """
+    print(
+        "\n=== EC24: last_week / last_month are closed prior-period windows ===",
+        flush=True,
+    )
+    ha_tz = ZoneInfo(api("GET", "/api/config")["time_zone"])
+    now_local = dt.datetime.now(ha_tz)
+    today_midnight = now_local.replace(hour=0, minute=0, second=0, microsecond=0)
+
+    eid = make_entity("lastwk_lastmo", "on")
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on", "off"],
+        frames={"last_week": True, "last_month": True},
+    )
+    reg = wait_entities(entry, min_count=1)
+
+    # --- last_week ---
+    lw_dur = eid_for(entry, "last_week", M_DURATION, reg)
+    chk(
+        "EC24 last_week duration sensor exists",
+        lw_dur is not None,
+        True,
+        f"uids={list(reg)}",
+    )
+    lw = gs(lw_dur).get("attributes", {})
+    chk("EC24 last_week frame attr", lw.get("frame"), "last_week")
+    ws = dt.datetime.fromisoformat(lw["window_start"]).astimezone(ha_tz)
+    note(
+        f"last_week window_start (HA tz {ha_tz}) = {ws.isoformat()}, window_seconds={lw['window_seconds']}"
+    )
+    chk("EC24 last_week start is a Monday", ws.weekday(), 0, f"{ws:%A}")
+    chk(
+        "EC24 last_week start is 00:00:00",
+        (ws.hour, ws.minute, ws.second),
+        (0, 0, 0),
+        f"{ws:%H:%M:%S}",
+    )
+    # Expected bounds computed exactly as the engine does: local midnights →
+    # UTC. Compare as absolute instants so a DST week (23h/25h day) still passes.
+    this_monday = today_midnight - dt.timedelta(days=now_local.weekday())
+    last_monday = today_midnight - dt.timedelta(days=now_local.weekday() + 7)
+    exp_start_utc = last_monday.astimezone(dt.UTC)
+    exp_span = (this_monday.astimezone(dt.UTC) - exp_start_utc).total_seconds()
+    chk(
+        "EC24 last_week start == prev week's Monday 00:00",
+        ws.astimezone(dt.UTC),
+        exp_start_utc,
+        f"got={ws} exp={last_monday}",
+    )
+    chk(
+        "EC24 last_week spans prev full week (DST-aware)",
+        lw["window_seconds"],
+        exp_span,
+        f"exp={exp_span}",
+    )
+    chk(
+        "EC24 last_week is closed (end in the past)",
+        this_monday < now_local,
+        True,
+        f"end={this_monday} now={now_local}",
+    )
+
+    # --- last_month ---
+    lm_dur = eid_for(entry, "last_month", M_DURATION, reg)
+    chk(
+        "EC24 last_month duration sensor exists",
+        lm_dur is not None,
+        True,
+        f"uids={list(reg)}",
+    )
+    lm = gs(lm_dur).get("attributes", {})
+    chk("EC24 last_month frame attr", lm.get("frame"), "last_month")
+    mws = dt.datetime.fromisoformat(lm["window_start"]).astimezone(ha_tz)
+    note(
+        f"last_month window_start (HA tz {ha_tz}) = {mws.isoformat()}, window_seconds={lm['window_seconds']}"
+    )
+    chk("EC24 last_month start is the 1st", mws.day, 1, f"{mws:%Y-%m-%d}")
+    chk(
+        "EC24 last_month start is 00:00:00",
+        (mws.hour, mws.minute, mws.second),
+        (0, 0, 0),
+        f"{mws:%H:%M:%S}",
+    )
+    # end == 1st of this month; start == 1st of the month before it (Jan→Dec rollback).
+    this_first = today_midnight.replace(day=1)
+    prev_first = (
+        this_first.replace(year=this_first.year - 1, month=12)
+        if this_first.month == 1
+        else this_first.replace(month=this_first.month - 1)
+    )
+    exp_mstart_utc = prev_first.astimezone(dt.UTC)
+    exp_mspan = (this_first.astimezone(dt.UTC) - exp_mstart_utc).total_seconds()
+    chk(
+        "EC24 last_month start == prev month's 1st 00:00",
+        mws.astimezone(dt.UTC),
+        exp_mstart_utc,
+        f"got={mws} exp={prev_first}",
+    )
+    chk(
+        "EC24 last_month spans prev full month (DST-aware)",
+        lm["window_seconds"],
+        exp_mspan,
+        f"exp={exp_mspan}",
+    )
+    chk(
+        "EC24 last_month is closed (end in the past)",
+        this_first < now_local,
+        True,
+        f"end={this_first} now={now_local}",
+    )
+    return entry, eid
+
+
+def ec25_count_once_live_fold():
+    """EC25: one folded visit == exactly one count (PR #16 count-once, live proxy).
+
+    PR #16 fixed a bucket-seam over-count where a visit straddling local midnight
+    could be counted twice (once by backfill, once by the live fold) or its
+    pre-midnight seconds re-added on top of a backfilled day (>86400/day). The
+    true seam regression needs a visit that crosses a real midnight, which the
+    live smoke harness cannot manufacture (no time freeze, no backdated
+    last_changed, wall-clock only) — that regression lives in the pytest unit
+    suite (mock tz + split_visit_across_days). What the live path CAN prove is
+    the invariant the fix rests on: folding N discrete visits into one state on
+    an open frame yields counts[state] == N, never 2N. Each visit is dwelt past
+    min_state_duration so none is glitch-filtered, then folded by leaving the
+    state; counts is read from the `today` breakdown attr.
+    """
+    print(
+        "\n=== EC25: N folded visits == N counts (count-once, PR #16 proxy) ===",
+        flush=True,
+    )
+    eid = make_entity("countonce", "off")
+    entry = create_tracker(
+        eid, "all_states", frames={"today": True}, min_state_duration=0
+    )
+    reg = wait_entities(entry, min_count=1)
+    today_bd = eid_for(entry, "today", M_BREAKDOWN, reg)
+    chk(
+        "EC25 today breakdown sensor exists",
+        today_bd is not None,
+        True,
+        f"uids={list(reg)}",
+    )
+
+    n_visits = 3
+    for i in range(n_visits):
+        ss(eid, "target")
+        time.sleep(3)
+        ss(eid, "off")  # fold this visit
+        time.sleep(2)
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": today_bd})
+    got = wait_for(
+        lambda: gs(today_bd).get("attributes", {}).get("counts", {}).get("target", 0),
+        n_visits,
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    counts = gs(today_bd).get("attributes", {}).get("counts", {})
+    chk(
+        "EC25 folded visits counted once each (no seam double-count)",
+        got,
+        n_visits,
+        f"counts={counts}",
+    )
+    # A count of 2N would be the pre-fix double-count symptom; assert not-doubled.
+    chk(
+        "EC25 count is not doubled",
+        (counts.get("target", 0) or 0) <= n_visits,
+        True,
+        f"counts={counts}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -2065,6 +2270,12 @@ def main():
 
         if ec_enabled(23):
             ec23_week_frame_starts_monday()
+
+        if ec_enabled(24):
+            ec24_last_week_last_month_frames()
+
+        if ec_enabled(25):
+            ec25_count_once_live_fold()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
