@@ -196,12 +196,18 @@ def test_resolve_frame_bounds_week_starts_local_monday(
         # last_month — now Apr 2026 → prev month March (contains spring-forward
         # 03-08); start is the 1st of the prev month.
         pytest.param(
-            "last_month", (2026, 4, 15, 12, 0), (2026, 3, 1, 0, 0), id="last_month-spring"
+            "last_month",
+            (2026, 4, 15, 12, 0),
+            (2026, 3, 1, 0, 0),
+            id="last_month-spring",
         ),
         # last_month — now Dec 2026 → prev month November (contains fall-back
         # 11-01 at 02:00, inside [11-01 00:00, 12-01 00:00)).
         pytest.param(
-            "last_month", (2026, 12, 15, 12, 0), (2026, 11, 1, 0, 0), id="last_month-fall"
+            "last_month",
+            (2026, 12, 15, 12, 0),
+            (2026, 11, 1, 0, 0),
+            id="last_month-fall",
         ),
     ],
 )
