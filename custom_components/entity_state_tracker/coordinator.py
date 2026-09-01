@@ -388,6 +388,11 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         if self.min_state_duration > 0 and total_secs < self.min_state_duration:
             # Glitch: re-attribute its time to the preceding surviving visit's
             # state, in that visit's start-day bucket; never opens a new count.
+            # ponytail: if a restart truncated this visit to a sub-threshold tail
+            # (start day dropped as backfilled), _last_fold may be a stale
+            # pre-restart predecessor. Unreachable at the min_state_duration=0
+            # default; if a nonzero-threshold restart-tail glitch ever mislands,
+            # reset _last_fold to None at load and gate this on it.
             if self._last_fold is not None:
                 prev_state, prev_day = self._last_fold
                 row = ledger.daily.setdefault(prev_day, {}).setdefault(

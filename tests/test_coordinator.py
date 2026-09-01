@@ -607,7 +607,7 @@ async def test_live_fold_splits_across_midnight_counts_once(
     ledger = c._ledger
     assert ledger is not None
     # Visit "on" from 06:30Z (23:30 06-09 PDT) to 07:30Z (00:30 06-10 PDT) —
-    # straddling the 07:00Z local midnight, 3600 s each side.
+    # straddling the 07:00Z local midnight, 1800 s each side.
     # No backfill seam (last_updated_day None): the fold owns both days, so it
     # writes each half. (When backfill HAS baked the start day, the fold skips it
     # — see test_live_fold_skips_already_backfilled_days.)
