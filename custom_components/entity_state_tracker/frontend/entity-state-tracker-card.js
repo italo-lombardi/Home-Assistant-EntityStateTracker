@@ -7,7 +7,7 @@
  * self-contained file, vanilla LitElement via the home-assistant-main prototype.
  */
 
-const CARD_VERSION = "0.1.2";
+const CARD_VERSION = "0.1.3";
 
 console.info(
   `%c ENTITY-STATE-TRACKER-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi `,
@@ -106,6 +106,27 @@ function sortStates(states) {
     const tb = _STATE_TAIL[b] ? 1 : 0;
     return ta - tb || String(a).localeCompare(String(b));
   });
+}
+
+// Effective frame selection for a card config: the `frames` array, or the legacy
+// single `frame` string, normalized to FRAME_ORDER. Empty = all frames. Shared by
+// the card renderer and the editor so the two never drift.
+function selectedFrames(config) {
+  const raw = Array.isArray(config.frames)
+    ? config.frames
+    : config.frame
+      ? [config.frame]
+      : [];
+  return FRAME_ORDER.filter((f) => raw.includes(f));
+}
+
+// Every frame a tracker actually publishes, in canonical order — the default
+// selection for a fresh card so it opens with all real (enabled) frames checked.
+function allFramesFor(hass, trackerId) {
+  const set = new Set(
+    trackerFrameSensors(hass, trackerId).map((s) => s.frame)
+  );
+  return FRAME_ORDER.filter((f) => set.has(f));
 }
 
 // -----------------------------------------------------------------------------
@@ -552,17 +573,39 @@ const cardStyles = css`
   .pie-charts {
     display: flex;
     align-items: flex-start;
+    justify-content: center;
     gap: 24px;
     flex-wrap: wrap;
     padding-top: 8px;
   }
 
-  /* One chart column: caption, then the donut+legend group. */
+  /* Multi-frame: frames stack vertically (one pie below the next). Each frame is
+     a .pie-frame row holding its donut + optional gauge side by side. */
+  .pie-charts:has(.pie-frame) {
+    flex-direction: column;
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+  .pie-frame {
+    display: flex;
+    align-items: flex-start;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+  .pie-frame + .pie-frame {
+    border-top: 1px solid var(--divider-color, #e0e0e0);
+    padding-top: 16px;
+  }
+
+  /* One chart column: caption, then the donut+legend group. flex:0 0 auto so it
+     hugs its content inside a .pie-frame row instead of stretching to fill the
+     row and leaving a white gap to the right of the donut/legend. */
   .pie-chart {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
+    flex: 0 0 auto;
   }
 
   /* A solo (beside) chart left-aligns its column: when the row-legend wraps
@@ -739,9 +782,14 @@ class EntityStateTrackerCard extends LitElement {
     // Preview: offer the first discovered tracker (by its config-entry id).
     // Harmless literal fallback if none is present.
     const [first] = trackerOptions(hass);
+    const tracker_id = first ? first.trackerId : "";
+    // Fresh card opens with every real (enabled) frame checked. Empty stays "all"
+    // at render, but pre-checking makes the default explicit and editable.
+    const frames = allFramesFor(hass, tracker_id);
     return {
-      tracker_id: first ? first.trackerId : "",
+      tracker_id,
       chart: "bars",
+      ...(frames.length ? { frames } : {}),
     };
   }
 
@@ -806,9 +854,14 @@ class EntityStateTrackerCard extends LitElement {
     return out;
   }
 
+  // Frames the card is configured to show (see module-level selectedFrames).
+  _selectedFrames() {
+    return selectedFrames(this._config);
+  }
+
   _framesToShow(sensors) {
-    const filter = this._config.frames;
-    if (!Array.isArray(filter) || filter.length === 0) return sensors;
+    const filter = this._selectedFrames();
+    if (filter.length === 0) return sensors;
     return sensors.filter((s) => filter.includes(s.frame));
   }
 
@@ -1331,14 +1384,18 @@ class EntityStateTrackerCard extends LitElement {
     const inSecs = Object.values(bs).reduce((n, v) => n + (Number(v) || 0), 0);
     const denom = ws > 0 ? ws : inSecs + gap;
     const pctOf = (secs) => (denom > 0 ? (secs / denom) * 100 : null);
-    const slices = sortStates(Object.keys(bs)).map((state) => ({
-      state,
-      secs: Number(bs[state]) || 0,
-      pct: bp[state] != null ? bp[state] : pctOf(Number(bs[state]) || 0),
-      color: stateColor(state),
-      count: counts[state] != null ? counts[state] : null,
-      avg: avgs[state] != null ? avgs[state] : null,
-    }));
+    const slices = Object.keys(bs)
+      .map((state) => ({
+        state,
+        secs: Number(bs[state]) || 0,
+        pct: bp[state] != null ? bp[state] : pctOf(Number(bs[state]) || 0),
+        color: stateColor(state),
+        count: counts[state] != null ? counts[state] : null,
+        avg: avgs[state] != null ? avgs[state] : null,
+      }))
+      // Biggest first, so the table/pie/bars lead with the dominant state and
+      // the top-5 cap keeps the states that actually matter.
+      .sort((x, y) => y.secs - x.secs);
     if (gap > 0) {
       slices.push({
         state: a.has_gap ? "No data" : "In progress",
@@ -1359,11 +1416,14 @@ class EntityStateTrackerCard extends LitElement {
     let inSlices;
     let inSecs;
     if (bs != null) {
-      inSlices = sortStates(tracked).map((state) => ({
-        state,
-        secs: Number(bs[state]) || 0,
-        color: stateColor(state),
-      }));
+      inSlices = tracked
+        .map((state) => ({
+          state,
+          secs: Number(bs[state]) || 0,
+          color: stateColor(state),
+        }))
+        // Biggest first (see _breakdownSlices) — % descending in the table.
+        .sort((x, y) => y.secs - x.secs);
       inSecs = inSlices.reduce((n, s) => n + s.secs, 0);
     } else {
       // pick.state is unit-converted to hours by HA (unit-ambiguous); prefer the
@@ -1397,47 +1457,37 @@ class EntityStateTrackerCard extends LitElement {
   }
 
   // ---------------------------------------------------------------------------
-  // Pie/donut: one frame's breakdown. all-states → every state; specific →
-  // in-state vs rest. Deterministic per-state color.
+  // Pie/donut: one donut per selected frame. all-states → every state; specific
+  // → in-state vs rest. Deterministic per-state color.
   // ---------------------------------------------------------------------------
   _renderPie(sensors) {
-    // Pick the configured frame, else the first available.
-    const pick =
-      sensors.find((s) => s.frame === this._config.frame) || sensors[0];
+    // One donut per frame. Solo → single donut (legacy legend-beside look);
+    // multi → frames stack vertically (one pie below the next), each frame's
+    // donut + optional gauge side by side in a .pie-frame row.
+    // solo is on the POST-filter count: one frame checked out of many → solo
+    // (legend beside, flat), same as a tracker that only has one frame enabled.
+    const solo = sensors.length === 1;
+    return html`
+      ${this._metaHeader(sensors[0]?.attrs || {})}
+      <div class="pie-charts">
+        ${sensors.map((s) => this._pieColumnFor(s, solo))}
+      </div>
+    `;
+  }
+
+  // Build one frame's donut column + optional compliance gauge. `solo` (single
+  // frame) returns a flat column; multi-frame wraps in a .pie-frame row so frames
+  // stack vertically. Legend placement is independent of solo (see below).
+  _pieColumnFor(pick, solo) {
     const a = pick.attrs || {};
-    let slices;
-    if (this._isBreakdown(pick)) {
-      const bs = a.breakdown_seconds || {};
-      slices = Object.keys(bs).map((state) => ({
-        state,
-        secs: bs[state],
-        pct: (a.breakdown_pct || {})[state],
-        color: stateColor(state),
-      }));
-      // Trailing grey slice for window time attributed to no state, so the
-      // donut visibly sums to 100. "No data" when the window predates our
-      // history, else "In progress" (a transient open-state lag). Guarded on
-      // the attr being present (falsy/absent on older backends). Same NaN-safe
-      // coercion as the specific-mode branch (Math.max(0, …||0)).
-      const gap = Math.max(0, Number(a.unaccounted_seconds) || 0);
-      if (gap > 0) {
-        const ws = Number(a.window_seconds) || 0;
-        slices.push({
-          state: a.has_gap ? "No data" : "In progress",
-          secs: gap,
-          pct: ws > 0 ? (gap / ws) * 100 : null,
-          color: "var(--est-bar-bg)",
-          derived: true, // computed filler, not a recorded state → dust-filterable
-        });
-      }
-    } else {
-      slices = this._specificSlices(a, pick);
-    }
+    // all-states reuses _breakdownSlices (sorted, gap-tailed); specific its own.
+    let slices = this._isBreakdown(pick)
+      ? this._breakdownSlices(a)
+      : this._specificSlices(a, pick);
     // Drop sub-second DERIVED slices (other / no-data): the engine counts the
     // current open state up to `now`, so a fully-covered window leaves only
     // floating-point residue there (e.g. 0.4s) — a dust slice that rounds to
-    // "0 s" and clutters the legend. Real state slices are never dropped: a
-    // genuine sub-second occupancy still shows.
+    // "0 s" and clutters the legend. Real state slices are never dropped.
     slices = slices.filter((s) => s.secs >= 1 || !s.derived);
     const total = slices.reduce((n, s) => n + s.secs, 0) || 1;
 
@@ -1498,22 +1548,26 @@ class EntityStateTrackerCard extends LitElement {
         ? html`<span class="since">since ${fmtDate(a.data_start)}</span>`
         : nothing}
     </div>`;
-    return html`
-      ${this._metaHeader(a)}
-      <div class="pie-charts">
-        ${this._pieColumn(
-          stateCaption,
-          paths,
-          slices.map((s) => ({
-            color: s.color,
-            label: s.state,
-            value: html`${fmtDuration(s.secs)} · ${fmtPct(s.pct)}`,
-          })),
-          gauge === nothing // solo → legend beside; with gauge → legend below
-        )}
-        ${gauge}
-      </div>
+    // Legend beside the donut whenever the beside slot is free. Frames stack
+    // vertically (one .pie-frame row each), so each donut has room beside it
+    // regardless of frame count; only a compliance gauge takes that slot.
+    const column = html`
+      ${this._pieColumn(
+        stateCaption,
+        paths,
+        slices.map((s) => ({
+          color: s.color,
+          label: s.state,
+          value: html`${fmtDuration(s.secs)} · ${fmtPct(s.pct)}`,
+        })),
+        gauge === nothing
+      )}
+      ${gauge}
     `;
+    // Multi-frame: wrap each frame's donut+gauge in a row so the frames stack
+    // vertically (one pie below the next) while a frame's own gauge stays beside
+    // its donut. Solo keeps the flat .pie-charts row (unchanged look).
+    return solo ? column : html`<div class="pie-frame">${column}</div>`;
   }
 
   // Build the donut <svg> as a real SVG-namespaced DOM node. Every element is
@@ -1812,6 +1866,18 @@ class EntityStateTrackerCardEditor extends LitElement {
         color: var(--secondary-text-color, #727272);
         margin-top: 4px;
       }
+      .frame-checklist {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px 16px;
+      }
+      .frame-check {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        font-weight: 400;
+        margin-bottom: 0;
+      }
     `;
   }
 
@@ -1829,8 +1895,29 @@ class EntityStateTrackerCardEditor extends LitElement {
         (s) => s.frame
       )
     );
+    // Also surface any already-checked frame whose sensor has since been disabled
+    // in the tracker, so the checkbox stays visible (checked-but-unavailable)
+    // instead of silently vanishing on next editor open.
+    this._selectedFrames().forEach((f) => frames.add(f));
     if (frames.size > 0) return FRAME_ORDER.filter((f) => frames.has(f));
     return FRAME_ORDER;
+  }
+
+  // Effective selected frames: the multi-select `frames` array, or the legacy
+  // single `frame` string (back-compat), else none = all. FRAME_ORDER-normalized.
+  _selectedFrames() {
+    return selectedFrames(this._config);
+  }
+
+  // Toggle one frame in the selection, write it back as `frames`, and drop the
+  // legacy `frame` key so a picked card migrates cleanly. Empty selection clears
+  // `frames` (undefined → stripped by _updateConfig) = all frames.
+  _toggleFrame(f, on) {
+    const next = this._selectedFrames().filter((x) => x !== f);
+    if (on) next.push(f);
+    const ordered = FRAME_ORDER.filter((x) => next.includes(x));
+    // One update: write `frames` and drop the legacy `frame` key together.
+    this._updateConfig({ frames: ordered.length ? ordered : undefined, frame: undefined });
   }
 
   // True when the selected tracker has a compliance target — the gauge is
@@ -1846,10 +1933,6 @@ class EntityStateTrackerCardEditor extends LitElement {
     if (!this._config) return html``;
 
     const chart = this._config.chart || "bars";
-    // The `frame` picker charts ONE frame — only the pie does that. The table now
-    // groups every frame (states beneath each frame heading) and bars render every
-    // frame as a row, so neither needs the picker.
-    const showFrame = chart === "pie";
     const options = trackerOptions(this.hass);
 
     return html`
@@ -1859,7 +1942,14 @@ class EntityStateTrackerCardEditor extends LitElement {
           ${options.length > 0
             ? html`<select
                 .value=${this._config.tracker_id || ""}
-                @change=${(e) => this._updateConfig("tracker_id", e.target.value)}
+                @change=${(e) => {
+                  const frames = allFramesFor(this.hass, e.target.value);
+                  this._updateConfig({
+                    tracker_id: e.target.value,
+                    frames: frames.length ? frames : undefined,
+                    frame: undefined,
+                  });
+                }}
               >
                 ${this._config.tracker_id &&
                 !options.some((o) => o.trackerId === this._config.tracker_id)
@@ -1892,37 +1982,30 @@ class EntityStateTrackerCardEditor extends LitElement {
             @change=${(e) => this._updateConfig("chart", e.target.value)}
           >
             <option value="bars" ?selected=${chart === "bars"}>Bars (one row per frame)</option>
-            <option value="pie" ?selected=${chart === "pie"}>Pie (one frame's breakdown)</option>
+            <option value="pie" ?selected=${chart === "pie"}>Pie (a donut per frame)</option>
             <option value="table" ?selected=${chart === "table"}>Table (states grouped by frame)</option>
           </select>
         </div>
-        ${showFrame
-          ? html`<div class="editor-row">
-              <label>Frame</label>
-              <select
-                .value=${this._config.frame || ""}
-                @change=${(e) =>
-                  this._updateConfig("frame", e.target.value || undefined)}
-              >
-                <option value="" ?selected=${!this._config.frame}>
-                  First available
-                </option>
-                ${this._frameOptions().map(
-                  (f) => html`<option
-                    value=${f}
-                    ?selected=${this._config.frame === f}
-                  >
-                    ${FRAME_LABELS[f] || f}
-                  </option>`
-                )}
-              </select>
-              <div class="editor-hint">
-                ${chart === "pie"
-                  ? "Which frame the pie breaks down."
-                  : "Which frame the table lists states for."}
-              </div>
-            </div>`
-          : nothing}
+        <div class="editor-row">
+          <label>Frames</label>
+          <div class="frame-checklist">
+            ${this._frameOptions().map((f) => {
+              const on = this._selectedFrames().includes(f);
+              return html`<label class="frame-check">
+                <input
+                  type="checkbox"
+                  ?checked=${on}
+                  @change=${(e) => this._toggleFrame(f, e.target.checked)}
+                />
+                ${FRAME_LABELS[f] || f}
+              </label>`;
+            })}
+          </div>
+          <div class="editor-hint">
+            Which frames to show (pie draws one donut each). None checked = all
+            frames.
+          </div>
+        </div>
         ${chart === "pie" && this._hasTarget()
           ? html`<div class="editor-row">
               <label>
@@ -1997,9 +2080,12 @@ class EntityStateTrackerCardEditor extends LitElement {
     `;
   }
 
+  // key,value for one field, or a patch object for several at once (undefined
+  // values are stripped either way).
   _updateConfig(key, value) {
     if (!this._config) return;
-    const newConfig = { ...this._config, [key]: value };
+    const patch = typeof key === "object" ? key : { [key]: value };
+    const newConfig = { ...this._config, ...patch };
     Object.keys(newConfig).forEach((k) => {
       if (newConfig[k] === undefined) delete newConfig[k];
     });

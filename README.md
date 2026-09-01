@@ -204,8 +204,8 @@ The `24h` and `7d` frames are computed from the **recorder** for accuracy: becau
 The integration ships a custom Lovelace card, auto-registered as a Lovelace resource when the integration loads. It offers three `chart:` view types:
 
 - **Bars** (default) — a row per enabled frame with a percentage fill and a `6.2 h · 26%` label; a compliance ring/second bar when a target is set; a transition line (`opened 12× · avg 5 min`).
-- **Pie / donut** — one frame's breakdown as slices (all-states) or in-state-vs-rest (specific mode). Each state gets a deterministic colour (hashed from the state name), so slices keep their colour as new states appear.
-- **Table** — a frame-total row per enabled frame (Frame · Duration · %, plus a Compliance column when a target is set). Turn on **Show per-state breakdown** to add a per-state table under each frame; states are capped at 5 per frame by default (the rest fold into a "… N more" row) — toggle that cap off to list every state.
+- **Pie / donut** — one donut per selected frame; each donut is that frame's breakdown as slices (all-states) or in-state-vs-rest (specific mode). Each state gets a deterministic colour (hashed from the state name), so slices keep their colour as new states appear.
+- **Table** — a frame-total row per enabled frame (Frame · Duration · %, plus a Compliance column when a target is set). Turn on **Show per-state breakdown** to add a per-state table (ordered by share, biggest first) under each frame; states are capped at 5 per frame by default (the rest fold into a "… N more" row) — toggle that cap off to list every state.
 
 ![Card: bars](assets/08_card_bars.png)
 ![Card: pie / donut](assets/09_card_pie.png)
@@ -219,7 +219,7 @@ Add the card from the dashboard's **visual editor** and pick your tracker from t
 type: custom:entity-state-tracker-card
 tracker_id: 01JABCXYZ...        # the tracker's config-entry id (visual editor fills this in)
 chart: bars                     # bars | pie | table
-frame: today                    # pie only — which frame to break down
+frames: [today, month]          # optional — any chart; which frames to show. Omit/empty = all frames
 show_states: false              # table only — add a per-state table under each frame total
 limit_states: true              # table only — cap per-state rows at 5 (only when show_states)
 ```
