@@ -120,6 +120,15 @@ function selectedFrames(config) {
   return FRAME_ORDER.filter((f) => raw.includes(f));
 }
 
+// Every frame a tracker actually publishes, in canonical order — the default
+// selection for a fresh card so it opens with all real (enabled) frames checked.
+function allFramesFor(hass, trackerId) {
+  const set = new Set(
+    trackerFrameSensors(hass, trackerId).map((s) => s.frame)
+  );
+  return FRAME_ORDER.filter((f) => set.has(f));
+}
+
 // -----------------------------------------------------------------------------
 // Deterministic per-state color.
 //
@@ -773,9 +782,14 @@ class EntityStateTrackerCard extends LitElement {
     // Preview: offer the first discovered tracker (by its config-entry id).
     // Harmless literal fallback if none is present.
     const [first] = trackerOptions(hass);
+    const tracker_id = first ? first.trackerId : "";
+    // Fresh card opens with every real (enabled) frame checked. Empty stays "all"
+    // at render, but pre-checking makes the default explicit and editable.
+    const frames = allFramesFor(hass, tracker_id);
     return {
-      tracker_id: first ? first.trackerId : "",
+      tracker_id,
       chart: "bars",
+      ...(frames.length ? { frames } : {}),
     };
   }
 
@@ -1928,7 +1942,14 @@ class EntityStateTrackerCardEditor extends LitElement {
           ${options.length > 0
             ? html`<select
                 .value=${this._config.tracker_id || ""}
-                @change=${(e) => this._updateConfig("tracker_id", e.target.value)}
+                @change=${(e) => {
+                  const frames = allFramesFor(this.hass, e.target.value);
+                  this._updateConfig({
+                    tracker_id: e.target.value,
+                    frames: frames.length ? frames : undefined,
+                    frame: undefined,
+                  });
+                }}
               >
                 ${this._config.tracker_id &&
                 !options.some((o) => o.trackerId === this._config.tracker_id)
