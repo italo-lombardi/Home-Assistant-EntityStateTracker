@@ -124,7 +124,7 @@ No state pick and no compliance — every state is discovered automatically.
 
 All settings can be edited after creation via **Settings > Devices & Services > Entity State Tracker > Configure**. Editing is **within-mode only** — changing the mode means creating a new tracker (a different mode produces a different output shape that would break existing consumers). Frame and target changes reload the entry automatically. Changing the glitch filter re-backfills the ledger so history reflects the new threshold.
 
-![Options Flow](assets/05_options.png)
+<!-- ![Options Flow](assets/05_options.png) — TODO: capture 05_options.png -->
 
 ---
 
@@ -207,9 +207,11 @@ The integration ships a custom Lovelace card, auto-registered as a Lovelace reso
 - **Pie / donut** — one donut per selected frame; each donut is that frame's breakdown as slices (all-states) or in-state-vs-rest (specific mode). Each state gets a deterministic colour (hashed from the state name), so slices keep their colour as new states appear.
 - **Table** — a frame-total row per enabled frame (Frame · Duration · %, plus a Compliance column when a target is set). Turn on **Show per-state breakdown** to add a per-state table (ordered by share, biggest first) under each frame; states are capped at 5 per frame by default (the rest fold into a "… N more" row) — toggle that cap off to list every state.
 
+<!-- TODO: capture card screenshots (multi-frame picker UI, post-#22)
 ![Card: bars](assets/08_card_bars.png)
 ![Card: pie / donut](assets/09_card_pie.png)
 ![Card: table](assets/10_card_table.png)
+-->
 
 Incomplete frames (where data is younger than the window) render hatched and labelled "since &lt;date&gt;". On YAML-mode dashboards, where Lovelace resources are read-only, the card degrades gracefully and logs manual-add instructions.
 
