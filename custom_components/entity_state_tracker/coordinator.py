@@ -117,9 +117,13 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         self.entity_id: str = config[CONF_ENTITY]
         self.mode: str = config[CONF_MODE]
         states = config.get(CONF_STATES)
-        self.tracked_states: list[str] | None = [s.lower() for s in states] if states else None
+        self.tracked_states: list[str] | None = (
+            [s.lower() for s in states] if states else None
+        )
         target = config.get(CONF_TARGET)
-        self.target_states: list[str] | None = [s.lower() for s in target] if target else None
+        self.target_states: list[str] | None = (
+            [s.lower() for s in target] if target else None
+        )
         self.target_threshold: float | None = config.get(CONF_TARGET_THRESHOLD)
         self.min_state_duration: float = config.get(
             CONF_MIN_STATE_DURATION, DEFAULT_MIN_STATE_DURATION
