@@ -26,7 +26,7 @@ def _str_map(raw: Any) -> dict[str, str]:
     """
     if not isinstance(raw, dict):
         return {}
-    return {str(k): str(v) for k, v in raw.items() if isinstance(v, str)}
+    return {str(k).lower(): str(v) for k, v in raw.items() if isinstance(v, str)}
 
 
 @dataclass(frozen=True, slots=True)
@@ -120,10 +120,10 @@ class TrackerLedger:
                 if not isinstance(row, dict):
                     continue
                 try:
-                    day_bucket[state] = {
-                        "secs": float(row.get("secs", 0.0)),
-                        "count": int(row.get("count", 0)),
-                    }
+                    key = str(state).lower()
+                    existing = day_bucket.setdefault(key, {"secs": 0.0, "count": 0})
+                    existing["secs"] += float(row.get("secs", 0.0))
+                    existing["count"] += int(row.get("count", 0))
                 except (TypeError, ValueError):
                     continue
             if day_bucket:
@@ -140,17 +140,18 @@ class TrackerLedger:
         # {str: str}, dropping malformed rows (mirrors the daily-bucket contract).
         last_entered = _str_map(d.get("last_entered"))
         last_exited = _str_map(d.get("last_exited"))
+        raw_last_state = d.get("last_state")
         return cls(
             entity_id=str(d.get("entity_id", "")),
             mode=str(d.get("mode", "")),
-            states=[str(s) for s in states_raw]
+            states=[str(s).lower() for s in states_raw]
             if isinstance(states_raw, list)
             else None,
-            target=[str(s) for s in target_raw]
+            target=[str(s).lower() for s in target_raw]
             if isinstance(target_raw, list)
             else None,
             daily=daily,
-            last_state=d.get("last_state"),
+            last_state=raw_last_state.lower() if isinstance(raw_last_state, str) else None,
             last_changed_ts=d.get("last_changed_ts"),
             last_updated_day=d.get("last_updated_day"),
             last_entered=last_entered,

@@ -1423,6 +1423,73 @@ def test_subset_percent_empty_subset_none() -> None:
     assert E._subset_percent({"on": 10.0}, [], 100.0) is None
 
 
+def test_subset_percent_case_insensitive_match() -> None:
+    # tracked_states are stored lowercase by config_flow; breakdown_seconds keys
+    # are normalized to lowercase in compute_frame. Both sides must be lowercase
+    # for the match to succeed. Regression guard for the title-case zone bug.
+    assert E._subset_percent({"casa buonabitacolo": 3600.0}, ["casa buonabitacolo"], 7200.0) == pytest.approx(50.0)
+
+
+def test_subset_percent_mismatched_case_returns_zero() -> None:
+    # If breakdown keys are NOT normalized and tracked_states are lowercase,
+    # the match fails and percent is 0. This documents the pre-fix behaviour
+    # and guards that the normalization fix in compute_frame is the fix point.
+    assert E._subset_percent({"Casa Buonabitacolo": 3600.0}, ["casa buonabitacolo"], 7200.0) == pytest.approx(0.0)
+
+
+def test_subset_percent_state_with_spaces_and_underscores() -> None:
+    # States with spaces ("casa nonna antonietta") and underscores ("not_home")
+    # must match exactly (no further transform in _subset_percent itself).
+    assert E._subset_percent({"not_home": 1800.0, "casa nonna antonietta": 3600.0}, ["not_home", "casa nonna antonietta"], 10800.0) == pytest.approx(50.0)
+
+
+def test_compute_frame_normalizes_titlecase_breakdown_keys() -> None:
+    # Regression: recorder may return State objects whose .state is title-cased
+    # (e.g. "Casa Buonabitacolo" from a zone friendly name). compute_frame must
+    # lowercase all breakdown keys so tracked_states (always lowercase) match.
+    now = dt.datetime(2026, 1, 15, 12, 0, tzinfo=NY)
+    recent = {
+        "Casa Buonabitacolo": {"secs": 7200.0, "count": 2},
+        "Not Home": {"secs": 3600.0, "count": 1},
+    }
+    fr = E.compute_frame(
+        "today",
+        now,
+        NY,
+        recent,
+        {},
+        None,
+        mode="specific_states",
+        tracked_states=["casa buonabitacolo", "not home"],
+    )
+    # Keys must be lowercase in breakdown_seconds
+    assert "casa buonabitacolo" in fr.breakdown_seconds
+    assert "not home" in fr.breakdown_seconds
+    assert "Casa Buonabitacolo" not in fr.breakdown_seconds
+    # percent must reflect the matched time, not 0
+    assert fr.percent is not None
+    assert fr.percent > 0.0
+
+
+def test_compute_frame_normalizes_mixed_case_open_state() -> None:
+    # open_state comes from ledger.last_state (raw HA value before coordinator fix).
+    # compute_frame lowercases it before the setdefault seed so it doesn't create
+    # a duplicate title-cased key.
+    now = dt.datetime(2026, 1, 15, 12, 0, tzinfo=NY)
+    fr = E.compute_frame(
+        "today",
+        now,
+        NY,
+        {},
+        {},
+        None,
+        mode="all_states",
+        open_state="Casa Buonabitacolo",
+    )
+    assert "casa buonabitacolo" in fr.breakdown_seconds
+    assert "Casa Buonabitacolo" not in fr.breakdown_seconds
+
+
 # --------------------------------------------------------------------------- #
 # query_recorder — recorder-off (None) and normal paths
 # --------------------------------------------------------------------------- #

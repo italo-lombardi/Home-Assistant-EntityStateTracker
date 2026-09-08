@@ -7,7 +7,7 @@
  * self-contained file, vanilla LitElement via the home-assistant-main prototype.
  */
 
-const CARD_VERSION = "0.1.3";
+const CARD_VERSION = "0.1.4";
 
 console.info(
   `%c ENTITY-STATE-TRACKER-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi `,
@@ -161,6 +161,14 @@ const SEMANTIC_COLORS = {
   unavailable: "#9aa4ad",
   unknown: "#c2c8cf",
 };
+
+// Convert a stored state key ("casa nonna antonietta", "not_home") to a
+// human-readable label ("Casa Nonna Antonietta", "Not Home").
+function toLabel(state) {
+  return String(state)
+    .replace(/_/g, " ")
+    .replace(/(^|[\s])\S/g, (c) => c.toUpperCase());
+}
 
 function stateHashIndex(state, mod) {
   let h = 0x811c9dc5;
@@ -1105,7 +1113,7 @@ class EntityStateTrackerCard extends LitElement {
         pct = a.percent;
       }
       const incomplete = this._incomplete(a);
-      const label = this._isBreakdown(s) ? `${s.state}` : "";
+      const label = this._isBreakdown(s) ? toLabel(s.state) : "";
       const compliantId = this._frameCompliantId(s);
       // Row opens its own duration/breakdown sensor; the compliance chip opens
       // that frame's Compliant binary sensor instead (its click stops bubbling).
@@ -1145,7 +1153,7 @@ class EntityStateTrackerCard extends LitElement {
               const w =
                 seg.pct == null ? 0 : Math.max(0, Math.min(100, Number(seg.pct)));
               const info = {
-                label: seg.state,
+                label: seg.derived ? seg.state : toLabel(seg.state),
                 secs: seg.secs,
                 pct: seg.pct,
                 color: seg.color,
@@ -1266,7 +1274,7 @@ class EntityStateTrackerCard extends LitElement {
       Array.isArray(tracked) && tracked.length
         ? html`<div class="bars-note">
             Tracked ${tracked.length > 1 ? "states" : "state"}:
-            ${sortStates(tracked).join(", ")}
+            ${sortStates(tracked).map(toLabel).join(", ")}
           </div>`
         : nothing;
     return html`${trackedLine}${threshold != null
@@ -1396,9 +1404,9 @@ class EntityStateTrackerCard extends LitElement {
       // Biggest first, so the table/pie/bars lead with the dominant state and
       // the top-5 cap keeps the states that actually matter.
       .sort((x, y) => y.secs - x.secs);
-    if (gap > 0) {
+    if (gap > 10) {
       slices.push({
-        state: a.has_gap ? "No data" : "In progress",
+        state: "No data",
         secs: gap,
         pct: pctOf(gap),
         color: "var(--est-bar-bg)",
@@ -1444,9 +1452,9 @@ class EntityStateTrackerCard extends LitElement {
       color: "var(--est-bar-bg-alt)",
       derived: true,
     });
-    if (gap > 0) {
+    if (gap > 10) {
       slices.push({
-        state: a.has_gap ? "No data" : "In progress",
+        state: "No data",
         secs: gap,
         pct: pctOf(gap),
         color: "var(--est-bar-bg)",
@@ -1557,7 +1565,7 @@ class EntityStateTrackerCard extends LitElement {
         paths,
         slices.map((s) => ({
           color: s.color,
-          label: s.state,
+          label: s.derived ? s.state : toLabel(s.state),
           value: html`${fmtDuration(s.secs)} · ${fmtPct(s.pct)}`,
         })),
         gauge === nothing
@@ -1799,7 +1807,8 @@ class EntityStateTrackerCard extends LitElement {
   // dust-filtered + capped by the caller.
   _stateSubRows(slices, hasCompliance) {
     return slices.map((s) => {
-      const { state, secs, pct, color } = s;
+      const { state, secs, pct, color, derived } = s;
+      const label = derived ? state : toLabel(state);
       const w = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
       const tint = `color-mix(in srgb, ${color} 22%, transparent)`;
       const bar =
@@ -1810,7 +1819,7 @@ class EntityStateTrackerCard extends LitElement {
         <td class="state-col">
           <span class="state-cell state-indent"
             ><span class="legend-swatch" style="background:${color}"></span
-            >${state}</span
+            >${label}</span
           >
         </td>
         <td class="cell-primary">${fmtDuration(secs)}</td>

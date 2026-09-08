@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4]
+
+### Fixed
+- **State name case mismatch (critical)** — tracked states were stored lowercase by the config flow but HA zone/person entity states are title-cased (e.g. `"Casa Buonabitacolo"`). The case-sensitive match in `_subset_percent` returned 0% for all tracked states, routing all time to the "other" slice. `accumulate_blocks` now lowercases state at source; `compute_frame` retains a defense-in-depth norm loop for legacy ledger files.
+- **Ledger migration** — `last_state`, daily bucket keys, and `last_entered`/`last_exited` keys loaded from disk (written by older versions with raw HA casing) are now lowercased on read, closing post-restart coalesce gaps and stale transition timestamps.
+- **State write normalisation** — coordinator lowercases state strings on every write path (`ledger.last_state`, `_fold_visit`, `_live_today_blocks`, `_overlay_open_visit` idempotency guard, `tracked_states`/`target_states` at load).
+- **Spurious new-state events on restart** — `_ledger_seen_states` was seeding `_seen` with raw-cased backfill keys; lowercase normalisation fixes false "new state" fires for title-cased zone states after restart.
+- **`breakdown_pct["unaccounted"]` overflow** — clamped to `max(0.0, ...)` so a seam overflow never produces a negative unaccounted slice.
+- **Config flow whitespace** — state strings from the selector are now stripped before lowercasing, preventing `" home"` ≠ `"home"` mismatches from user-typed entries.
+
+### Changed
+- **State labels now title-cased in card** — a `toLabel()` helper converts stored lowercase keys to human-readable labels: `"casa nonna antonietta"` → `"Casa Nonna Antonietta"`, `"not_home"` → `"Not Home"`. Applied to legend, table rows, bar labels, tooltip, and tracked-states header.
+- **Config flow state picker shows human-readable labels** — the "pick states to track" selector now displays `"Casa Buonabitacolo"` / `"Not Home"` instead of raw lowercase keys. Labels are auto-generated (`toLabel()`); stored values remain lowercase. Applies to both tracked-states and compliance-target selectors.
+- **"No data" slice threshold** — shown whenever `unaccounted_seconds > 10s` (previously only when `has_gap` was True). Catches mid-window recorder outages (DB restart, recorder error) that leave real gaps without setting `has_gap`. The 10s threshold absorbs normal recorder commit lag (~2–5s) on slow hardware.
+- **"In progress" slice removed** — open-frame lag (recorder commit latency ~5s) was silently inflated by the case-mismatch bug. Now that state time is correctly attributed, only genuine gaps (> 10s unaccounted) show a "No data" slice.
+- **Poll interval reduced to 1 minute** — `SCAN_INTERVAL` changed from 5 min to 1 min so long-running visits on idle entities update the donut at most 1 minute behind. State-change accuracy remains event-driven (< 100 ms).
+
 ## [0.1.3]
 
 ### Added

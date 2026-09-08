@@ -16,7 +16,7 @@ Data flow (§6.6, §8):
   local-day bucket(s) (split at midnight), bumps ``count`` once on the start
   day, and updates the live transition metadata; a debounced refresh coalesces
   the resulting recompute.
-* **Poll** — the 5-minute base-class timer advances open blocks and flushes the
+* **Poll** — the 1-minute base-class timer advances open blocks and flushes the
   in-memory ledger to disk (in-memory is truth; disk writes are debounced —
   §8). A final flush fires on ``EVENT_HOMEASSISTANT_STOP`` and on shutdown.
 
@@ -117,9 +117,9 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         self.entity_id: str = config[CONF_ENTITY]
         self.mode: str = config[CONF_MODE]
         states = config.get(CONF_STATES)
-        self.tracked_states: list[str] | None = list(states) if states else None
+        self.tracked_states: list[str] | None = [s.lower() for s in states] if states else None
         target = config.get(CONF_TARGET)
-        self.target_states: list[str] | None = list(target) if target else None
+        self.target_states: list[str] | None = [s.lower() for s in target] if target else None
         self.target_threshold: float | None = config.get(CONF_TARGET_THRESHOLD)
         self.min_state_duration: float = config.get(
             CONF_MIN_STATE_DURATION, DEFAULT_MIN_STATE_DURATION
@@ -250,7 +250,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         state = self.hass.states.get(self.entity_id)
         if state is None:
             return
-        ledger.last_state = state.state
+        ledger.last_state = state.state.lower()
         ledger.last_changed_ts = dt_util.utcnow().isoformat()
         self._dirty = True
 
@@ -305,7 +305,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             # The state we just left is now the "previous" state.
             self._previous_state = prev_state
 
-        new_name = new_state.state
+        new_name = new_state.state.lower()
         first_seen = new_name not in self._seen
         # Cap _seen so a unique-state-per-transition entity can't grow it (and
         # spam notifications) without bound — past the cap, stop tracking and
@@ -430,7 +430,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         """
         seen: set[str] = set()
         for day_bucket in ledger.daily.values():
-            seen.update(day_bucket)
+            seen.update(k.lower() for k in day_bucket)
         if ledger.last_state is not None:
             seen.add(ledger.last_state)
         return seen
@@ -785,7 +785,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         # began at/after the visit start -> nothing to inject.
         if (
             states
-            and states[-1].state == open_state
+            and states[-1].state.lower() == open_state
             and states[-1].last_changed >= open_ts
         ):
             return states
@@ -854,7 +854,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             live_state = self.hass.states.get(self.entity_id)
             if live_state is None:
                 return {}
-            state = live_state.state
+            state = live_state.state.lower()
             ts = live_state.last_changed
             if ts.tzinfo is None:  # pragma: no cover
                 ts = ts.replace(tzinfo=dt.UTC)

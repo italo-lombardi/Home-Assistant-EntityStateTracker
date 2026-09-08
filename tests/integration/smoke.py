@@ -927,15 +927,15 @@ def ec5_ec6_ec7_allstates():
     time.sleep(8)
     ss(eid, "stateB")  # fold stateA visit
     ss(eid, "stateA")  # back to A, fold tiny B
-    dom = wait_for(lambda: gs(today_bd).get("state"), "stateA")
+    dom = wait_for(lambda: gs(today_bd).get("state"), "statea")
     chk(
         "EC5 today dominant = max-duration state",
         dom,
-        "stateA",
+        "statea",
         f"state={gs(today_bd).get('state')!r}",
     )
     bd = gs(today_bd).get("attributes", {}).get("breakdown_seconds", {})
-    chk("EC5 breakdown_seconds has stateA", "stateA" in bd, True, f"breakdown={bd}")
+    chk("EC5 breakdown_seconds has stateA", "statea" in bd, True, f"breakdown={bd}")
 
     # EC5b: the card's Frame picker binds to per-frame breakdown data, so assert
     # that EACH enabled frame independently carries a populated breakdown (not just
@@ -2371,6 +2371,79 @@ def ec27_specific_breakdown_all_tracked_keyed():
     return entry, eid
 
 
+def ec28_case_insensitive_state_tracking():
+    """EC28: tracked states stored as lowercase but HA emits title-cased state
+    values (e.g. "Casa Buonabitacolo").  breakdown_seconds must attribute time
+    under the lowercase key, not zero.
+
+    Regression guard for the case-mismatch bug fixed in v0.1.4 where
+    _subset_percent did a case-sensitive set-membership check and returned 0%
+    for all tracked states when the entity used title-cased zone names.
+    """
+    print(
+        "\n=== EC28: case-insensitive state tracking (title-case HA state → lowercase key) ===",
+        flush=True,
+    )
+    # Post entity with a title-cased state (mirrors HA zone/person entity style).
+    title_state = "Casa Buonabitacolo"
+    eid = make_entity("caseic", title_state)
+
+    # Config flow stores states lowercased; we pass lowercase explicitly to
+    # match what config_flow.py normalises to.
+    lower_state = title_state.lower()
+    entry = create_tracker(
+        eid, "specific_states", states=[lower_state], frames={"today": True}
+    )
+    reg = wait_entities(entry, min_count=1)
+    dur = eid_for(entry, "today", M_DURATION, reg)
+    chk("EC28 duration sensor exists", dur is not None, True)
+    if not dur:
+        return entry, eid
+
+    # Cycle through an untracked state and back to close the open visit so the
+    # engine has a completed block to attribute. Then force a coordinator refresh
+    # via update_entity — avoids waiting the full 1-min SCAN_INTERVAL tick.
+    time.sleep(3 if FAST else 5)
+    ss(eid, "not_home")
+    time.sleep(2 if FAST else 3)
+    ss(eid, title_state)
+    time.sleep(2 if FAST else 3)
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
+
+    def _bd():
+        return (gs(dur).get("attributes", {}).get("breakdown_seconds") or {})
+
+    bd = wait_for(
+        lambda: lower_state in _bd() and _bd()[lower_state] > 0,
+        True,
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    attrs = gs(dur).get("attributes", {})
+    breakdown = attrs.get("breakdown_seconds", {})
+    bp = attrs.get("breakdown_pct", {})
+    chk(
+        f"EC28 lowercase key '{lower_state}' present in breakdown_seconds",
+        lower_state in breakdown,
+        True,
+        f"breakdown_seconds={breakdown}",
+    )
+    chk(
+        f"EC28 breakdown_seconds['{lower_state}'] > 0 (time attributed, not zero)",
+        breakdown.get(lower_state, 0) > 0,
+        True,
+        f"breakdown_seconds={breakdown}",
+    )
+    # breakdown_pct has 2-decimal precision; percent rounds to 1 decimal and may
+    # be 0.0 for a short dwell in a long window — check pct instead.
+    chk(
+        f"EC28 breakdown_pct['{lower_state}'] > 0 (non-zero share)",
+        (bp.get(lower_state) or 0) > 0,
+        True,
+        f"breakdown_pct={bp}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -2437,6 +2510,9 @@ def main():
 
         if ec_enabled(27):
             ec27_specific_breakdown_all_tracked_keyed()
+
+        if ec_enabled(28):
+            ec28_case_insensitive_state_tracking()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
