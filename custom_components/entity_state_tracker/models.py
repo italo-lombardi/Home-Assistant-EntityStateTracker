@@ -121,9 +121,11 @@ class TrackerLedger:
                     continue
                 try:
                     key = str(state).lower()
+                    secs = float(row.get("secs", 0.0))
+                    count = int(row.get("count", 0))
                     existing = day_bucket.setdefault(key, {"secs": 0.0, "count": 0})
-                    existing["secs"] += float(row.get("secs", 0.0))
-                    existing["count"] += int(row.get("count", 0))
+                    existing["secs"] += secs
+                    existing["count"] += count
                 except (TypeError, ValueError):
                     continue
             if day_bucket:
@@ -151,7 +153,9 @@ class TrackerLedger:
             if isinstance(target_raw, list)
             else None,
             daily=daily,
-            last_state=raw_last_state.lower() if isinstance(raw_last_state, str) else None,
+            last_state=raw_last_state.lower()
+            if isinstance(raw_last_state, str)
+            else None,
             last_changed_ts=d.get("last_changed_ts"),
             last_updated_day=d.get("last_updated_day"),
             last_entered=last_entered,

@@ -396,9 +396,9 @@ def compute_frame(
     ledger_data_start_iso: str | None,
     *,
     mode: str,
-    tracked_states: list[str] | None,
-    target_states: list[str] | None,
-    prior_dominant: str | None,
+    tracked_states: list[str] | None = None,
+    target_states: list[str] | None = None,
+    prior_dominant: str | None = None,
     ledger_upper_local_day: str | None = None,
     open_state: str | None = None,
 ) -> FrameResult:
