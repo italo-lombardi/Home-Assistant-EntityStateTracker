@@ -54,7 +54,7 @@ STORAGE_VERSION = 1
 STORAGE_KEY_FMT = "entity_state_tracker.{entry_id}"
 
 # Coordinator base-class poll cadence (§6.6) — advances open blocks.
-SCAN_INTERVAL = timedelta(minutes=5)
+SCAN_INTERVAL = timedelta(minutes=1)
 
 # Prune ceiling: buckets older than this many days are dropped (§6.2).
 LEDGER_MAX_DAYS = 400

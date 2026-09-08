@@ -50,11 +50,25 @@ _KEY_STATES = f"_{CONF_STATES}"
 _KEY_NAME = f"_{CONF_NAME}"
 
 
+def _to_label(state: str) -> str:
+    """Human-readable label for a raw state key — mirrors card toLabel().
+
+    Capitalises the first letter of each whitespace-separated word only,
+    so apostrophes ("st. john's") don't produce mid-word capitals.
+    """
+    return " ".join(w.capitalize() for w in state.replace("_", " ").split())
+
+
+def _state_options(states: list[str]) -> list[dict[str, str]]:
+    """Convert lowercase state list to [{value, label}] selector options."""
+    return [{"value": s, "label": _to_label(s)} for s in states]
+
+
 def _seen_states_schema(seen: list[str]) -> Any:
     """SelectSelector for tracked states, prefilled with seen states."""
     return selector.SelectSelector(
         selector.SelectSelectorConfig(
-            options=seen,
+            options=_state_options(seen),
             multiple=True,
             custom_value=True,
         )
@@ -65,7 +79,7 @@ def _target_selector(options: list[str]) -> Any:
     """SelectSelector for the compliance target set."""
     return selector.SelectSelector(
         selector.SelectSelectorConfig(
-            options=options,
+            options=_state_options(options),
             multiple=True,
             custom_value=True,
         )
@@ -267,7 +281,7 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            states = [s.lower() for s in user_input.get(CONF_STATES, [])]
+            states = [s.strip().lower() for s in user_input.get(CONF_STATES, [])]
             if not states:
                 errors[CONF_STATES] = "no_states_selected"
             else:
@@ -300,7 +314,7 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            target = [s.lower() for s in user_input.get(CONF_TARGET, [])]
+            target = [s.strip().lower() for s in user_input.get(CONF_TARGET, [])]
             threshold = user_input.get(CONF_TARGET_THRESHOLD)
             # The threshold selector already clamps to 0–100; only presence matters.
             if not target:
@@ -430,14 +444,14 @@ class EntityStateTrackerOptionsFlow(OptionsFlow):
                 errors["base"] = "no_frames_selected"
 
             if tracked:  # specific mode: tracked states are editable + required
-                states = [s.lower() for s in user_input.get(CONF_STATES, [])]
+                states = [s.strip().lower() for s in user_input.get(CONF_STATES, [])]
                 if not states:
                     errors[CONF_STATES] = "no_states_selected"
                 else:
                     options[CONF_STATES] = list(dict.fromkeys(states))
 
             if has_compliance:
-                target = [s.lower() for s in user_input.get(CONF_TARGET, [])]
+                target = [s.strip().lower() for s in user_input.get(CONF_TARGET, [])]
                 threshold = user_input.get(CONF_TARGET_THRESHOLD)
                 # The threshold selector already clamps to 0–100.
                 if not target:

@@ -48,6 +48,10 @@ OVERFLOW_TOLERANCE_SECS = 1.0
 # into the largest real slice; above it "unaccounted" is a real slice and
 # absorbs the drift as the balancing term.
 _UNACCOUNTED_EPSILON_SECS = 1.0
+# Note: the card has a separate display threshold of 10s (gap > 10) — it hides
+# the "No data" slice for sub-10s recorder commit lag on open frames. The two
+# thresholds are intentionally different: this epsilon controls server-side pct
+# balancing; the card threshold controls whether the slice renders at all.
 
 type StatesList = list[State]
 type BlockMap = dict[str, dict[str, float]]
@@ -236,7 +240,7 @@ def accumulate_blocks(
             block_end = measure_end
         if block_end <= block_start:
             continue
-        name = state.state
+        name = state.state.lower()
         counts = not (i == 0 and leading_is_continuation)
         if raw and raw[-1][0] == name:
             # Merge consecutive identical-state rows into the open block.
@@ -392,9 +396,9 @@ def compute_frame(
     ledger_data_start_iso: str | None,
     *,
     mode: str,
-    tracked_states: list[str] | None,
-    target_states: list[str] | None,
-    prior_dominant: str | None,
+    tracked_states: list[str] | None = None,
+    target_states: list[str] | None = None,
+    prior_dominant: str | None = None,
     ledger_upper_local_day: str | None = None,
     open_state: str | None = None,
 ) -> FrameResult:
@@ -462,17 +466,27 @@ def compute_frame(
     # frames); a closed frame (yesterday/last_week/…) must not gain a phantom
     # current-state slice. setdefault never overwrites a real accrued value.
     if open_state is not None and end_utc >= now:
-        combined.setdefault(open_state, {"secs": 0.0, "count": 0})
+        combined.setdefault(open_state.lower(), {"secs": 0.0, "count": 0})
 
-    breakdown_seconds = {name: row["secs"] for name, row in combined.items()}
-    counts = {name: int(row["count"]) for name, row in combined.items()}
+    # ponytail: norm loop is defense-in-depth for ledger.daily keys written by
+    # pre-v0.1.4 code before accumulate_blocks lowercased at line 239. New
+    # writes are always lowercase; remove when ledger migration is shipped.
+    norm: BlockMap = {}
+    for name, row in combined.items():
+        key = name.lower()
+        into = norm.setdefault(key, {"secs": 0.0, "count": 0})
+        into["secs"] += row["secs"]
+        into["count"] += row["count"]
+
+    breakdown_seconds = {name: row["secs"] for name, row in norm.items()}
+    counts = {name: int(row["count"]) for name, row in norm.items()}
     avg_duration: dict[str, float | None] = {
         # Seconds per visit, 1-dp float (359s / 2 → 179.5), matching
         # breakdown_pct's precision so the display layer sees a consistent
         # granularity across metrics. ``None`` at count 0 (a ledger
         # continuation day).
         name: (round(row["secs"] / row["count"], 1) if row["count"] else None)
-        for name, row in combined.items()
+        for name, row in norm.items()
     }
     # Window time attributed to no state — the pre-data gap and/or a transient
     # open-state lag. A single honest number the card renders as a trailing
@@ -517,7 +531,7 @@ def compute_frame(
             )
             breakdown_pct[largest] = round(breakdown_pct[largest] + drift, 2)
     else:
-        breakdown_pct["unaccounted"] = round(100.0 - real_pct_sum, 2)
+        breakdown_pct["unaccounted"] = max(0.0, round(100.0 - real_pct_sum, 2))
 
     dominant = _pick_dominant(breakdown_seconds, window_seconds, prior_dominant)
 
