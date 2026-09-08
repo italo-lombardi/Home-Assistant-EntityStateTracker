@@ -443,7 +443,11 @@ async def test_compliance_target_offers_seen_union(hass: HomeAssistant) -> None:
     target_key = next(k for k in schema if str(k.schema) == CONF_TARGET)
     options = schema[target_key].config["options"]
     # Union of tracked (["heat"]) + seen (["heat", "off", "unknown"]), deduped.
-    assert options == ["heat", "off", "unknown"]
+    assert options == [
+        {"value": "heat", "label": "Heat"},
+        {"value": "off", "label": "Off"},
+        {"value": "unknown", "label": "Unknown"},
+    ]
     # Prefilled default is the tracked set only.
     assert target_key.default() == ["heat"]
 
@@ -710,7 +714,11 @@ async def test_options_compliance_fields_and_edit(hass: HomeAssistant) -> None:
     assert CONF_TARGET_THRESHOLD in keys
     # Selector offers tracked (heat, auto) unioned with the saved target (off).
     target_key = next(k for k in schema if str(k.schema) == CONF_TARGET)
-    assert schema[target_key].config["options"] == ["heat", "auto", "off"]
+    assert schema[target_key].config["options"] == [
+        {"value": "heat", "label": "Heat"},
+        {"value": "auto", "label": "Auto"},
+        {"value": "off", "label": "Off"},
+    ]
 
     result = await hass.config_entries.options.async_configure(
         result["flow_id"],
@@ -787,7 +795,10 @@ async def test_options_states_field_present(hass: HomeAssistant) -> None:
     states_key = next(k for k in schema if str(k.schema) == CONF_STATES)
     # Offers the current tracked set as default + options (custom_value adds more).
     assert states_key.default() == ["heat", "auto"]
-    assert schema[states_key].config["options"] == ["heat", "auto"]
+    assert schema[states_key].config["options"] == [
+        {"value": "heat", "label": "Heat"},
+        {"value": "auto", "label": "Auto"},
+    ]
 
 
 async def test_options_edit_tracked_states(hass: HomeAssistant) -> None:

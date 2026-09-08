@@ -2411,9 +2411,9 @@ def ec28_case_insensitive_state_tracking():
     api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
 
     def _bd():
-        return (gs(dur).get("attributes", {}).get("breakdown_seconds") or {})
+        return gs(dur).get("attributes", {}).get("breakdown_seconds") or {}
 
-    bd = wait_for(
+    wait_for(
         lambda: lower_state in _bd() and _bd()[lower_state] > 0,
         True,
         timeout=WAIT_FOR_TIMEOUT,
