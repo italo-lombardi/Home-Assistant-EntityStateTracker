@@ -1,6 +1,6 @@
 # Entity State Tracker for Home Assistant
 
-<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/releases"><img src="https://img.shields.io/badge/release-v0.1.4-blue" alt="Release"></a>
+<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/releases"><img src="https://img.shields.io/badge/release-v0.1.5-blue" alt="Release"></a>
 <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS Custom"></a>
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.entity_state_tracker.total&label=installs&color=41BDF5" alt="HACS Installs"></a>
 <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-2026.8%2B-blue.svg" alt="Home Assistant"></a>
@@ -168,7 +168,7 @@ Each `compliant` binary sensor also exposes `source_entity`, `compliance_percent
 
 | Entity | State | Attributes |
 |--------|-------|------------|
-| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `frame`, `breakdown_seconds` `{state: int}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration_seconds` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
+| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `frame`, `breakdown_seconds` `{state: float}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration_seconds` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
 
 - **Every state literal gets its own row** — `unavailable`, `unknown`, and `none` are counted as ordinary state names against a single wall-clock denominator, so the rows sum to ~100% of the covered window.
 - **A new state seen at runtime becomes a new key**, accumulating from first-seen. No entity is created, no restart is needed. One INFO log line is written and an `entity_state_tracker_new_state` event always fires — automations can react to it with no extra configuration.

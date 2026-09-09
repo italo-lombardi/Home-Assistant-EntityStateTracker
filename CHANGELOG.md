@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5]
+
+### Fixed
+- **Phantom "other" slice on binary_sensor breakdowns** — the duration and breakdown sensors floored each tracked state's `breakdown_seconds` with `int()` at the publish boundary while `window_seconds` and `unaccounted_seconds` stayed float. On a fully-covered window (gap = 0) the card's `other = window − Σ(tracked) − gap` then surfaced the discarded sub-second fractions as a spurious slice (e.g. a 7-day `binary_sensor` showing "other 2s, <0.1%"). Both sensors now emit the engine's raw float seconds, so `other` collapses to 0 when the window is fully accounted for. The `breakdown_seconds` attribute value type is now `float` (was truncated `int`); template consumers reading it numerically are unaffected.
+
 ## [0.1.4]
 
 ### Fixed

@@ -7,7 +7,7 @@
  * self-contained file, vanilla LitElement via the home-assistant-main prototype.
  */
 
-const CARD_VERSION = "0.1.4";
+const CARD_VERSION = "0.1.5";
 
 console.info(
   `%c ENTITY-STATE-TRACKER-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi `,
