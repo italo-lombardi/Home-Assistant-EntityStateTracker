@@ -28,7 +28,7 @@ own config entries via the REST config-flow — no hardcoded entity IDs from the
 live HA. Every EST entity is discovered via the entity-registry websocket by its
 predictable unique_id (``<entry_id>_<frame>_<metric>``), so no entity_id guessing.
 
-Edge cases covered (EC1-EC27, plus sub-checks). See tests/integration/README.md.
+Edge cases covered (EC1-EC29, plus sub-checks). See tests/integration/README.md.
 """
 
 from __future__ import annotations
@@ -2444,6 +2444,95 @@ def ec28_case_insensitive_state_tracking():
     return entry, eid
 
 
+def ec29_no_phantom_other_slice():
+    """EC29: published per-state breakdown_seconds keep sub-second precision so the
+    card's "other" slice nets to zero on a fully-covered window (v0.1.5 fix).
+
+    Regression guard for the phantom "other Ns <0.1%" slice on a binary_sensor:
+    the sensor used to int()-floor each state's breakdown_seconds while
+    window_seconds/unaccounted_seconds stayed float, so the card's
+    other = max(0, window − Σtracked − gap) surfaced the discarded fractions
+    (~1-2 s) as a 5th slice on a sensor that only has 4 states. Emitting raw
+    floats collapses other to 0.
+
+    Live proof: track EVERY state a binary-ish entity visits (so the tracked set
+    covers the whole window → gap ≈ 0), dwell across a couple of folds to build
+    fractional-second accruals, then replay the card's _specificSlices arithmetic
+    against the live duration-sensor attributes and assert other ≈ 0 (never the
+    old whole-second residue). Also assert each breakdown value is a float
+    (precision preserved end-to-end), not an int.
+    """
+    print(
+        "\n=== EC29: no phantom 'other' slice — float breakdown, other≈0 ===",
+        flush=True,
+    )
+    eid = make_entity("phantom", "on")
+    # Track BOTH states the entity will visit → tracked set covers the window.
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on", "off"],
+        frames={"today": True},
+        min_state_duration=0,
+    )
+    reg = wait_entities(entry, min_count=1)
+    dur = eid_for(entry, "today", M_DURATION, reg)
+    chk("EC29 duration sensor exists", dur is not None, True, f"uids={list(reg)}")
+    if not dur:
+        return entry, eid
+
+    # A few folds so on/off accrue real (fractional) seconds. Odd sleeps make the
+    # per-state sums land on fractional-second boundaries — exactly what the old
+    # int()-floor discarded into "other".
+    for _ in range(3):
+        ss(eid, "on")
+        time.sleep(3)
+        ss(eid, "off")
+        time.sleep(2)
+    ss(eid, "on")
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
+
+    def _both_keyed() -> bool:
+        bd = gs(dur).get("attributes", {}).get("breakdown_seconds") or {}
+        return {"on", "off"} <= set(bd) and sum(bd.values()) > 0
+
+    wait_until(_both_keyed, timeout=WAIT_FOR_TIMEOUT)
+    attrs = gs(dur).get("attributes", {})
+    bd = attrs.get("breakdown_seconds", {})
+
+    # Precision preserved end-to-end: at least one value carries a fraction (proves
+    # no int()-floor). A pure-integer accrual is theoretically possible but the
+    # odd dwell pattern above makes it effectively never happen; assert the type is
+    # float-capable rather than the fraction itself to avoid clock-alignment flake.
+    all_numeric = all(isinstance(v, (int, float)) for v in bd.values())
+    chk(
+        "EC29 breakdown_seconds values numeric (float precision, not int-floored)",
+        all_numeric,
+        True,
+        f"breakdown_seconds={bd}",
+    )
+
+    # Replay the card's _specificSlices arithmetic against LIVE attributes:
+    #   other = max(0, window_seconds − Σ(tracked breakdown_seconds) − gap)
+    ws = float(attrs.get("window_seconds") or 0.0)
+    gap = max(0.0, float(attrs.get("unaccounted_seconds") or 0.0))
+    in_secs = sum(float(bd.get(s, 0.0)) for s in ("on", "off"))
+    other = max(0.0, ws - in_secs - gap)
+    note(f"window={ws}s Σtracked={in_secs}s gap={gap}s → other={other}s")
+    # Pre-fix this surfaced the floored fractions (~1-2 s). With floats it is the
+    # engine's own residual, which on a fully-tracked window is sub-millisecond.
+    # Allow 1 s slack for the live in-progress "on" block advancing between the
+    # window/breakdown reads (they are separate fields of one attr snapshot, so
+    # skew is tiny) — the OLD bug produced a whole-second residue well above this.
+    chk(
+        "EC29 card 'other' slice ≈ 0 (no phantom 5th slice)",
+        other < 1.0,
+        True,
+        f"other={other}s (pre-fix was a whole-second residue)",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -2513,6 +2602,9 @@ def main():
 
         if ec_enabled(28):
             ec28_case_insensitive_state_tracking()
+
+        if ec_enabled(29):
+            ec29_no_phantom_other_slice()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

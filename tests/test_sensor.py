@@ -389,10 +389,49 @@ def test_duration_attributes_breakdown_tracked_only() -> None:
     coord = _duration_coord(tracked=("heat", "auto"))
     sensor = DurationSensor(coord, "today")
     attrs = sensor.extra_state_attributes
-    # off (1200) is recorded but not tracked → excluded; ints, tracked keys only.
+    # off (1200) is recorded but not tracked → excluded; tracked keys only. Values
+    # are the engine's raw floats (NOT int()-floored): flooring each state made the
+    # card's `other = window − Σtracked − gap` net the discarded fractions into a
+    # phantom "other" slice — see test_specific_breakdown_no_other_residue.
     assert attrs["breakdown_seconds"] == {"heat": 1800, "auto": 600}
-    assert all(isinstance(v, int) for v in attrs["breakdown_seconds"].values())
+    assert all(isinstance(v, (int, float)) for v in attrs["breakdown_seconds"].values())
     assert set(attrs["breakdown_pct"]) == {"heat", "auto"}
+
+
+def test_specific_breakdown_no_other_residue() -> None:
+    """Regression: published per-state seconds keep enough precision that the
+    card's phantom "other" slice nets to zero on a fully-covered window.
+
+    Reproduces the 7-day binary_sensor.home_safety_status "other 2s <0.1%" bug:
+    the engine's float breakdown sums EXACTLY to the window (gap = 0), but the old
+    int()-floor at the publish boundary dropped each state's sub-second fraction,
+    so the card's other = window − Σ(floored tracked) − gap surfaced those
+    fractions (~2s). Emitting raw floats collapses other to 0.
+    """
+    tracked = ("off", "on", "unavailable", "unknown")
+    # Real recorder floats: off=6.849d, on=3.304h, unavailable=19.2min; sum == 7d.
+    bd = {"off": 591752.7, "on": 11893.9, "unavailable": 1153.4, "unknown": 0.0}
+    assert sum(bd.values()) == 604800.0  # engine invariant: window fully covered
+    res = _frame_result(
+        window_seconds=604800.0,
+        breakdown_seconds=bd,
+        breakdown_pct={"off": 97.9, "on": 1.9, "unavailable": 0.2, "unknown": 0.0},
+        counts={"off": 12, "on": 2, "unavailable": 10},
+        avg_duration={"off": 1.0, "on": 1.0, "unavailable": 1.0},
+        unaccounted_seconds=max(0.0, 604800.0 - sum(bd.values())),  # = 0.0
+        has_gap=False,
+    )
+    coord = _duration_coord(tracked=tracked, result=res)
+    attrs = DurationSensor(coord, "today").extra_state_attributes
+
+    # Replay the card's _specificSlices arithmetic (card.js:1420-1444).
+    ws = float(attrs["window_seconds"])
+    gap = max(0.0, float(attrs["unaccounted_seconds"]))
+    in_secs = sum(float(attrs["breakdown_seconds"][s]) for s in tracked)
+    other = max(0.0, ws - in_secs - gap)
+
+    # Pre-fix (int()-floored breakdown) this was 2.0; it MUST be 0.
+    assert other == 0.0, f"phantom 'other' residue: {other}s"
 
 
 def test_duration_attributes_with_target_adds_compliance() -> None:
@@ -583,7 +622,9 @@ def test_breakdown_attributes_sorted_by_seconds_desc() -> None:
     # heat 1800 > off 1200 > auto 600.
     assert list(attrs["breakdown_seconds"]) == ["heat", "off", "auto"]
     assert attrs["breakdown_seconds"]["heat"] == 1800
-    assert all(isinstance(v, int) for v in attrs["breakdown_seconds"].values())
+    # Raw engine floats (no int() truncation) — flooring per-state seconds while
+    # window/gap stay float manufactured a phantom "other" slice in the card.
+    assert all(isinstance(v, (int, float)) for v in attrs["breakdown_seconds"].values())
     # breakdown_pct shares that per-state ordering, then the additive
     # "unaccounted" key trails last (it has no breakdown_seconds entry).
     assert list(attrs["breakdown_pct"]) == ["heat", "off", "auto", "unaccounted"]

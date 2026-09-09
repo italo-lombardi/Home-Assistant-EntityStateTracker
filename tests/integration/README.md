@@ -116,6 +116,12 @@ ECs cannot run.
 | EC21 | Compliance across multiple frames → one Compliant binary sensor **per** frame, each with its own `frame` attr honoring `is_on == compliance_percent >= threshold` |
 | EC22 | Options flow edits the compliance target **set** and `min_state_duration` → both take effect after reload (target_states attr + diagnostics `min_state_duration`) |
 | EC23 | `week` (week-to-date) frame → its `window_start` lands on the most recent local **Monday 00:00** (not "7 days ago"), and duration accrues like any frame |
+| EC24 | `last_week` / `last_month` are closed prior-period windows (fixed start+end, not rolling) |
+| EC25 | N folded visits == N counts — a state visited across day-fold seams is counted once, not double-counted (PR #16 proxy) |
+| EC26 | Options flow edits the tracked-state **set** → retroactive recompute picks up the newly-tracked state's past time |
+| EC27 | Specific `breakdown_seconds` is keyed for **all** tracked states, unvisited ones zero-seeded (never missing keys) |
+| EC28 | Case-insensitive state tracking: a title-case HA state (e.g. `"Casa Buonabitacolo"`) is attributed under its lowercase breakdown key |
+| EC29 | No phantom "other" slice: on a fully-covered specific tracker (gap=0) the card's `other = window − Σ(tracked) − gap` stays <1 s, and `breakdown_seconds` values are numeric floats (regression for the `int()`-truncation residue) |
 
 ## Notes on semantics that shape the tests
 

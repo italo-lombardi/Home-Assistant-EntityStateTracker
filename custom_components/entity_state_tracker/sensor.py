@@ -264,7 +264,7 @@ class DurationSensor(_FrameSensor):
         tracked = self.coordinator.tracked_states
         if tracked is not None:
             attrs["breakdown_seconds"] = {
-                s: int(result.breakdown_seconds.get(s, 0.0)) for s in tracked
+                s: result.breakdown_seconds.get(s, 0.0) for s in tracked
             }
             attrs["breakdown_pct"] = {s: result.breakdown_pct.get(s) for s in tracked}
         if self.coordinator.target_states:
@@ -398,7 +398,7 @@ class BreakdownSensor(_FrameSensor):
         return {
             "source_entity": self.coordinator.entity_id,
             "frame": self._frame,
-            "breakdown_seconds": {s: int(result.breakdown_seconds[s]) for s in order},
+            "breakdown_seconds": {s: result.breakdown_seconds[s] for s in order},
             "breakdown_pct": breakdown_pct,
             "counts": {s: result.counts.get(s, 0) for s in order},
             "avg_duration_seconds": {s: result.avg_duration.get(s) for s in order},
