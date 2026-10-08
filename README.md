@@ -195,6 +195,8 @@ duration_text:
   wd: "0w 0d"
 ```
 
+> **Pick the representation that matches your duration's magnitude.** Each rep only carries signal at its own scale — above its range the big unit reads `0` (for this 18-hour value, `wd` is `"0w 0d"` and `dh` is `"0d 18h"`, while `hm`/`ms` are the useful ones). Use `wd` for multi-week spans (a `year` frame), `dh` for multi-day, `hm` for intra-day, `ms` for short visits. The set is a menu, not four views you'd show at once.
+
 Pick whichever representation fits (dot or bracket access both work):
 
 ```jinja
