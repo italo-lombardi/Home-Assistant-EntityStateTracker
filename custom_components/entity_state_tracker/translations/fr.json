@@ -59,6 +59,7 @@
           "month": "Ce mois-ci",
           "last_month": "Le mois dernier",
           "year": "Cette année",
+          "365d": "365 derniers jours",
           "min_state_duration": "Durée d'état minimale (secondes)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Depuis lundi 00:00 (cette semaine jusqu'à présent).",
           "last_week": "La semaine entière précédente, du lundi au dimanche.",
           "7d": "Fenêtre glissante de 7 jours se terminant maintenant.",
-          "30d": "Les 30 derniers jours locaux entiers.",
+          "30d": "Fenêtre glissante de 30 jours se terminant maintenant.",
           "month": "Depuis le 1er de ce mois.",
           "last_month": "Le mois calendaire entier précédent.",
           "year": "Depuis le 1er janvier.",
+          "365d": "Fenêtre glissante de 365 jours se terminant maintenant.",
           "min_state_duration": "Si l'entité suivie passe dans un état puis en ressort plus vite que ce nombre de secondes, ce bref instant est ignoré — son temps est ajouté à l'état précédent et il ne compte pas comme un changement distinct. Utilisez-le pour filtrer les capteurs qui scintillent ou rebondissent. Réglez sur 0 pour compter chaque changement, aussi bref soit-il."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Ce mois-ci",
           "last_month": "Le mois dernier",
           "year": "Cette année",
+          "365d": "365 derniers jours",
           "target": "État(s) cible(s)",
           "target_threshold": "Seuil de conformité (%, facultatif)",
           "min_state_duration": "Durée d'état minimale (secondes)",
@@ -110,10 +113,11 @@
           "week": "Depuis lundi 00:00 (cette semaine jusqu'à présent).",
           "last_week": "La semaine entière précédente, du lundi au dimanche.",
           "7d": "Fenêtre glissante de 7 jours se terminant maintenant.",
-          "30d": "Les 30 derniers jours locaux entiers.",
+          "30d": "Fenêtre glissante de 30 jours se terminant maintenant.",
           "month": "Depuis le 1er de ce mois.",
           "last_month": "Le mois calendaire entier précédent.",
           "year": "Depuis le 1er janvier.",
+          "365d": "Fenêtre glissante de 365 jours se terminant maintenant.",
           "target": "L'ensemble des états considérés comme conformes. Se trouver dans l'un d'eux compte. Indépendant des états suivis — choisissez n'importe quel état que l'entité peut prendre. Utilisé uniquement lorsque l'évaluation de conformité est activée.",
           "target_threshold": "Si défini, un capteur binaire « Conforme » s'active lorsque le pourcentage de conformité atteint ou dépasse cette valeur. Laissez vide pour ignorer le seuil.",
           "min_state_duration": "Si l'entité suivie passe dans un état puis en ressort plus vite que ce nombre de secondes, ce bref instant est ignoré — son temps est ajouté à l'état précédent et il ne compte pas comme un changement distinct. Utilisez-le pour filtrer les capteurs qui scintillent ou rebondissent. Réglez sur 0 pour compter chaque changement, aussi bref soit-il.",

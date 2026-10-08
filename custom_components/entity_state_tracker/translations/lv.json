@@ -59,6 +59,7 @@
           "month": "Šis mēnesis",
           "last_month": "Pagājušais mēnesis",
           "year": "Šogad",
+          "365d": "Pēdējās 365 dienas",
           "min_state_duration": "Minimālais stāvokļa ilgums (sekundes)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "No pirmdienas plkst. 00:00 (šī nedēļa līdz šim).",
           "last_week": "Iepriekšējā pilnā nedēļa no pirmdienas līdz svētdienai.",
           "7d": "Ritošs 7 dienu logs, kas beidzas tagad.",
-          "30d": "Pēdējās 30 pilnās vietējās dienas.",
+          "30d": "Ritošs 30 dienu logs, kas beidzas tagad.",
           "month": "Kopš šī mēneša 1. datuma.",
           "last_month": "Iepriekšējais pilnais kalendārais mēnesis.",
           "year": "Kopš 1. janvāra.",
+          "365d": "Ritošs 365 dienu logs, kas beidzas tagad.",
           "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā iziet ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Šis mēnesis",
           "last_month": "Pagājušais mēnesis",
           "year": "Šogad",
+          "365d": "Pēdējās 365 dienas",
           "target": "Mērķa stāvoklis (-ļi)",
           "target_threshold": "Atbilstības slieksnis (%, neobligāts)",
           "min_state_duration": "Minimālais stāvokļa ilgums (sekundes)",
@@ -110,10 +113,11 @@
           "week": "No pirmdienas plkst. 00:00 (šī nedēļa līdz šim).",
           "last_week": "Iepriekšējā pilnā nedēļa no pirmdienas līdz svētdienai.",
           "7d": "Ritošs 7 dienu logs, kas beidzas tagad.",
-          "30d": "Pēdējās 30 pilnās vietējās dienas.",
+          "30d": "Ritošs 30 dienu logs, kas beidzas tagad.",
           "month": "Kopš šī mēneša 1. datuma.",
           "last_month": "Iepriekšējais pilnais kalendārais mēnesis.",
           "year": "Kopš 1. janvāra.",
+          "365d": "Ritošs 365 dienu logs, kas beidzas tagad.",
           "target": "Par atbilstošiem uzskatīto stāvokļu kopa. Atrašanās jebkurā no tiem tiek ieskaitīta. Neatkarīgi no sekojamajiem stāvokļiem — izvēlieties jebkuru stāvokli, kādā entītija var būt. Izmanto tikai tad, kad ir iespējota atbilstības vērtēšana.",
           "target_threshold": "Ja iestatīts, binārais sensors „Atbilstošs” ieslēdzas, kad atbilstības procents sasniedz vai pārsniedz šo vērtību. Atstājiet tukšu, lai izlaistu slieksni.",
           "min_state_duration": "Ja izsekotā entītija pāriet stāvoklī un no tā iziet ātrāk par šo sekunžu skaitu, šis īsais mirklis tiek ignorēts — tā laiks tiek pievienots iepriekšējam stāvoklim un netiek uzskatīts par atsevišķu izmaiņu. Izmantojiet to mirgojošu vai lecošu sensoru filtrēšanai. Iestatiet 0, lai skaitītu katru izmaiņu, lai cik īsa tā būtu.",

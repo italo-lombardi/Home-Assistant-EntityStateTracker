@@ -31,9 +31,11 @@ FRAMES: dict[str, FrameKind] = {
     "month": "calendar",
     "last_month": "calendar",
     "year": "calendar",
+    "365d": "rolling",
 }
 
-# Frames on by default; week/30d/month/year exceed retention and fill in over time.
+# Frames on by default; week/30d/month/year/365d exceed recorder retention and
+# fill in over time (365d is the deepest — mostly ledger whole-day buckets).
 DEFAULT_FRAMES = ["today", "yesterday", "24h", "7d"]
 
 # Config flow keys

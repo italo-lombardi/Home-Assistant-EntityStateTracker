@@ -59,6 +59,7 @@
           "month": "This month",
           "last_month": "Last month",
           "year": "This year",
+          "365d": "Last 365 days",
           "min_state_duration": "Minimum state duration (seconds)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Since Monday 00:00 (this week so far).",
           "last_week": "The previous whole Monday–Sunday week.",
           "7d": "Rolling 7-day window ending now.",
-          "30d": "The last 30 whole local days.",
+          "30d": "Rolling 30-day window ending now.",
           "month": "Since the 1st of this month.",
           "last_month": "The previous whole calendar month.",
           "year": "Since 1 January.",
+          "365d": "Rolling 365-day window ending now.",
           "min_state_duration": "If the tracked entity flips into a state and back out again faster than this many seconds, that brief moment is ignored — its time is added to the previous state instead, and it does not count as a separate change. Use it to filter flickering or bouncing sensors. Set to 0 to count every change, however short."
         }
       }
@@ -98,6 +100,7 @@
           "month": "This month",
           "last_month": "Last month",
           "year": "This year",
+          "365d": "Last 365 days",
           "target": "Target state(s)",
           "target_threshold": "Compliance threshold (%, optional)",
           "min_state_duration": "Minimum state duration (seconds)",
@@ -110,10 +113,11 @@
           "week": "Since Monday 00:00 (this week so far).",
           "last_week": "The previous whole Monday–Sunday week.",
           "7d": "Rolling 7-day window ending now.",
-          "30d": "The last 30 whole local days.",
+          "30d": "Rolling 30-day window ending now.",
           "month": "Since the 1st of this month.",
           "last_month": "The previous whole calendar month.",
           "year": "Since 1 January.",
+          "365d": "Rolling 365-day window ending now.",
           "target": "The set of states considered compliant. Being in any one of them counts. Independent of the tracked states — pick any state the entity can be in. Only used when compliance scoring is enabled.",
           "target_threshold": "If set, a 'Compliant' binary sensor turns on when the compliance percentage meets or exceeds this value. Leave empty to skip the threshold.",
           "min_state_duration": "If the tracked entity flips into a state and back out again faster than this many seconds, that brief moment is ignored — its time is added to the previous state instead, and it does not count as a separate change. Use it to filter flickering or bouncing sensors. Set to 0 to count every change, however short.",

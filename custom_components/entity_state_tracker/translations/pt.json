@@ -59,6 +59,7 @@
           "month": "Este mês",
           "last_month": "Mês passado",
           "year": "Este ano",
+          "365d": "Últimos 365 dias",
           "min_state_duration": "Duração mínima de estado (segundos)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Desde segunda-feira às 00:00 (esta semana até agora).",
           "last_week": "A semana inteira anterior, de segunda-feira a domingo.",
           "7d": "Janela móvel de 7 dias que termina agora.",
-          "30d": "Os últimos 30 dias locais inteiros.",
+          "30d": "Janela móvel de 30 dias que termina agora.",
           "month": "Desde o dia 1 deste mês.",
           "last_month": "O mês de calendário inteiro anterior.",
           "year": "Desde 1 de janeiro.",
+          "365d": "Janela móvel de 365 dias que termina agora.",
           "min_state_duration": "Se a entidade acompanhada mudar para um estado e sair dele mais rápido do que este número de segundos, esse breve momento é ignorado — o seu tempo é adicionado ao estado anterior e não conta como uma alteração separada. Utilize-o para filtrar sensores que oscilam ou saltam. Defina como 0 para contar cada alteração, por mais breve que seja."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Este mês",
           "last_month": "Mês passado",
           "year": "Este ano",
+          "365d": "Últimos 365 dias",
           "target": "Estado(s)-alvo",
           "target_threshold": "Limite de conformidade (%, opcional)",
           "min_state_duration": "Duração mínima de estado (segundos)",
@@ -110,10 +113,11 @@
           "week": "Desde segunda-feira às 00:00 (esta semana até agora).",
           "last_week": "A semana inteira anterior, de segunda-feira a domingo.",
           "7d": "Janela móvel de 7 dias que termina agora.",
-          "30d": "Os últimos 30 dias locais inteiros.",
+          "30d": "Janela móvel de 30 dias que termina agora.",
           "month": "Desde o dia 1 deste mês.",
           "last_month": "O mês de calendário inteiro anterior.",
           "year": "Desde 1 de janeiro.",
+          "365d": "Janela móvel de 365 dias que termina agora.",
           "target": "O conjunto de estados considerados conformes. Estar em qualquer um deles conta. Independente dos estados monitorizados — escolha qualquer estado que a entidade possa ter. Usado apenas quando a pontuação de conformidade está ativada.",
           "target_threshold": "Se definido, um sensor binário «Conforme» liga quando a percentagem de conformidade atinge ou ultrapassa este valor. Deixe vazio para ignorar o limite.",
           "min_state_duration": "Se a entidade acompanhada mudar para um estado e sair dele mais rápido do que este número de segundos, esse breve momento é ignorado — o seu tempo é adicionado ao estado anterior e não conta como uma alteração separada. Utilize-o para filtrar sensores que oscilam ou saltam. Defina como 0 para contar cada alteração, por mais breve que seja.",

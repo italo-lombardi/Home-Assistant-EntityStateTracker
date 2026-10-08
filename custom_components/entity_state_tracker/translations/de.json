@@ -59,6 +59,7 @@
           "month": "Dieser Monat",
           "last_month": "Letzter Monat",
           "year": "Dieses Jahr",
+          "365d": "Letzte 365 Tage",
           "min_state_duration": "Mindestzustandsdauer (Sekunden)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Seit Montag 00:00 Uhr (bisher diese Woche).",
           "last_week": "Die vorherige ganze Woche von Montag bis Sonntag.",
           "7d": "Rollierendes 7-Tage-Fenster bis jetzt.",
-          "30d": "Die letzten 30 ganzen lokalen Tage.",
+          "30d": "Rollierendes 30-Tage-Fenster bis jetzt.",
           "month": "Seit dem 1. dieses Monats.",
           "last_month": "Der vorherige ganze Kalendermonat.",
           "year": "Seit dem 1. Januar.",
+          "365d": "Rollierendes 365-Tage-Fenster bis jetzt.",
           "min_state_duration": "Wenn die verfolgte Entität schneller als diese Anzahl von Sekunden in einen Zustand und wieder heraus wechselt, wird dieser kurze Moment ignoriert — seine Zeit wird stattdessen zum vorherigen Zustand addiert und zählt nicht als separate Änderung. Verwende dies, um flackernde oder prellende Sensoren zu filtern. Auf 0 setzen, um jede Änderung zu zählen, egal wie kurz."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Dieser Monat",
           "last_month": "Letzter Monat",
           "year": "Dieses Jahr",
+          "365d": "Letzte 365 Tage",
           "target": "Zielzustand/-zustände",
           "target_threshold": "Konformitätsschwelle (%, optional)",
           "min_state_duration": "Mindestzustandsdauer (Sekunden)",
@@ -110,10 +113,11 @@
           "week": "Seit Montag 00:00 Uhr (bisher diese Woche).",
           "last_week": "Die vorherige ganze Woche von Montag bis Sonntag.",
           "7d": "Rollierendes 7-Tage-Fenster bis jetzt.",
-          "30d": "Die letzten 30 ganzen lokalen Tage.",
+          "30d": "Rollierendes 30-Tage-Fenster bis jetzt.",
           "month": "Seit dem 1. dieses Monats.",
           "last_month": "Der vorherige ganze Kalendermonat.",
           "year": "Seit dem 1. Januar.",
+          "365d": "Rollierendes 365-Tage-Fenster bis jetzt.",
           "target": "Die Menge der als konform geltenden Zustände. Sich in einem davon zu befinden zählt. Unabhängig von den verfolgten Zuständen – wähle einen beliebigen Zustand, den die Entität annehmen kann. Wird nur verwendet, wenn die Konformitätsbewertung aktiviert ist.",
           "target_threshold": "Wenn gesetzt, schaltet sich ein Binärsensor „Konform“ ein, wenn der Konformitätsprozentsatz diesen Wert erreicht oder überschreitet. Leer lassen, um den Schwellenwert zu überspringen.",
           "min_state_duration": "Wenn die verfolgte Entität schneller als diese Anzahl von Sekunden in einen Zustand und wieder heraus wechselt, wird dieser kurze Moment ignoriert — seine Zeit wird stattdessen zum vorherigen Zustand addiert und zählt nicht als separate Änderung. Verwende dies, um flackernde oder prellende Sensoren zu filtern. Auf 0 setzen, um jede Änderung zu zählen, egal wie kurz.",

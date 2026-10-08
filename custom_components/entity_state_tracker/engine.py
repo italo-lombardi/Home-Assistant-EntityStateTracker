@@ -75,10 +75,12 @@ def resolve_frame_bounds(
       ``last_month``). ``week`` starts at local Monday 00:00 (week-to-date);
       ``last_week`` is the previous full Monday-anchored week; ``last_month`` is
       the previous full calendar month.
-    * rolling — ``24h``/``7d`` are ``now − delta → now``.
-    * ``30d`` — "last 30 whole local days": ``[today_midnight − 30 days,
-      today_midnight)`` (§6.4), so the tail day is queryable-complete and the
-      window never includes the partial open day.
+    * rolling — ``24h``/``7d``/``30d``/``365d`` are ``now − delta → now``,
+      true-rolling windows that include the current moment (``365d`` is the
+      rolling sibling of the calendar ``year``). Their deep history past recorder
+      retention comes from ledger whole-day buckets; the partial far-edge start
+      day is dropped from the ledger (see :func:`_ledger_days_before`
+      ``exclude_start_day``) so it is never over-counted as a whole bucket.
 
     Raises ``ValueError`` for an unknown frame key so a typo fails loudly rather
     than silently producing a zero window.
@@ -109,12 +111,10 @@ def resolve_frame_bounds(
         return now_utc - dt.timedelta(days=7), now_utc
 
     if frame_key == "30d":
-        # Last 30 WHOLE local days — ends at today's local midnight, not now.
-        start = _rewind_local_days(today_midnight_local, 30, tz)
-        return (
-            start.astimezone(dt.UTC),
-            today_midnight_local.astimezone(dt.UTC),
-        )
+        return now_utc - dt.timedelta(days=30), now_utc
+
+    if frame_key == "365d":
+        return now_utc - dt.timedelta(days=365), now_utc
 
     if frame_key == "month":
         start = today_midnight_local.replace(day=1)
@@ -365,29 +365,49 @@ def _ledger_days_before(
     daily: dict[str, dict[str, dict[str, float]]],
     window_start_local_day: str,
     upper_exclusive_local_day: str,
+    *,
+    exclude_start_day: bool = False,
 ) -> BlockMap:
     """Sum ledger buckets for closed local days inside ``[start_day, upper)``.
 
     ``upper_exclusive_local_day`` is the local day at which the *recorder* takes
-    over, i.e. ``end_utc``'s local day. For an OPEN calendar frame that is today
-    (the ledger owns every closed day, the open day is recomputed from the
-    recorder); ``yesterday``/``30d`` close AT today's midnight so their seam is
-    today too; only ``last_week``/``last_month`` close on an EARLIER midnight, so
-    the ledger owns only days below the window's close and never the days after
-    it. For a ROLLING frame it is the recorder-floor's local day — the ledger
-    only fills WHOLE days strictly below the point the recorder query starts at,
-    so a mid-day window_start never pulls in the oldest partial day as a whole
-    bucket (§6.4, no double count, no over-count at the seam).
+    over, i.e. the recorder-floor's local day (rolling) or ``end_utc``'s local day
+    (calendar). The ledger fills only WHOLE days strictly below it.
+
+    ``exclude_start_day`` guards the FAR edge. A true-rolling window
+    (``24h``/``7d``/``30d``/``365d``) starts MID-DAY (``now − delta``), so its
+    ``window_start_local_day`` is a *partial* day. When the recorder covers that
+    day (retention reaches it), the recorder owns the partial slice and this
+    function is called with ``upper`` = window_start's day, so the partial day is
+    already excluded. But when the window exceeds recorder retention
+    (``365d`` always; ``30d`` if ``keep_days < 30``) the recorder floor sits
+    *inside* the window, ``upper`` is the floor day, and the mid-day
+    ``window_start_local_day`` would otherwise be summed as a WHOLE ``86400``
+    bucket — a one-directional over-count at the far edge (the mirror of the
+    ``last_week`` seam bug). ``exclude_start_day=True`` drops that partial day
+    from the ledger entirely: the window loses at most one sub-day slice at its
+    far edge (bounded UNDER, never over — matching the never-overstate rule),
+    rather than over-counting it to a full day.
     """
     agg: BlockMap = {}
+    lower = (
+        _next_local_day_iso(window_start_local_day)
+        if exclude_start_day
+        else window_start_local_day
+    )
     for day, states in daily.items():
-        if day < window_start_local_day or day >= upper_exclusive_local_day:
+        if day < lower or day >= upper_exclusive_local_day:
             continue
         for name, row in states.items():
             into = agg.setdefault(name, {"secs": 0.0, "count": 0})
             into["secs"] += float(row.get("secs", 0.0))
             into["count"] += int(row.get("count", 0))
     return agg
+
+
+def _next_local_day_iso(day_iso: str) -> str:
+    """Return the ISO date string one day after ``day_iso`` (``YYYY-MM-DD``)."""
+    return (dt.date.fromisoformat(day_iso) + dt.timedelta(days=1)).isoformat()
 
 
 def compute_frame(
@@ -467,10 +487,34 @@ def compute_frame(
     frame_upper_local_day = end_utc.astimezone(tz).date().isoformat()
     upper_local_day = ledger_upper_local_day or frame_upper_local_day
 
+    # Far-edge guard: a true-rolling frame (24h/7d/30d/365d) starts MID-DAY, so
+    # its window_start_local_day is a PARTIAL day. If the recorder reaches that
+    # day it owns the slice (upper == window_start day → already excluded). But
+    # when the window exceeds recorder retention (365d always; 30d if keep_days <
+    # 30) the floor sits inside the window and that mid-day start day would be
+    # summed as a WHOLE 86400 ledger bucket — a one-directional far-edge
+    # over-count (mirror of the last_week seam). Detect a non-midnight start and
+    # drop its partial day from the ledger (bounded UNDER, never over).
+    start_local = start_utc.astimezone(tz)
+    rolling_partial_start = (
+        start_local.hour,
+        start_local.minute,
+        start_local.second,
+    ) != (
+        0,
+        0,
+        0,
+    )
+
     combined: BlockMap = {}
     _merge_block_maps(
         combined,
-        _ledger_days_before(ledger_daily, window_start_local_day, upper_local_day),
+        _ledger_days_before(
+            ledger_daily,
+            window_start_local_day,
+            upper_local_day,
+            exclude_start_day=rolling_partial_start,
+        ),
     )
     _merge_block_maps(combined, {k: dict(v) for k, v in recent_blocks.items()})
 

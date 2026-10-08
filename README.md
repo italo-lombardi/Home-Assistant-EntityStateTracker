@@ -231,14 +231,13 @@ Every duration/breakdown sensor exists per **enabled frame**:
 | `week` | calendar | local Monday 00:00 → now (week-to-date) |
 | `last_week` | calendar | previous full Monday–Sunday week (closed) |
 | `7d` | rolling | now − 7d → now |
-| `30d` | rolling* | last 30 whole local days |
+| `30d` | rolling | now − 30d → now |
 | `month` | calendar | 1st of the local month → now |
 | `last_month` | calendar | previous full calendar month (closed) |
-| `year` | calendar | Jan 1 local → now |
+| `year` | calendar | Jan 1 local → now (year-to-date) |
+| `365d` | rolling | now − 365d → now (the rolling sibling of `year`) |
 
-\* Windows longer than the recorder's retention can't be *truly* rolling (the tail day is no longer queryable), so `30d` is defined as "the last 30 whole local days" and labelled as such. `24h` and `7d` are true-rolling because they fit inside retention.
-
-The `24h` and `7d` frames are computed from the **recorder** for accuracy: because their window starts mid-day, the recent portion is read from the recorder's real intra-day timeline rather than a whole-day ledger bucket (which would over-count the partial oldest day). The ledger only fills whole days older than the recorder covers. If you set recorder `purge_keep_days` below 7 days, the `7d` frame's oldest purged day falls back to whole-day ledger granularity for that single day — bounded and unavoidable, since daily-sum buckets carry no intra-day timeline.
+All rolling frames (`24h`/`7d`/`30d`/`365d`) are true-rolling: `now − N days → now`, **including the current moment**, consistent with each other. The recent portion is read from the **recorder's** real intra-day timeline (not a whole-day ledger bucket) so the partial window-start day isn't over-counted; the ledger fills only whole days older than the recorder covers. `30d` and `365d` reach past the recorder's retention, so their deep history comes from the ledger's whole-day buckets — the single partial day at the far edge of the window is dropped from the ledger sum (bounded under, never over), the mirror of the closed-frame seam guard. If you set recorder `purge_keep_days` very low, the oldest purged day of any rolling frame falls back to whole-day ledger granularity for that one day — bounded and unavoidable, since daily-sum buckets carry no intra-day timeline.
 
 ---
 

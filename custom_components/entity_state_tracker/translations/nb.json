@@ -59,6 +59,7 @@
           "month": "Denne måneden",
           "last_month": "Forrige måned",
           "year": "I år",
+          "365d": "Siste 365 dager",
           "min_state_duration": "Minste tilstandsvarighet (sekunder)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Siden mandag kl. 00:00 (denne uken så langt).",
           "last_week": "Den forrige hele uken fra mandag til søndag.",
           "7d": "Rullerende 7-dagersvindu som slutter nå.",
-          "30d": "De siste 30 hele lokale dagene.",
+          "30d": "Rullerende 30-dagersvindu som slutter nå.",
           "month": "Siden den 1. i denne måneden.",
           "last_month": "Den forrige hele kalendermåneden.",
           "year": "Siden 1. januar.",
+          "365d": "Rullerende 365-dagersvindu som slutter nå.",
           "min_state_duration": "Hvis den sporede enheten går inn i en tilstand og ut igjen raskere enn dette antallet sekunder, ignoreres dette korte øyeblikket — tiden legges i stedet til den forrige tilstanden, og det teller ikke som en separat endring. Bruk det til å filtrere flimrende eller sprettende sensorer. Sett til 0 for å telle hver endring, uansett hvor kort."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Denne måneden",
           "last_month": "Forrige måned",
           "year": "I år",
+          "365d": "Siste 365 dager",
           "target": "Måltilstand(er)",
           "target_threshold": "Samsvarsterskel (%, valgfritt)",
           "min_state_duration": "Minste tilstandsvarighet (sekunder)",
@@ -110,10 +113,11 @@
           "week": "Siden mandag kl. 00:00 (denne uken så langt).",
           "last_week": "Den forrige hele uken fra mandag til søndag.",
           "7d": "Rullerende 7-dagersvindu som slutter nå.",
-          "30d": "De siste 30 hele lokale dagene.",
+          "30d": "Rullerende 30-dagersvindu som slutter nå.",
           "month": "Siden den 1. i denne måneden.",
           "last_month": "Den forrige hele kalendermåneden.",
           "year": "Siden 1. januar.",
+          "365d": "Rullerende 365-dagersvindu som slutter nå.",
           "target": "Settet med tilstander som regnes som samsvarende. Å være i en av dem teller. Uavhengige av de sporede tilstandene — velg en hvilken som helst tilstand entiteten kan være i. Brukes bare når scoring av samsvar er aktivert.",
           "target_threshold": "Hvis satt, slås en binærsensor «Samsvarende» på når samsvarsprosenten når eller overstiger denne verdien. La stå tom for å hoppe over terskelen.",
           "min_state_duration": "Hvis den sporede enheten går inn i en tilstand og ut igjen raskere enn dette antallet sekunder, ignoreres dette korte øyeblikket — tiden legges i stedet til den forrige tilstanden, og det teller ikke som en separat endring. Bruk det til å filtrere flimrende eller sprettende sensorer. Sett til 0 for å telle hver endring, uansett hvor kort.",

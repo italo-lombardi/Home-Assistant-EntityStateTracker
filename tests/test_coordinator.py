@@ -1250,7 +1250,7 @@ async def test_update_data_queries_recorder_once_per_tick(
     c = await _make_coordinator(hass, entry)
     with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
         await _first_refresh(hass, c)
-        assert len(c.enabled_frames) == 10  # all frames on
+        assert len(c.enabled_frames) == 11  # all frames on (incl. 365d)
         patch_recorder.mock.reset_mock()  # type: ignore[attr-defined]
         await c._async_update_data()
     # ≤2 per the contract; the shared-slice design makes it exactly 1.
@@ -1982,7 +1982,9 @@ async def test_rolling_short_retention_ledger_fills_head(
     [now-7d, now-5d) falls to the ledger as WHOLE days below recorder_floor.
 
     Asserts no double-count at the seam (the recorder_floor day's own bucket is
-    excluded — the recorder owns it) and no crash.
+    excluded — the recorder owns it), the far-edge window-start partial day is
+    also excluded (its whole bucket would over-count the sub-day slice the window
+    covers), and no crash.
     """
     now = _utc(2026, 6, 10, 15, 0)
     # Recorder returns "on" continuously across whatever it's asked for.
@@ -1992,18 +1994,21 @@ async def test_rolling_short_retention_ledger_fills_head(
         await _first_refresh(hass, c)
         c._ledger.last_state = "on"
         c._ledger.last_changed_ts = _utc(2026, 6, 5, 0, 0).isoformat()
-        # recorder_floor for 7d = now-5d = 2026-06-05 15:00 → seam day 2026-06-05.
-        # Head days below the seam are summed; the seam day's bucket is excluded.
+        # 7d window_start = now-7d = 2026-06-03 15:00 (mid-day); recorder_floor =
+        # now-5d = 2026-06-05 15:00 → seam day 2026-06-05. The window-start day
+        # (06-03) is a PARTIAL far-edge day → excluded; the seam day (06-05) is
+        # recorder-owned → excluded; only the whole in-between day (06-04) sums.
         c._ledger.daily = {
-            "2026-06-03": {"off": {"secs": 3600.0, "count": 1}},  # head, summed
-            "2026-06-04": {"off": {"secs": 3600.0, "count": 1}},  # head, summed
+            "2026-06-03": {"off": {"secs": 3600.0, "count": 1}},  # far-edge — excluded
+            "2026-06-04": {"off": {"secs": 3600.0, "count": 1}},  # whole — summed
             "2026-06-05": {"off": {"secs": 99999.0, "count": 9}},  # seam — excluded
         }
         with _patch_retention(5):
             data = await c._async_update_data()
     fr = data.frames["7d"]
-    # off = only the two head days (2*3600); the seam-day 99999 is excluded.
-    assert fr.breakdown_seconds.get("off", 0.0) == pytest.approx(7200.0)
+    # off = only the single whole in-window day (06-04); the far-edge start day
+    # (06-03) and the seam day (06-05) are both excluded.
+    assert fr.breakdown_seconds.get("off", 0.0) == pytest.approx(3600.0)
     assert sum(fr.breakdown_seconds.values()) <= fr.window_seconds + 1.0
     assert fr.unaccounted_seconds >= 0.0
     await c.async_shutdown()

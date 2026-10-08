@@ -114,12 +114,23 @@ def test_resolve_frame_bounds_rolling(frame: str, delta: dt.timedelta) -> None:
     assert start == now.astimezone(UTC) - delta
 
 
-def test_resolve_frame_bounds_30d_is_last_30_whole_days() -> None:
+def test_resolve_frame_bounds_30d_is_rolling_includes_now() -> None:
+    # 30d is now true-rolling (now − 30d → now), including the current moment —
+    # not the old whole-days [midnight−30d, midnight) window.
     now = dt.datetime(2026, 1, 31, 9, 30, tzinfo=NY)
     start, end = E.resolve_frame_bounds("30d", now, NY)
-    assert end.astimezone(NY) == dt.datetime(2026, 1, 31, 0, 0, tzinfo=NY)
-    assert start.astimezone(NY) == dt.datetime(2026, 1, 1, 0, 0, tzinfo=NY)
+    assert end == now.astimezone(dt.UTC)
+    assert start == now.astimezone(dt.UTC) - dt.timedelta(days=30)
     assert (end - start).total_seconds() == 30 * 86400
+
+
+def test_resolve_frame_bounds_365d_is_rolling_includes_now() -> None:
+    # 365d — the rolling sibling of `year`: now − 365d → now, includes now.
+    now = dt.datetime(2026, 6, 15, 14, 20, tzinfo=NY)
+    start, end = E.resolve_frame_bounds("365d", now, NY)
+    assert end == now.astimezone(dt.UTC)
+    assert start == now.astimezone(dt.UTC) - dt.timedelta(days=365)
+    assert (end - start).total_seconds() == 365 * 86400
 
 
 @pytest.mark.parametrize(
@@ -177,12 +188,6 @@ def test_resolve_frame_bounds_week_starts_local_monday(
         pytest.param(
             "yesterday", (2026, 11, 2, 12, 0), (2026, 11, 1, 0, 0), id="yesterday-fall"
         ),
-        # 30d — today 2026-03-20 rewinds 30 days to 02-18 ACROSS spring-forward
-        # 03-08 (absolute rewind would land 02-18 01:00).
-        pytest.param("30d", (2026, 3, 20, 12, 0), (2026, 2, 18, 0, 0), id="30d-spring"),
-        # 30d — today 2026-11-20 rewinds 30 days to 10-21 ACROSS fall-back 11-01
-        # (absolute rewind would land 10-21 23:00).
-        pytest.param("30d", (2026, 11, 20, 12, 0), (2026, 10, 21, 0, 0), id="30d-fall"),
         # last_week — spring-forward Sun 2026-03-08 lies inside the PREVIOUS week:
         # now Thu 2026-03-12 → prev week Mon 03-02 .. Mon 03-09 (contains 03-08).
         pytest.param(
@@ -1717,6 +1722,7 @@ _ALL_FRAMES = (
     "last_week",
     "7d",
     "30d",
+    "365d",
     "month",
     "last_month",
     "year",
@@ -1757,22 +1763,22 @@ def test_frame_agnostic_breakdown_never_exceeds_window(
         day += dt.timedelta(days=1)
 
     # Model exactly what the coordinator feeds compute_frame per frame kind:
-    #   * rolling (24h/7d): recorder recent over [recorder_floor==window_start,
-    #     now) as a leading continuation; ledger seam = window_start's day.
+    #   * rolling (24h/7d/30d/365d): recorder recent over [recorder_floor==
+    #     window_start, now) as a leading continuation; ledger seam =
+    #     window_start's day (ample retention here, so floor == window_start).
     #   * calendar open (today/month/year): recent = today-slice only; ledger
     #     fills closed days (default seam = end_utc's day == today).
-    #   * calendar closed (yesterday/30d/last_week/last_month): recent empty
+    #   * calendar closed (yesterday/last_week/last_month): recent empty
     #     (window ends at a past midnight); ledger fills whole days below the
-    #     default seam = end_utc's day (today for yesterday/30d, an earlier
-    #     midnight for last_week/last_month — the days-after-window-close the
-    #     over-count fix excludes).
+    #     default seam = end_utc's day (today for yesterday, an earlier midnight
+    #     for last_week/last_month — the days-after-window-close the fix excludes).
     today_midnight = dt.datetime.combine(now.date(), dt.time(), tzinfo=tz).astimezone(
         dt.UTC
     )
-    if frame in ("24h", "7d"):
+    if frame in ("24h", "7d", "30d", "365d"):
         recent = {"on": {"secs": (now - start_utc).total_seconds(), "count": 0}}
         upper = window_start_local_day
-    elif frame in ("yesterday", "30d", "last_week", "last_month"):
+    elif frame in ("yesterday", "last_week", "last_month"):
         recent = {}
         upper = None
     else:  # today / month / year — open calendar, recent = today slice
@@ -1896,12 +1902,12 @@ def test_closed_frame_ledger_seam_excludes_days_after_window(frame: str) -> None
     assert fr.percent == pytest.approx(100.0)
 
 
-@pytest.mark.parametrize("frame", ["yesterday", "30d"])
+@pytest.mark.parametrize("frame", ["yesterday"])
 def test_closed_frame_closing_at_today_midnight_seam_unchanged(frame: str) -> None:
-    """``yesterday``/``30d`` are closed but end AT today's midnight, so the seam
-    is today both before and after the fix — a no-op guard that the seam change
-    does not disturb them and that a future refactor (e.g. seam from
-    ``start_utc``) would trip here.
+    """``yesterday`` is closed but ends AT today's midnight, so the seam is today
+    both before and after the 0.1.6 seam fix — a no-op guard that the seam change
+    does not disturb it and that a future refactor (e.g. seam from ``start_utc``)
+    would trip here. (``30d`` was in this set until it became true-rolling.)
 
     Ledger holds a full bucket for every day from the window start through today;
     only days strictly below today are in-window, today's bucket sits at/after the
@@ -2015,16 +2021,21 @@ def test_retention_edge_ledger_fills_head_below_recorder_floor() -> None:
 
     Simulates what the coordinator passes when retention < window: recent =
     recorder's [now-5d, now) blocks, ledger_upper = recorder_floor's local day
-    (now-5d). Ledger days below that seam are summed; the day AT the seam is
-    owned by the recorder (excluded from the ledger). No double-count.
+    (now-5d). Ledger days strictly BETWEEN the window-start day and the seam are
+    summed; the day AT the seam is owned by the recorder (excluded), AND the
+    window-start day itself is a PARTIAL far-edge day (window starts mid-day
+    now-7d) so it is also excluded — otherwise its whole 86400 bucket over-counts
+    the sub-day slice the window actually covers (the far-edge guard). No
+    double-count, no far-edge over-count.
     """
     now = dt.datetime(2026, 5, 20, 15, 0, 0, tzinfo=NY)
     recorder_floor = now - dt.timedelta(days=5)
     floor_day = recorder_floor.astimezone(NY).date().isoformat()
     # Recorder recent: 5 days of continuous "on" as a leading continuation.
     recent = {"on": {"secs": 5 * 86400.0, "count": 0}}
-    # Ledger head: the 2 purged whole days [now-7d, now-5d) plus a bucket ON the
-    # seam day (which must be EXCLUDED — the recorder owns it).
+    # Ledger head: the window-start partial day (now-7d, EXCLUDED as far-edge
+    # partial), one whole in-window day (now-6d, SUMMED), and a bucket ON the seam
+    # day (now-5d, EXCLUDED — recorder owns it).
     d = now.astimezone(NY).date()
     ledger = {
         (d - dt.timedelta(days=7)).isoformat(): {"on": {"secs": 40000.0, "count": 1}},
@@ -2044,10 +2055,64 @@ def test_retention_edge_ledger_fills_head_below_recorder_floor() -> None:
         prior_dominant=None,
         ledger_upper_local_day=floor_day,
     )
-    # recorder 5*86400 + ledger head (40000 + 86400); seam-day 99999 excluded.
-    assert fr.breakdown_seconds["on"] == pytest.approx(5 * 86400.0 + 40000.0 + 86400.0)
-    assert fr.counts["on"] == 0 + 1 + 1  # seam day's count 9 excluded
+    # recorder 5*86400 + one whole in-window ledger day (86400); the window-start
+    # partial day (40000, far-edge) and the seam day (99999) are both excluded.
+    assert fr.breakdown_seconds["on"] == pytest.approx(5 * 86400.0 + 86400.0)
+    assert fr.counts["on"] == 0 + 1  # start-day count and seam-day count 9 excluded
     assert sum(fr.breakdown_seconds.values()) <= fr.window_seconds + 1e-6
+
+
+def test_rolling_far_edge_partial_day_not_whole_bucket() -> None:
+    """A true-rolling frame whose window exceeds recorder retention must NOT sum
+    the mid-day window-start day as a WHOLE 86400 ledger bucket (far-edge
+    over-count — the mirror of the last_week seam bug).
+
+    365d @ now=mid-day: window_start = now-365d is mid-day. Recorder retention is
+    far short of 365d, so the recorder floor sits days-ago and the ledger fills
+    the deep head. The window-start day's full 86400 bucket covers hours BEFORE
+    the window actually starts (window begins ~15:00 that day); summing it whole
+    over-counts by ~15h every tick, which on a near-full 365d can tip percent >
+    100. The far-edge guard drops that partial day from the ledger.
+
+    Uses 86400s/day buckets (NOT 3600) per the invariant-bucket-size lesson: a
+    small bucket makes the overcount too small to trip <= window and lets it
+    escape. Exact assert at a mid-day now.
+    """
+    now = dt.datetime(2026, 6, 15, 15, 0, 0, tzinfo=NY)
+    start_utc, _ = E.resolve_frame_bounds("365d", now, NY)
+    start_day = start_utc.astimezone(NY).date()
+    floor = now - dt.timedelta(days=3)  # recorder retention ~3 days
+    floor_day = floor.astimezone(NY).date().isoformat()
+    recent = {"on": {"secs": 3 * 86400.0, "count": 0}}  # recorder [floor, now)
+    # Full 86400 bucket on every day from the mid-day window-start day up to (not
+    # incl.) the recorder floor day. The window-start day bucket is the trap.
+    ledger: dict[str, dict[str, dict[str, float]]] = {}
+    day = start_day
+    while day.isoformat() < floor_day:
+        ledger[day.isoformat()] = {"on": {"secs": 86400.0, "count": 1}}
+        day += dt.timedelta(days=1)
+    n_ledger_days = len(ledger)
+
+    fr = E.compute_frame(
+        "365d",
+        now,
+        NY,
+        recent,
+        ledger,
+        None,
+        mode="specific_states",
+        tracked_states=["on"],
+        target_states=None,
+        prior_dominant=None,
+        ledger_upper_local_day=floor_day,
+    )
+    # Window-start partial day EXCLUDED (far-edge guard): ledger contributes
+    # n_ledger_days - 1 whole days; recorder adds 3. Never over the window.
+    expected = (n_ledger_days - 1) * 86400.0 + 3 * 86400.0
+    assert fr.breakdown_seconds["on"] == pytest.approx(expected)
+    assert sum(fr.breakdown_seconds.values()) <= fr.window_seconds + 1e-6
+    assert fr.unaccounted_seconds >= 0.0
+    assert fr.percent is not None and fr.percent <= 100.0
 
 
 def test_invariant_guard_clamps_overflow_to_zero() -> None:

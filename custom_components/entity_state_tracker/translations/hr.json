@@ -59,6 +59,7 @@
           "month": "Ovaj mjesec",
           "last_month": "Prošli mjesec",
           "year": "Ove godine",
+          "365d": "Zadnjih 365 dana",
           "min_state_duration": "Najmanje trajanje stanja (sekunde)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Od ponedjeljka 00:00 (ovaj tjedan dosad).",
           "last_week": "Prethodni cijeli tjedan, od ponedjeljka do nedjelje.",
           "7d": "Klizni prozor od 7 dana koji završava sada.",
-          "30d": "Zadnjih 30 cijelih lokalnih dana.",
+          "30d": "Klizni prozor od 30 dana koji završava sada.",
           "month": "Od 1. u ovom mjesecu.",
           "last_month": "Prethodni cijeli kalendarski mjesec.",
           "year": "Od 1. siječnja.",
+          "365d": "Klizni prozor od 365 dana koji završava sada.",
           "min_state_duration": "Ako praćeni entitet prijeđe u stanje i izađe iz njega brže od ovoga broja sekundi, taj se kratki trenutak zanemaruje — njegovo se vrijeme umjesto toga dodaje prethodnom stanju i ne računa se kao zasebna promjena. Upotrijebite to za filtriranje treperavih ili poskakujućih senzora. Postavite na 0 da se broji svaka promjena, koliko god kratka bila."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Ovaj mjesec",
           "last_month": "Prošli mjesec",
           "year": "Ove godine",
+          "365d": "Zadnjih 365 dana",
           "target": "Ciljno stanje (stanja)",
           "target_threshold": "Prag usklađenosti (%, neobavezno)",
           "min_state_duration": "Najmanje trajanje stanja (sekunde)",
@@ -110,10 +113,11 @@
           "week": "Od ponedjeljka 00:00 (ovaj tjedan dosad).",
           "last_week": "Prethodni cijeli tjedan, od ponedjeljka do nedjelje.",
           "7d": "Klizni prozor od 7 dana koji završava sada.",
-          "30d": "Zadnjih 30 cijelih lokalnih dana.",
+          "30d": "Klizni prozor od 30 dana koji završava sada.",
           "month": "Od 1. u ovom mjesecu.",
           "last_month": "Prethodni cijeli kalendarski mjesec.",
           "year": "Od 1. siječnja.",
+          "365d": "Klizni prozor od 365 dana koji završava sada.",
           "target": "Skup stanja koja se smatraju usklađenima. Boravak u bilo kojem od njih se broji. Neovisna o praćenim stanjima — odaberite bilo koje stanje u kojem entitet može biti. Koristi se samo kada je uključeno bodovanje usklađenosti.",
           "target_threshold": "Ako je postavljeno, binarni senzor „Usklađeno” uključuje se kada postotak usklađenosti dosegne ili premaši ovu vrijednost. Ostavi prazno za preskakanje praga.",
           "min_state_duration": "Ako praćeni entitet prijeđe u stanje i izađe iz njega brže od ovoga broja sekundi, taj se kratki trenutak zanemaruje — njegovo se vrijeme umjesto toga dodaje prethodnom stanju i ne računa se kao zasebna promjena. Upotrijebite to za filtriranje treperavih ili poskakujućih senzora. Postavite na 0 da se broji svaka promjena, koliko god kratka bila.",

@@ -59,6 +59,7 @@
           "month": "Ez a hónap",
           "last_month": "Múlt hónap",
           "year": "Ez az év",
+          "365d": "Utolsó 365 nap",
           "min_state_duration": "Minimális állapotidőtartam (másodperc)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Hétfő 00:00 óta (eddig ezen a héten).",
           "last_week": "Az előző teljes hét, hétfőtől vasárnapig.",
           "7d": "Most végződő, gördülő 7 napos ablak.",
-          "30d": "Az utolsó 30 teljes helyi nap.",
+          "30d": "Most végződő, gördülő 30 napos ablak.",
           "month": "A hónap 1-jétől.",
           "last_month": "Az előző teljes naptári hónap.",
           "year": "Január 1-jétől.",
+          "365d": "Most végződő, gördülő 365 napos ablak.",
           "min_state_duration": "Ha a követett entitás gyorsabban vált egy állapotba és ki belőle, mint ennyi másodperc, ez a rövid pillanat figyelmen kívül marad — ideje a korábbi állapothoz adódik hozzá, és nem számít külön változásnak. Használja villódzó vagy pattogó érzékelők szűrésére. Állítsa 0-ra, hogy minden változás számítson, bármilyen rövid is."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Ez a hónap",
           "last_month": "Múlt hónap",
           "year": "Ez az év",
+          "365d": "Utolsó 365 nap",
           "target": "Célállapot(ok)",
           "target_threshold": "Megfelelőségi küszöb (%, opcionális)",
           "min_state_duration": "Minimális állapotidőtartam (másodperc)",
@@ -110,10 +113,11 @@
           "week": "Hétfő 00:00 óta (eddig ezen a héten).",
           "last_week": "Az előző teljes hét, hétfőtől vasárnapig.",
           "7d": "Most végződő, gördülő 7 napos ablak.",
-          "30d": "Az utolsó 30 teljes helyi nap.",
+          "30d": "Most végződő, gördülő 30 napos ablak.",
           "month": "A hónap 1-jétől.",
           "last_month": "Az előző teljes naptári hónap.",
           "year": "Január 1-jétől.",
+          "365d": "Most végződő, gördülő 365 napos ablak.",
           "target": "A megfelelőnek tekintett állapotok halmaza. A bármelyikükben tartózkodás beleszámít. Függetlenek a követett állapotoktól — válasszon bármely állapotot, amelyben az entitás lehet. Csak akkor használatos, ha a megfelelőségpontozás engedélyezve van.",
           "target_threshold": "Ha be van állítva, egy „Megfelelő” bináris érzékelő bekapcsol, amikor a megfelelőségi százalék eléri vagy meghaladja ezt az értéket. Hagyja üresen a küszöb kihagyásához.",
           "min_state_duration": "Ha a követett entitás gyorsabban vált egy állapotba és ki belőle, mint ennyi másodperc, ez a rövid pillanat figyelmen kívül marad — ideje a korábbi állapothoz adódik hozzá, és nem számít külön változásnak. Használja villódzó vagy pattogó érzékelők szűrésére. Állítsa 0-ra, hogy minden változás számítson, bármilyen rövid is.",

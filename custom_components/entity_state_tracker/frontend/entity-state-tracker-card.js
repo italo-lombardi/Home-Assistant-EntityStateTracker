@@ -69,7 +69,7 @@ const css =
   })();
 
 // Canonical frame order + labels, mirroring helpers.py `_FRAME_LABELS`.
-const FRAME_ORDER = ["today", "yesterday", "24h", "week", "last_week", "7d", "30d", "month", "last_month", "year"];
+const FRAME_ORDER = ["today", "yesterday", "24h", "week", "last_week", "7d", "30d", "month", "last_month", "year", "365d"];
 const FRAME_LABELS = {
   today: "Today",
   yesterday: "Yesterday",
@@ -81,6 +81,7 @@ const FRAME_LABELS = {
   month: "This month",
   last_month: "Last month",
   year: "This year",
+  "365d": "Last 365 days",
 };
 
 // Backend integration domain (device identifier + entity platform key). All of
