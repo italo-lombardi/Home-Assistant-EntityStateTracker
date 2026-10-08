@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Closed-frame ledger over-count (`last_week` / `last_month` > 100%)** — `compute_frame` summed ledger buckets up to *today*'s local day for every calendar frame, defaulting the ledger↔recorder seam to `now`'s day. That is correct for open frames (which end at `now`) but wrong for the closed `last_week` / `last_month` frames, which end on an *earlier* local midnight: the seam pulled in the current week's/month's whole-day buckets that fall *after* the window closed, inflating the window total (a 7-day `last_week` summed ~9–12 real days, e.g. 864000s in a 604800s window → **142.9%**). The seam now defaults to the frame's own `end_utc` local day, so a closed frame counts only ledger days inside its window; open frames and rolling frames (which pass an explicit seam) are unchanged. Present since 0.1.1 when the closed frames were introduced.
+- **`percent` / `compliance_percent` clamped to 100** — `_subset_percent` returned the raw ratio, so any sub-second seam/rounding overshoot (or, pre-fix, the `last_week` over-count) leaked a >100% value straight to the sensor. Both are now capped at `100.0`. The cap is cosmetic defense-in-depth, not a mask: a genuine bucket-seam over-count still surfaces via `unaccounted_seconds` and the coordinator's `_warn_overflow` log.
 
 ## [0.1.5]
 

@@ -619,12 +619,22 @@ def _subset_percent(
     subset: list[str] | None,
     window_seconds: float,
 ) -> float | None:
-    """Percent of the window spent in any of ``subset`` (``None`` when N/A)."""
+    """Percent of the window spent in any of ``subset`` (``None`` when N/A).
+
+    Clamped to ``[0, 100]``: ``matched`` is a subset of ``breakdown_seconds``,
+    which the frame math holds at ``≤ window_seconds`` (modulo ≤1s seam/rounding
+    noise, see ``unaccounted_seconds``), so a value above 100 is never a real
+    occupancy — only that sub-second noise. Capping keeps a nonsensical "137%
+    compliance" off the sensor. The cap is NOT a substitute for the overflow
+    guard: a genuine bucket-seam over-count still surfaces via
+    ``unaccounted_seconds`` and the coordinator's :meth:`_warn_overflow` log, so
+    the diagnostic that made the ``last_week`` bug visible is preserved.
+    """
     if not subset or window_seconds <= 0:
         return None
     wanted = set(subset)
     matched = sum(secs for name, secs in breakdown_seconds.items() if name in wanted)
-    return round(matched / window_seconds * 100, 1)
+    return min(100.0, round(matched / window_seconds * 100, 1))
 
 
 def _coverage(

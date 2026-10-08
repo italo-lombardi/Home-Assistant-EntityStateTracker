@@ -1451,6 +1451,16 @@ def test_subset_percent_state_with_spaces_and_underscores() -> None:
     ) == pytest.approx(50.0)
 
 
+def test_subset_percent_clamped_to_100_on_seam_overflow() -> None:
+    # matched is a subset of breakdown_seconds; if a seam/rounding overshoot
+    # pushes it just past the window, percent must cap at 100.0 — never surface
+    # a nonsensical >100% (the last_week 142.9% symptom) on the sensor. The
+    # genuine-overcount diagnostic lives in _warn_overflow, not here.
+    assert E._subset_percent({"on": 604801.0}, ["on"], 604800.0) == 100.0
+    # And an exactly-full window is 100.0, not 100.1 from rounding.
+    assert E._subset_percent({"on": 604800.0}, ["on"], 604800.0) == 100.0
+
+
 def test_compute_frame_normalizes_titlecase_breakdown_keys() -> None:
     # Regression: recorder may return State objects whose .state is title-cased
     # (e.g. "Casa Buonabitacolo" from a zone friendly name). compute_frame must
