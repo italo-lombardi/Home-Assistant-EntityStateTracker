@@ -420,8 +420,6 @@ const cardStyles = css`
   .group-members .gm-head {
     font-size: 12px;
     font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
     color: var(--est-text-secondary, var(--secondary-text-color));
     margin: 4px 0 6px;
   }
@@ -435,7 +433,13 @@ const cardStyles = css`
     align-items: center;
     gap: 8px;
     padding: 3px 0;
-    font-size: 14px;
+    font-size: 12px;
+  }
+  /* Neutral list bullet — a marker only, no per-member status meaning. */
+  .group-members .gm-bullet {
+    flex: 0 0 auto;
+    color: var(--est-text-secondary, var(--secondary-text-color));
+    opacity: 0.6;
   }
   .group-members .gm-name {
     flex: 1 1 auto;
@@ -454,13 +458,16 @@ const cardStyles = css`
   .group-members .gm-state {
     flex: 0 0 auto;
     color: var(--est-text-secondary, var(--secondary-text-color));
-    text-transform: capitalize;
+    cursor: pointer;
+    border-radius: 3px;
   }
-  .group-members .gm-caption {
-    margin-top: 6px;
-    font-size: 12px;
-    color: var(--est-text-secondary, var(--secondary-text-color));
-    font-style: italic;
+  .group-members .gm-state:hover {
+    color: var(--est-accent);
+    text-decoration: underline;
+  }
+  .group-members .gm-state:focus-visible {
+    outline: 2px solid var(--est-accent);
+    outline-offset: 1px;
   }
 
   .error-message {
@@ -993,12 +1000,13 @@ class EntityStateTrackerCard extends LitElement {
       const st = this.hass.states[mid];
       const friendly =
         (st && st.attributes && st.attributes.friendly_name) || mid;
-      // Show the member's literal state as-is (on/off, but also Clear/Dry/Safe/
-      // Home/…) — group members span every domain, so NO on/off assumption, no
-      // active/inactive dot, no "N active" count (meaningless across mixed
-      // state types). Just name + current state, like HA's own entity rows.
-      const state = st ? st.state : "unavailable";
+      // Show the member's state the SAME way HA does (device-class label +
+      // locale) with the raw state in parens — e.g. "Clear (off)" — via the
+      // shared Entity-Guard-style formatter, consistent with the top row and the
+      // breakdown rows. "unavailable" when the member isn't in hass.
+      const state = st ? this._formatStateDisplay(st, st.state) : "unavailable";
       return html`<li class="gm-row">
+        <span class="gm-bullet">•</span>
         <span
           class="gm-name source-link"
           role="button"
@@ -1012,7 +1020,19 @@ class EntityStateTrackerCard extends LitElement {
           }}
           >${friendly}</span
         >
-        <span class="gm-state">${state}</span>
+        <span
+          class="gm-state source-link"
+          role="button"
+          tabindex="0"
+          @click=${(e) => this._handleEntityClick(e, mid)}
+          @keydown=${(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              this._handleEntityClick(e, mid);
+            }
+          }}
+          >${state}</span
+        >
       </li>`;
     });
 
@@ -1021,7 +1041,6 @@ class EntityStateTrackerCard extends LitElement {
       <ul class="gm-list">
         ${rows}
       </ul>
-      <div class="gm-caption">Live member states — not tracked history.</div>
     </div>`;
   }
 
@@ -1057,11 +1076,24 @@ class EntityStateTrackerCard extends LitElement {
       </div>`;
     }
     const changed = fmtLastChanged(st.last_changed);
+    // "Clear (off)" style via the shared formatter — consistent with the member
+    // list and the breakdown rows.
+    const stateLabel = this._formatStateDisplay(st, st.state);
     return html`<div class="source-context">
       Tracking: ${name} · now
-      <span class="current">${st.state}</span>${changed
-        ? html` · ${changed}`
-        : nothing}
+      <span
+        class="current source-link"
+        role="button"
+        tabindex="0"
+        @click=${(e) => this._handleEntityClick(e, sourceId)}
+        @keydown=${(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            this._handleEntityClick(e, sourceId);
+          }
+        }}
+        >${stateLabel}</span
+      >${changed ? html` · ${changed}` : nothing}
     </div>`;
   }
 
@@ -1079,6 +1111,54 @@ class EntityStateTrackerCard extends LitElement {
         composed: true,
       })
     );
+  }
+
+  // --- State display formatting (ported from the Entity Guard card, which
+  // handles the cases: numeric passthrough, device-class translation, and the
+  // "label == raw" dedup so we don't print redundant "Off (off)"). Produces
+  // "Clear (off)" — the device-class/localized label plus the raw state EST
+  // actually tracks — used uniformly in the top row, the member list, AND the
+  // breakdown/table rows so the whole card speaks one language. ---
+  _applyStateFormat(stateObj, rawValue) {
+    // A numeric state (a value sensor) has no device-class label — show as-is.
+    if (!isNaN(parseFloat(rawValue))) return rawValue;
+    let label = rawValue;
+    if (this.hass.formatEntityState) {
+      try {
+        label = this.hass.formatEntityState(stateObj) ?? rawValue;
+      } catch (e) {}
+    }
+    // No translation happened (label is just the raw state) → don't duplicate.
+    if (label.toLowerCase() === rawValue.toLowerCase()) return label;
+    return `${label} (${rawValue})`;
+  }
+
+  // Display string for a LIVE entity state (top row, group members).
+  _formatStateDisplay(stateObj, rawValue) {
+    if (!stateObj || rawValue == null) return rawValue ?? "unknown";
+    return this._applyStateFormat(stateObj, rawValue);
+  }
+
+  // Display string for a RAW state VALUE that has no live state object of its
+  // own — the breakdown/table rows, keyed by raw tracked states like "off".
+  // Fabricate a stateObj from the source entity's attributes so
+  // formatEntityState can resolve its device_class (mirrors Entity Guard's
+  // _formatHypotheticalState). Falls back to toLabel() (title-cased raw) when
+  // there's no live source or formatter — preserving the pre-existing label
+  // style for plain states that have no device-class translation.
+  _formatTrackedState(sourceId, rawValue) {
+    if (rawValue == null) return "unknown";
+    const existing = sourceId ? this.hass.states[sourceId] : null;
+    if (!existing || !this.hass.formatEntityState) return toLabel(rawValue);
+    const fakeState = {
+      ...existing,
+      state: rawValue,
+      attributes: { ...existing.attributes },
+    };
+    const out = this._applyStateFormat(fakeState, rawValue);
+    // _applyStateFormat returns the raw value unchanged when no device-class
+    // translation applies; title-case it (toLabel) for display consistency.
+    return out === rawValue ? toLabel(rawValue) : out;
   }
 
   // ---------------------------------------------------------------------------
@@ -1223,7 +1303,9 @@ class EntityStateTrackerCard extends LitElement {
         pct = a.percent;
       }
       const incomplete = this._incomplete(a);
-      const label = this._isBreakdown(s) ? toLabel(s.state) : "";
+      const label = this._isBreakdown(s)
+        ? this._formatTrackedState(a.source_entity, s.state)
+        : "";
       const compliantId = this._frameCompliantId(s);
       // Row opens its own duration/breakdown sensor; the compliance chip opens
       // that frame's Compliant binary sensor instead (its click stops bubbling).
@@ -1263,7 +1345,9 @@ class EntityStateTrackerCard extends LitElement {
               const w =
                 seg.pct == null ? 0 : Math.max(0, Math.min(100, Number(seg.pct)));
               const info = {
-                label: seg.derived ? seg.state : toLabel(seg.state),
+                label: seg.derived
+                  ? seg.state
+                  : this._formatTrackedState(a.source_entity, seg.state),
                 secs: seg.secs,
                 pct: seg.pct,
                 color: seg.color,
@@ -1384,7 +1468,9 @@ class EntityStateTrackerCard extends LitElement {
       Array.isArray(tracked) && tracked.length
         ? html`<div class="bars-note">
             Tracked ${tracked.length > 1 ? "states" : "state"}:
-            ${sortStates(tracked).map(toLabel).join(", ")}
+            ${sortStates(tracked)
+              .map((st) => this._formatTrackedState(a.source_entity, st))
+              .join(", ")}
           </div>`
         : nothing;
     return html`${trackedLine}${threshold != null
@@ -1675,7 +1761,9 @@ class EntityStateTrackerCard extends LitElement {
         paths,
         slices.map((s) => ({
           color: s.color,
-          label: s.derived ? s.state : toLabel(s.state),
+          label: s.derived
+            ? s.state
+            : this._formatTrackedState(a.source_entity, s.state),
           value: html`${fmtDuration(s.secs)} · ${fmtPct(s.pct)}`,
         })),
         gauge === nothing
@@ -1825,7 +1913,8 @@ class EntityStateTrackerCard extends LitElement {
               : [];
             return html`${this._frameRow(s, hasCompliance)}${this._stateSubRows(
               stateRows,
-              hasCompliance
+              hasCompliance,
+              (s.attrs || {}).source_entity
             )}`;
           })}
         </tbody>
@@ -1915,10 +2004,12 @@ class EntityStateTrackerCard extends LitElement {
   // beneath the frame row). Same three/four columns as the frame row; the state
   // name is indented + swatched so it reads as nested. slices already
   // dust-filtered + capped by the caller.
-  _stateSubRows(slices, hasCompliance) {
+  _stateSubRows(slices, hasCompliance, sourceId) {
     return slices.map((s) => {
       const { state, secs, pct, color, derived } = s;
-      const label = derived ? state : toLabel(state);
+      const label = derived
+        ? state
+        : this._formatTrackedState(sourceId, state);
       const w = pct == null ? 0 : Math.max(0, Math.min(100, Number(pct)));
       const tint = `color-mix(in srgb, ${color} 22%, transparent)`;
       const bar =
