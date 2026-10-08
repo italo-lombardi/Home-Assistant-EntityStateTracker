@@ -118,7 +118,7 @@ def humanize_duration(seconds: float) -> dict[str, str]:
     form server-side as an attribute dict, keyed by unit pair, ordered minimum →
     maximum granularity:
 
-        {"ms": "1113m 36s", "hm": "18h 36m", "dh": "0d 18h", "wd": "0w 0d"}
+        {"ms": "1113m 36s", "hm": "18h 33m", "dh": "0d 18h", "wd": "0w 0d"}
 
     Each value TRUNCATES (never rounds up), so the text never overstates elapsed
     time — ``119s`` → ``{"ms": "1m 59s", ...}`` not ``"2m"``. The big unit is
