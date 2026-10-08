@@ -27,7 +27,7 @@ Point Entity State Tracker at one entity, pick a mode, and it produces a bundle 
 - **Transitions** — per-state entry count, average visit duration, last-seen, and previous-state — riding the same event stream, near-zero extra machinery.
 - **Auto-discovered breakdown** — all-states mode emits one breakdown sensor per frame whose attributes hold `breakdown_seconds`, `breakdown_pct`, `counts`, and `avg_duration_seconds` per state. A brand-new state at runtime just becomes a new key — no restart, no config change — and fires an `entity_state_tracker_new_state` event.
 - **DST-correct** — every percentage uses the real elapsed seconds of the window as its denominator, so a 23-hour or 25-hour DST day still reads 100%.
-- **Recorder-friendly** — the churny breakdown dicts are marked unrecorded; only sensor *states* record, and displayed values are rounded so idle ticks don't create history rows. Budgeted at ~250–400 KB/yr per tracker.
+- **Recorder-friendly** — the churny per-state breakdown dicts and the live percent/coverage attributes are marked unrecorded, so each stored history row is just the sensor state plus a few static config attributes. Open-frame sensors still record a small row per update interval (their window grows each tick), but the rows stay tiny; budgeted at ~250–400 KB/yr per tracker. The ledger — not HA's recorder — is the long-run history store.
 - **Custom Lovelace card** — bars, pie/donut, or table view; deterministic per-state colours; auto-installed as a Lovelace resource.
 - **Survives HA restarts** — closed days persist in `.storage`; the open window is recomputed fresh from the recorder on start, with backfill for days missed while HA was down.
 

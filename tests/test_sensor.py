@@ -257,12 +257,13 @@ def _duration_coord(
 
 
 def test_duration_native_value_tracked_subset() -> None:
-    """native_value sums only the tracked states' seconds (int)."""
+    """native_value sums only the tracked states' seconds (raw float)."""
     coord = _duration_coord(tracked=("heat", "auto"))
     sensor = DurationSensor(coord, "today")
     # heat 1800 + auto 600 = 2400.
-    assert sensor.native_value == 2400
-    assert isinstance(sensor.native_value, int)
+    assert sensor.native_value == pytest.approx(2400.0)
+    # Raw float now (no minute-floor), so it matches history_stats to the second.
+    assert isinstance(sensor.native_value, float)
 
 
 def test_duration_native_value_all_states_when_tracked_none() -> None:
@@ -300,7 +301,7 @@ def test_duration_entity_descriptors() -> None:
     assert sensor.device_class == SensorDeviceClass.DURATION
     assert sensor.native_unit_of_measurement == UnitOfTime.SECONDS
     assert sensor.suggested_unit_of_measurement == UnitOfTime.HOURS
-    assert sensor.suggested_display_precision == 1
+    assert sensor.suggested_display_precision == 2
     assert sensor.state_class == SensorStateClass.MEASUREMENT
     assert sensor.unique_id == "est_entry_today_duration"
     # entity_id is PINNED to id==slug(name), namespaced by the tracker NAME
@@ -352,9 +353,9 @@ def test_duration_attributes_without_target() -> None:
     # duration_seconds is the RAW tracked seconds (== native_value), independent
     # of HA's native→suggested (seconds→hours) unit conversion on the state, so
     # the card has an unambiguous seconds figure. heat 1800 + auto 600 = 2400.
-    assert attrs["duration_seconds"] == 2400
+    assert attrs["duration_seconds"] == pytest.approx(2400.0)
     assert attrs["duration_seconds"] == sensor.native_value
-    assert isinstance(attrs["duration_seconds"], int)
+    assert isinstance(attrs["duration_seconds"], float)
     assert attrs["tracked_states"] == ["heat", "auto"]
     # source_entity names the tracked entity so the card can show it (Part A).
     assert attrs["source_entity"] == "climate.living_room"
