@@ -34,6 +34,7 @@ _FRAME_LABELS: dict[str, str] = {
     "month": "This month",
     "last_month": "Last month",
     "year": "This year",
+    "365d": "Last 365 days",
 }
 
 

@@ -59,6 +59,7 @@
           "month": "Denne måned",
           "last_month": "Sidste måned",
           "year": "I år",
+          "365d": "Sidste 365 dage",
           "min_state_duration": "Mindste tilstandsvarighed (sekunder)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Siden mandag kl. 00:00 (denne uge indtil nu).",
           "last_week": "Den foregående hele uge fra mandag til søndag.",
           "7d": "Rullende 7-dages vindue, der slutter nu.",
-          "30d": "De sidste 30 hele lokale dage.",
+          "30d": "Rullende 30-dages vindue, der slutter nu.",
           "month": "Siden den 1. i denne måned.",
           "last_month": "Den foregående hele kalendermåned.",
           "year": "Siden 1. januar.",
+          "365d": "Rullende 365-dages vindue, der slutter nu.",
           "min_state_duration": "Hvis den sporede enhed skifter til en tilstand og ud igen hurtigere end dette antal sekunder, ignoreres dette korte øjeblik — dets tid lægges i stedet til den forrige tilstand, og det tæller ikke som en separat ændring. Brug det til at filtrere flimrende eller hoppende sensorer. Sæt til 0 for at tælle hver ændring, uanset hvor kort."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Denne måned",
           "last_month": "Sidste måned",
           "year": "I år",
+          "365d": "Sidste 365 dage",
           "target": "Måltilstand(e)",
           "target_threshold": "Overholdelsestærskel (%, valgfrit)",
           "min_state_duration": "Mindste tilstandsvarighed (sekunder)",
@@ -110,10 +113,11 @@
           "week": "Siden mandag kl. 00:00 (denne uge indtil nu).",
           "last_week": "Den foregående hele uge fra mandag til søndag.",
           "7d": "Rullende 7-dages vindue, der slutter nu.",
-          "30d": "De sidste 30 hele lokale dage.",
+          "30d": "Rullende 30-dages vindue, der slutter nu.",
           "month": "Siden den 1. i denne måned.",
           "last_month": "Den foregående hele kalendermåned.",
           "year": "Siden 1. januar.",
+          "365d": "Rullende 365-dages vindue, der slutter nu.",
           "target": "Sættet af tilstande, der betragtes som overholdende. At være i en af dem tæller. Uafhængige af de sporede tilstande — vælg enhver tilstand, enheden kan være i. Bruges kun, når scoring af overholdelse er aktiveret.",
           "target_threshold": "Hvis angivet, tændes en binær sensor „Overholdende“, når overholdelsesprocenten når eller overstiger denne værdi. Lad stå tom for at springe tærsklen over.",
           "min_state_duration": "Hvis den sporede enhed skifter til en tilstand og ud igen hurtigere end dette antal sekunder, ignoreres dette korte øjeblik — dets tid lægges i stedet til den forrige tilstand, og det tæller ikke som en separat ændring. Brug det til at filtrere flimrende eller hoppende sensorer. Sæt til 0 for at tælle hver ændring, uanset hvor kort.",

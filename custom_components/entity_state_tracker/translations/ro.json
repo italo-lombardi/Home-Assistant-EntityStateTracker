@@ -59,6 +59,7 @@
           "month": "Luna aceasta",
           "last_month": "Luna trecută",
           "year": "Anul acesta",
+          "365d": "Ultimele 365 de zile",
           "min_state_duration": "Durată minimă de stare (secunde)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "De luni ora 00:00 (această săptămână până acum).",
           "last_week": "Săptămâna întreagă precedentă, de luni până duminică.",
           "7d": "Fereastră glisantă de 7 zile care se termină acum.",
-          "30d": "Ultimele 30 de zile locale întregi.",
+          "30d": "Fereastră glisantă de 30 de zile care se termină acum.",
           "month": "De la data de 1 a acestei luni.",
           "last_month": "Luna calendaristică întreagă precedentă.",
           "year": "De la 1 ianuarie.",
+          "365d": "Fereastră glisantă de 365 de zile care se termină acum.",
           "min_state_duration": "Dacă entitatea urmărită intră într-o stare și iese din ea mai repede decât acest număr de secunde, acel moment scurt este ignorat — timpul său este adăugat în schimb la starea anterioară și nu contează ca o schimbare separată. Folosește-l pentru a filtra senzorii care pâlpâie sau ricoșează. Setează la 0 pentru a număra fiecare schimbare, oricât de scurtă."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Luna aceasta",
           "last_month": "Luna trecută",
           "year": "Anul acesta",
+          "365d": "Ultimele 365 de zile",
           "target": "Stare (stări) țintă",
           "target_threshold": "Prag de conformitate (%, opțional)",
           "min_state_duration": "Durată minimă de stare (secunde)",
@@ -110,10 +113,11 @@
           "week": "De luni ora 00:00 (această săptămână până acum).",
           "last_week": "Săptămâna întreagă precedentă, de luni până duminică.",
           "7d": "Fereastră glisantă de 7 zile care se termină acum.",
-          "30d": "Ultimele 30 de zile locale întregi.",
+          "30d": "Fereastră glisantă de 30 de zile care se termină acum.",
           "month": "De la data de 1 a acestei luni.",
           "last_month": "Luna calendaristică întreagă precedentă.",
           "year": "De la 1 ianuarie.",
+          "365d": "Fereastră glisantă de 365 de zile care se termină acum.",
           "target": "Setul de stări considerate conforme. Aflarea în oricare dintre ele contează. Independente de stările urmărite — alegeți orice stare în care poate fi entitatea. Folosit doar când punctarea conformității este activată.",
           "target_threshold": "Dacă este setat, un senzor binar „Conform” se activează atunci când procentul de conformitate atinge sau depășește această valoare. Lasă gol pentru a omite pragul.",
           "min_state_duration": "Dacă entitatea urmărită intră într-o stare și iese din ea mai repede decât acest număr de secunde, acel moment scurt este ignorat — timpul său este adăugat în schimb la starea anterioară și nu contează ca o schimbare separată. Folosește-l pentru a filtra senzorii care pâlpâie sau ricoșează. Setează la 0 pentru a număra fiecare schimbare, oricât de scurtă.",

@@ -87,7 +87,7 @@ _RECORDER_OFF_ISSUE = "recorder_off"
 # the oldest partial day is never counted as a whole 86400 bucket (the
 # over-count this seam closes). Calendar frames start on a local midnight and
 # need no such treatment (their windows are whole local days already).
-_ROLLING_FRAMES = ("24h", "7d")
+_ROLLING_FRAMES = ("24h", "7d", "30d", "365d")
 
 # Upper bound on the durable per-session ``_seen`` set. A pathological entity
 # that emits a unique state per transition (e.g. a timestamp as its state) would

@@ -59,6 +59,7 @@
           "month": "Šį mėnesį",
           "last_month": "Praėjęs mėnuo",
           "year": "Šiais metais",
+          "365d": "Paskutinės 365 dienų",
           "min_state_duration": "Mažiausia būsenos trukmė (sekundės)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Nuo pirmadienio 00:00 (ši savaitė iki šiol).",
           "last_week": "Ankstesnė visa savaitė nuo pirmadienio iki sekmadienio.",
           "7d": "Slankusis 7 dienų langas, pasibaigiantis dabar.",
-          "30d": "Paskutinės 30 visų vietinių dienų.",
+          "30d": "Slankusis 30 dienų langas, pasibaigiantis dabar.",
           "month": "Nuo šio mėnesio 1 dienos.",
           "last_month": "Ankstesnis visas kalendorinis mėnuo.",
           "year": "Nuo sausio 1 dienos.",
+          "365d": "Slankusis 365 dienų langas, pasibaigiantis dabar.",
           "min_state_duration": "Jei stebimas objektas pereina į būseną ir iš jos išeina greičiau nei per tiek sekundžių, ta trumpa akimirka ignoruojama — jos laikas pridedamas prie ankstesnės būsenos ir neskaičiuojamas kaip atskiras pokytis. Naudokite tai mirgantiems arba šokinėjantiems jutikliams filtruoti. Nustatykite 0, kad būtų skaičiuojamas kiekvienas pokytis, kad ir koks trumpas."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Šį mėnesį",
           "last_month": "Praėjęs mėnuo",
           "year": "Šiais metais",
+          "365d": "Paskutinės 365 dienų",
           "target": "Tikslinė (-ės) būsena (-os)",
           "target_threshold": "Atitikties slenkstis (%, neprivaloma)",
           "min_state_duration": "Mažiausia būsenos trukmė (sekundės)",
@@ -110,10 +113,11 @@
           "week": "Nuo pirmadienio 00:00 (ši savaitė iki šiol).",
           "last_week": "Ankstesnė visa savaitė nuo pirmadienio iki sekmadienio.",
           "7d": "Slankusis 7 dienų langas, pasibaigiantis dabar.",
-          "30d": "Paskutinės 30 visų vietinių dienų.",
+          "30d": "Slankusis 30 dienų langas, pasibaigiantis dabar.",
           "month": "Nuo šio mėnesio 1 dienos.",
           "last_month": "Ankstesnis visas kalendorinis mėnuo.",
           "year": "Nuo sausio 1 dienos.",
+          "365d": "Slankusis 365 dienų langas, pasibaigiantis dabar.",
           "target": "Atitinkančiomis laikomų būsenų rinkinys. Buvimas bet kurioje iš jų įskaičiuojamas. Nepriklauso nuo sekamų būsenų — pasirinkite bet kurią būseną, kurioje objektas gali būti. Naudojama tik įjungus atitikties vertinimą.",
           "target_threshold": "Jei nustatyta, dvejetainis jutiklis „Atitinka“ įsijungia, kai atitikties procentas pasiekia arba viršija šią vertę. Palikite tuščią, kad praleistumėte slenkstį.",
           "min_state_duration": "Jei stebimas objektas pereina į būseną ir iš jos išeina greičiau nei per tiek sekundžių, ta trumpa akimirka ignoruojama — jos laikas pridedamas prie ankstesnės būsenos ir neskaičiuojamas kaip atskiras pokytis. Naudokite tai mirgantiems arba šokinėjantiems jutikliams filtruoti. Nustatykite 0, kad būtų skaičiuojamas kiekvienas pokytis, kad ir koks trumpas.",

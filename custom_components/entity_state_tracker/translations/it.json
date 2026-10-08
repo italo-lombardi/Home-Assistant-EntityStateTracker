@@ -59,6 +59,7 @@
           "month": "Questo mese",
           "last_month": "Il mese scorso",
           "year": "Quest'anno",
+          "365d": "Ultimi 365 giorni",
           "min_state_duration": "Durata minima dello stato (secondi)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Da lunedì 00:00 (questa settimana finora).",
           "last_week": "L'intera settimana precedente, da lunedì a domenica.",
           "7d": "Finestra mobile di 7 giorni che termina ora.",
-          "30d": "Gli ultimi 30 giorni locali interi.",
+          "30d": "Finestra mobile di 30 giorni che termina ora.",
           "month": "Dal 1° di questo mese.",
           "last_month": "L'intero mese di calendario precedente.",
           "year": "Dal 1° gennaio.",
+          "365d": "Finestra mobile di 365 giorni che termina ora.",
           "min_state_duration": "Se l'entità monitorata passa a uno stato e ne esce più velocemente di questo numero di secondi, quel breve momento viene ignorato — il suo tempo viene invece aggiunto allo stato precedente e non conta come cambiamento separato. Usalo per filtrare sensori che sfarfallano o rimbalzano. Imposta 0 per contare ogni cambiamento, per quanto breve."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Questo mese",
           "last_month": "Il mese scorso",
           "year": "Quest'anno",
+          "365d": "Ultimi 365 giorni",
           "target": "Stato/i obiettivo",
           "target_threshold": "Soglia di conformità (%, opzionale)",
           "min_state_duration": "Durata minima dello stato (secondi)",
@@ -110,10 +113,11 @@
           "week": "Da lunedì 00:00 (questa settimana finora).",
           "last_week": "L'intera settimana precedente, da lunedì a domenica.",
           "7d": "Finestra mobile di 7 giorni che termina ora.",
-          "30d": "Gli ultimi 30 giorni locali interi.",
+          "30d": "Finestra mobile di 30 giorni che termina ora.",
           "month": "Dal 1° di questo mese.",
           "last_month": "L'intero mese di calendario precedente.",
           "year": "Dal 1° gennaio.",
+          "365d": "Finestra mobile di 365 giorni che termina ora.",
           "target": "L'insieme degli stati considerati conformi. Trovarsi in uno qualsiasi di essi conta. Indipendente dagli stati monitorati: scegli qualsiasi stato che l'entità può assumere. Usato solo quando la valutazione della conformità è abilitata.",
           "target_threshold": "Se impostato, un sensore binario «Conforme» si attiva quando la percentuale di conformità raggiunge o supera questo valore. Lascia vuoto per saltare la soglia.",
           "min_state_duration": "Se l'entità monitorata passa a uno stato e ne esce più velocemente di questo numero di secondi, quel breve momento viene ignorato — il suo tempo viene invece aggiunto allo stato precedente e non conta come cambiamento separato. Usalo per filtrare sensori che sfarfallano o rimbalzano. Imposta 0 per contare ogni cambiamento, per quanto breve.",

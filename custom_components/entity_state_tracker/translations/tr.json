@@ -59,6 +59,7 @@
           "month": "Bu ay",
           "last_month": "Geçen ay",
           "year": "Bu yıl",
+          "365d": "Son 365 gün",
           "min_state_duration": "Minimum durum süresi (saniye)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Pazartesi 00:00'dan beri (bu hafta şu ana kadar).",
           "last_week": "Pazartesiden pazara önceki tam hafta.",
           "7d": "Şu anda biten kayan 7 günlük pencere.",
-          "30d": "Son 30 tam yerel gün.",
+          "30d": "Şu anda biten kayan 30 günlük pencere.",
           "month": "Bu ayın 1'inden itibaren.",
           "last_month": "Önceki tam takvim ayı.",
           "year": "1 Ocak'tan itibaren.",
+          "365d": "Şu anda biten kayan 365 günlük pencere.",
           "min_state_duration": "İzlenen varlık bir duruma girip bu saniye sayısından daha hızlı çıkarsa, o kısa an yok sayılır — süresi bunun yerine önceki duruma eklenir ve ayrı bir değişiklik olarak sayılmaz. Titreşen veya zıplayan sensörleri filtrelemek için kullanın. Ne kadar kısa olursa olsun her değişikliği saymak için 0 olarak ayarlayın."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Bu ay",
           "last_month": "Geçen ay",
           "year": "Bu yıl",
+          "365d": "Son 365 gün",
           "target": "Hedef durum(lar)",
           "target_threshold": "Uyumluluk eşiği (%, isteğe bağlı)",
           "min_state_duration": "Minimum durum süresi (saniye)",
@@ -110,10 +113,11 @@
           "week": "Pazartesi 00:00'dan beri (bu hafta şu ana kadar).",
           "last_week": "Pazartesiden pazara önceki tam hafta.",
           "7d": "Şu anda biten kayan 7 günlük pencere.",
-          "30d": "Son 30 tam yerel gün.",
+          "30d": "Şu anda biten kayan 30 günlük pencere.",
           "month": "Bu ayın 1'inden itibaren.",
           "last_month": "Önceki tam takvim ayı.",
           "year": "1 Ocak'tan itibaren.",
+          "365d": "Şu anda biten kayan 365 günlük pencere.",
           "target": "Uyumlu kabul edilen durumlar kümesi. Bunlardan herhangi birinde bulunmak sayılır. İzlenen durumlardan bağımsızdır — varlığın olabileceği herhangi bir durumu seçin. Yalnızca uyumluluk puanlaması etkinken kullanılır.",
           "target_threshold": "Ayarlanırsa, uyumluluk yüzdesi bu değere ulaştığında veya bu değeri aştığında \"Uyumlu\" ikili sensörü açılır. Eşiği atlamak için boş bırakın.",
           "min_state_duration": "İzlenen varlık bir duruma girip bu saniye sayısından daha hızlı çıkarsa, o kısa an yok sayılır — süresi bunun yerine önceki duruma eklenir ve ayrı bir değişiklik olarak sayılmaz. Titreşen veya zıplayan sensörleri filtrelemek için kullanın. Ne kadar kısa olursa olsun her değişikliği saymak için 0 olarak ayarlayın.",

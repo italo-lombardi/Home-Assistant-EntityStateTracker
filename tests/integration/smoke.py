@@ -28,7 +28,7 @@ own config entries via the REST config-flow — no hardcoded entity IDs from the
 live HA. Every EST entity is discovered via the entity-registry websocket by its
 predictable unique_id (``<entry_id>_<frame>_<metric>``), so no entity_id guessing.
 
-Edge cases covered (EC1-EC30, plus sub-checks). See tests/integration/README.md.
+Edge cases covered (EC1-EC31, plus sub-checks). See tests/integration/README.md.
 """
 
 from __future__ import annotations
@@ -2664,6 +2664,79 @@ def ec30_humanized_duration_text():
     return entry, eid
 
 
+def ec31_rolling_365d_frame():
+    """EC31: `365d` is a true-rolling frame (now − 365d → now), the rolling
+    sibling of `year`. Includes the current moment like 7d/24h — NOT whole-days.
+
+    Asserts the frame's sensor exists, its window is a true-rolling 365-day span
+    ending at ~now (window_start = now − 365d, mid-day, NOT snapped to midnight),
+    the window spans ~365*86400s, and the percent stays <= 100 (the far-edge
+    whole-day over-count guard — the window-start partial day must not be summed
+    as a full ledger bucket). Also confirms 30d is likewise rolling now.
+    """
+    print(
+        "\n=== EC31: 365d (and 30d) are true-rolling frames including now ===",
+        flush=True,
+    )
+    ha_tz = ZoneInfo(api("GET", "/api/config")["time_zone"])
+    now_local = dt.datetime.now(ha_tz)
+
+    eid = make_entity("rolling365", "on")
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on", "off"],
+        frames={"365d": True, "30d": True},
+    )
+    reg = wait_entities(entry, min_count=1)
+
+    for frame_key, days in (("365d", 365), ("30d", 30)):
+        dur = eid_for(entry, frame_key, M_DURATION, reg)
+        chk(
+            f"EC31 {frame_key} duration sensor exists",
+            dur is not None,
+            True,
+            f"uids={list(reg)}",
+        )
+        if not dur:
+            continue
+        attrs = gs(dur).get("attributes", {})
+        chk(f"EC31 {frame_key} frame attr", attrs.get("frame"), frame_key)
+        win = attrs.get("window_seconds") or 0
+        # True-rolling span is exactly days*86400 (DST-agnostic: absolute delta).
+        chk(
+            f"EC31 {frame_key} spans {days} rolling days",
+            abs(win - days * 86400) <= 2,
+            True,
+            f"window_seconds={win} expected≈{days * 86400}",
+        )
+        ws = dt.datetime.fromisoformat(attrs["window_start"]).astimezone(ha_tz)
+        # Rolling start = now − days, so it is NOT snapped to local midnight
+        # (unless now happens to be midnight). Confirm it is ~days ago, mid-day.
+        expected_start = now_local - dt.timedelta(days=days)
+        chk(
+            f"EC31 {frame_key} start ≈ now − {days}d (rolling, not midnight-snapped)",
+            abs((ws - expected_start).total_seconds()) <= 120,
+            True,
+            f"window_start={ws.isoformat()} expected≈{expected_start.isoformat()}",
+        )
+        pct = attrs.get("percent")
+        chk(
+            f"EC31 {frame_key} percent <= 100 (far-edge over-count guard)",
+            pct is None or pct <= 100.0,
+            True,
+            f"percent={pct}",
+        )
+        in_secs = attrs.get("duration_seconds") or 0
+        chk(
+            f"EC31 {frame_key} tracked seconds <= window (no far-edge over-count)",
+            in_secs <= win + 1,
+            True,
+            f"in={in_secs} window={win}",
+        )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -2739,6 +2812,9 @@ def main():
 
         if ec_enabled(30):
             ec30_humanized_duration_text()
+
+        if ec_enabled(31):
+            ec31_rolling_365d_frame()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

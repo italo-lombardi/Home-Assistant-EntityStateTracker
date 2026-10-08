@@ -59,6 +59,7 @@
           "month": "Tässä kuussa",
           "last_month": "Viime kuussa",
           "year": "Tänä vuonna",
+          "365d": "Viimeiset 365 päivää",
           "min_state_duration": "Tilan vähimmäiskesto (sekuntia)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Maanantaista klo 00:00 (tämä viikko tähän mennessä).",
           "last_week": "Edellinen kokonainen viikko, maanantaista sunnuntaihin.",
           "7d": "Liukuva 7 päivän ikkuna, joka päättyy nyt.",
-          "30d": "Viimeiset 30 kokonaista paikallista päivää.",
+          "30d": "Liukuva 30 päivän ikkuna, joka päättyy nyt.",
           "month": "Tämän kuun 1. päivästä.",
           "last_month": "Edellinen kokonainen kalenterikuukausi.",
           "year": "1. tammikuuta alkaen.",
+          "365d": "Liukuva 365 päivän ikkuna, joka päättyy nyt.",
           "min_state_duration": "Jos seurattu entiteetti siirtyy tilaan ja pois siitä nopeammin kuin tämä sekuntimäärä, tämä lyhyt hetki ohitetaan — sen aika lisätään sen sijaan edelliseen tilaan, eikä sitä lasketa erilliseksi muutokseksi. Käytä tätä välkkyvien tai pomppivien antureiden suodattamiseen. Aseta arvoksi 0 laskeaksesi jokaisen muutoksen, olipa se kuinka lyhyt tahansa."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Tässä kuussa",
           "last_month": "Viime kuussa",
           "year": "Tänä vuonna",
+          "365d": "Viimeiset 365 päivää",
           "target": "Kohdetila(t)",
           "target_threshold": "Vaatimustenmukaisuuskynnys (%, valinnainen)",
           "min_state_duration": "Tilan vähimmäiskesto (sekuntia)",
@@ -110,10 +113,11 @@
           "week": "Maanantaista klo 00:00 (tämä viikko tähän mennessä).",
           "last_week": "Edellinen kokonainen viikko, maanantaista sunnuntaihin.",
           "7d": "Liukuva 7 päivän ikkuna, joka päättyy nyt.",
-          "30d": "Viimeiset 30 kokonaista paikallista päivää.",
+          "30d": "Liukuva 30 päivän ikkuna, joka päättyy nyt.",
           "month": "Tämän kuun 1. päivästä.",
           "last_month": "Edellinen kokonainen kalenterikuukausi.",
           "year": "1. tammikuuta alkaen.",
+          "365d": "Liukuva 365 päivän ikkuna, joka päättyy nyt.",
           "target": "Vaatimukset täyttäviksi katsottujen tilojen joukko. Missä tahansa niistä oleminen lasketaan. Riippumattomia seuratuista tiloista — valitse mikä tahansa tila, jossa entiteetti voi olla. Käytetään vain, kun vaatimustenmukaisuuden pisteytys on käytössä.",
           "target_threshold": "Jos asetettu, binäärianturi ”Vaatimusten mukainen” kytkeytyy päälle, kun vaatimustenmukaisuusprosentti saavuttaa tämän arvon tai ylittää sen. Jätä tyhjäksi ohittaaksesi kynnyksen.",
           "min_state_duration": "Jos seurattu entiteetti siirtyy tilaan ja pois siitä nopeammin kuin tämä sekuntimäärä, tämä lyhyt hetki ohitetaan — sen aika lisätään sen sijaan edelliseen tilaan, eikä sitä lasketa erilliseksi muutokseksi. Käytä tätä välkkyvien tai pomppivien antureiden suodattamiseen. Aseta arvoksi 0 laskeaksesi jokaisen muutoksen, olipa se kuinka lyhyt tahansa.",

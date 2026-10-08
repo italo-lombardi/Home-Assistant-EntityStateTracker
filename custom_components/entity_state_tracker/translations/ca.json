@@ -59,6 +59,7 @@
           "month": "Aquest mes",
           "last_month": "El mes passat",
           "year": "Enguany",
+          "365d": "Últims 365 dies",
           "min_state_duration": "Durada mínima d'estat (segons)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Des de dilluns a les 00:00 (aquesta setmana fins ara).",
           "last_week": "La setmana sencera anterior, de dilluns a diumenge.",
           "7d": "Finestra mòbil de 7 dies fins ara.",
-          "30d": "Els últims 30 dies locals sencers.",
+          "30d": "Finestra mòbil de 30 dies fins ara.",
           "month": "Des de l'1 d'aquest mes.",
           "last_month": "El mes natural sencer anterior.",
           "year": "Des de l'1 de gener.",
+          "365d": "Finestra mòbil de 365 dies fins ara.",
           "min_state_duration": "Si l'entitat seguida canvia a un estat i en surt més ràpid que aquest nombre de segons, aquest breu moment s'ignora — el seu temps s'afegeix a l'estat anterior i no compta com a canvi separat. Utilitzeu-ho per filtrar sensors que parpellegen o reboten. Poseu 0 per comptar cada canvi, per breu que sigui."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Aquest mes",
           "last_month": "El mes passat",
           "year": "Enguany",
+          "365d": "Últims 365 dies",
           "target": "Estat(s) objectiu",
           "target_threshold": "Llindar de compliment (%, opcional)",
           "min_state_duration": "Durada mínima d'estat (segons)",
@@ -110,10 +113,11 @@
           "week": "Des de dilluns a les 00:00 (aquesta setmana fins ara).",
           "last_week": "La setmana sencera anterior, de dilluns a diumenge.",
           "7d": "Finestra mòbil de 7 dies fins ara.",
-          "30d": "Els últims 30 dies locals sencers.",
+          "30d": "Finestra mòbil de 30 dies fins ara.",
           "month": "Des de l'1 d'aquest mes.",
           "last_month": "El mes natural sencer anterior.",
           "year": "Des de l'1 de gener.",
+          "365d": "Finestra mòbil de 365 dies fins ara.",
           "target": "El conjunt d'estats considerats conformes. Estar en qualsevol d'ells compta. Independents dels estats seguits: trieu qualsevol estat en què pugui estar l'entitat. Només s'utilitza quan la puntuació de compliment està activada.",
           "target_threshold": "Si s'estableix, un sensor binari «Conforme» s'activa quan el percentatge de compliment assoleix o supera aquest valor. Deixeu-ho buit per ometre el llindar.",
           "min_state_duration": "Si l'entitat seguida canvia a un estat i en surt més ràpid que aquest nombre de segons, aquest breu moment s'ignora — el seu temps s'afegeix a l'estat anterior i no compta com a canvi separat. Utilitzeu-ho per filtrar sensors que parpellegen o reboten. Poseu 0 per comptar cada canvi, per breu que sigui.",

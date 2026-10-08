@@ -59,6 +59,7 @@
           "month": "Deze maand",
           "last_month": "Vorige maand",
           "year": "Dit jaar",
+          "365d": "Laatste 365 dagen",
           "min_state_duration": "Minimale toestandsduur (seconden)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Sinds maandag 00:00 (deze week tot nu toe).",
           "last_week": "De vorige hele week van maandag tot en met zondag.",
           "7d": "Voortschrijdend venster van 7 dagen dat nu eindigt.",
-          "30d": "De laatste 30 hele lokale dagen.",
+          "30d": "Voortschrijdend venster van 30 dagen dat nu eindigt.",
           "month": "Sinds de 1e van deze maand.",
           "last_month": "De vorige hele kalendermaand.",
           "year": "Sinds 1 januari.",
+          "365d": "Voortschrijdend venster van 365 dagen dat nu eindigt.",
           "min_state_duration": "Als de gevolgde entiteit sneller dan dit aantal seconden in een toestand komt en er weer uit gaat, wordt dat korte moment genegeerd — de tijd ervan wordt in plaats daarvan bij de vorige toestand opgeteld en telt niet als een aparte wijziging. Gebruik het om flikkerende of stuiterende sensoren te filteren. Stel in op 0 om elke wijziging te tellen, hoe kort ook."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Deze maand",
           "last_month": "Vorige maand",
           "year": "Dit jaar",
+          "365d": "Laatste 365 dagen",
           "target": "Doeltoestand(en)",
           "target_threshold": "Nalevingsdrempel (%, optioneel)",
           "min_state_duration": "Minimale toestandsduur (seconden)",
@@ -110,10 +113,11 @@
           "week": "Sinds maandag 00:00 (deze week tot nu toe).",
           "last_week": "De vorige hele week van maandag tot en met zondag.",
           "7d": "Voortschrijdend venster van 7 dagen dat nu eindigt.",
-          "30d": "De laatste 30 hele lokale dagen.",
+          "30d": "Voortschrijdend venster van 30 dagen dat nu eindigt.",
           "month": "Sinds de 1e van deze maand.",
           "last_month": "De vorige hele kalendermaand.",
           "year": "Sinds 1 januari.",
+          "365d": "Voortschrijdend venster van 365 dagen dat nu eindigt.",
           "target": "De verzameling toestanden die als conform gelden. In een van deze toestanden zijn telt mee. Los van de gevolgde toestanden — kies elke toestand die de entiteit kan hebben. Alleen gebruikt wanneer nalevingsscore is ingeschakeld.",
           "target_threshold": "Indien ingesteld, gaat een binaire sensor „Conform” aan wanneer het nalevingspercentage deze waarde bereikt of overschrijdt. Laat leeg om de drempel over te slaan.",
           "min_state_duration": "Als de gevolgde entiteit sneller dan dit aantal seconden in een toestand komt en er weer uit gaat, wordt dat korte moment genegeerd — de tijd ervan wordt in plaats daarvan bij de vorige toestand opgeteld en telt niet als een aparte wijziging. Gebruik het om flikkerende of stuiterende sensoren te filteren. Stel in op 0 om elke wijziging te tellen, hoe kort ook.",

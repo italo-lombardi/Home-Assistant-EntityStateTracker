@@ -59,6 +59,7 @@
           "month": "Ten miesiąc",
           "last_month": "Zeszły miesiąc",
           "year": "Ten rok",
+          "365d": "Ostatnie 365 dni",
           "min_state_duration": "Minimalny czas trwania stanu (sekundy)"
         },
         "data_description": {
@@ -68,10 +69,11 @@
           "week": "Od poniedziałku 00:00 (ten tydzień jak dotąd).",
           "last_week": "Poprzedni pełny tydzień od poniedziałku do niedzieli.",
           "7d": "Ruchome okno 7-dniowe kończące się teraz.",
-          "30d": "Ostatnie 30 pełnych lokalnych dni.",
+          "30d": "Ruchome okno 30-dniowe kończące się teraz.",
           "month": "Od 1. dnia tego miesiąca.",
           "last_month": "Poprzedni pełny miesiąc kalendarzowy.",
           "year": "Od 1 stycznia.",
+          "365d": "Ruchome okno 365-dniowe kończące się teraz.",
           "min_state_duration": "Jeśli śledzona encja przechodzi w stan i wychodzi z niego szybciej niż ta liczba sekund, ta krótka chwila jest ignorowana — jej czas jest zamiast tego dodawany do poprzedniego stanu i nie liczy się jako osobna zmiana. Użyj tego do filtrowania migoczących lub odbijających czujników. Ustaw 0, aby liczyć każdą zmianę, jakkolwiek krótką."
         }
       }
@@ -98,6 +100,7 @@
           "month": "Ten miesiąc",
           "last_month": "Zeszły miesiąc",
           "year": "Ten rok",
+          "365d": "Ostatnie 365 dni",
           "target": "Stan(y) docelowy(e)",
           "target_threshold": "Próg zgodności (%, opcjonalnie)",
           "min_state_duration": "Minimalny czas trwania stanu (sekundy)",
@@ -110,10 +113,11 @@
           "week": "Od poniedziałku 00:00 (ten tydzień jak dotąd).",
           "last_week": "Poprzedni pełny tydzień od poniedziałku do niedzieli.",
           "7d": "Ruchome okno 7-dniowe kończące się teraz.",
-          "30d": "Ostatnie 30 pełnych lokalnych dni.",
+          "30d": "Ruchome okno 30-dniowe kończące się teraz.",
           "month": "Od 1. dnia tego miesiąca.",
           "last_month": "Poprzedni pełny miesiąc kalendarzowy.",
           "year": "Od 1 stycznia.",
+          "365d": "Ruchome okno 365-dniowe kończące się teraz.",
           "target": "Zbiór stanów uznawanych za zgodne. Przebywanie w którymkolwiek z nich jest liczone. Niezależne od stanów śledzonych — wybierz dowolny stan, w którym encja może się znajdować. Używane tylko, gdy włączone jest punktowanie zgodności.",
           "target_threshold": "Jeśli ustawiono, czujnik binarny „Zgodny” włącza się, gdy procent zgodności osiągnie tę wartość lub ją przekroczy. Pozostaw puste, aby pominąć próg.",
           "min_state_duration": "Jeśli śledzona encja przechodzi w stan i wychodzi z niego szybciej niż ta liczba sekund, ta krótka chwila jest ignorowana — jej czas jest zamiast tego dodawany do poprzedniego stanu i nie liczy się jako osobna zmiana. Użyj tego do filtrowania migoczących lub odbijających czujników. Ustaw 0, aby liczyć każdą zmianę, jakkolwiek krótką.",
