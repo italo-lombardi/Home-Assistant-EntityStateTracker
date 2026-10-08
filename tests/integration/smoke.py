@@ -2561,7 +2561,7 @@ def ec30_humanized_duration_text():
 
     The sensor state is seconds (HA converts to hours for templates), and HA's
     pretty "18h 33m" string is frontend-only. This feature exposes it server-side
-    as nested two-unit dicts (ms/hm/dh/wd, ordered min→max granularity). Assert
+    as nested dicts (s/ms/hm/dh/wd, ordered min→max granularity). Assert
     both modes carry it, the key order, and that the humanized value is consistent
     with the raw seconds (reconstruct seconds from the hm pair and compare).
     """
@@ -2600,9 +2600,9 @@ def ec30_humanized_duration_text():
     chk("EC30 duration_text present (specific)", isinstance(dtext, dict), True)
     if isinstance(dtext, dict):
         chk(
-            "EC30 duration_text ordered ms→hm→dh→wd",
+            "EC30 duration_text ordered s→ms→hm→dh→wd",
             list(dtext),
-            ["ms", "hm", "dh", "wd"],
+            ["s", "ms", "hm", "dh", "wd"],
             f"keys={list(dtext)}",
         )
         # hm must agree with the raw duration_seconds, floored to the minute —
@@ -2637,9 +2637,9 @@ def ec30_humanized_duration_text():
             f"keys={list(btext)}",
         )
         chk(
-            "EC30 breakdown_text['on'] carries all four reps",
+            "EC30 breakdown_text['on'] carries all five reps",
             isinstance(btext.get("on"), dict)
-            and list(btext["on"]) == ["ms", "hm", "dh", "wd"],
+            and list(btext["on"]) == ["s", "ms", "hm", "dh", "wd"],
             True,
             f"on={btext.get('on')}",
         )

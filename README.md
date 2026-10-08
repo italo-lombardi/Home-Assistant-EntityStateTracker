@@ -185,17 +185,18 @@ The duration sensor's **state** is seconds (`device_class: duration`), so Home A
 {# → "18.55"  (hours, after HA's unit conversion — not "18h 33m") #}
 ```
 
-To get that human-readable form in a template, card, or notification, read the **`duration_text`** attribute. It is a dict of fixed two-unit representations, ordered from finest to coarsest granularity — minutes/seconds, hours/minutes, days/hours, weeks/days — each **truncated** (never rounded up) so it matches Home Assistant's own frontend duration formatter:
+To get that human-readable form in a template, card, or notification, read the **`duration_text`** attribute. It is a dict of fixed representations, ordered from finest to coarsest granularity — total seconds, then minutes/seconds, hours/minutes, days/hours, weeks/days — each **truncated** (never rounded up) so it matches Home Assistant's own frontend duration formatter:
 
 ```yaml
 duration_text:
+  s: "66816s"
   ms: "1113m 36s"
   hm: "18h 33m"
   dh: "0d 18h"
   wd: "0w 0d"
 ```
 
-> **Pick the representation that matches your duration's magnitude.** Each rep only carries signal at its own scale — above its range the big unit reads `0` (for this 18-hour value, `wd` is `"0w 0d"` and `dh` is `"0d 18h"`, while `hm`/`ms` are the useful ones). Use `wd` for multi-week spans (a `year` frame), `dh` for multi-day, `hm` for intra-day, `ms` for short visits. The set is a menu, not four views you'd show at once.
+> **Pick the representation that matches your duration's magnitude.** `s` is the whole duration in seconds (handy for math); the rest are two-unit pairs, and each pair only carries signal at its own scale — above its range the big unit reads `0` (for this 18-hour value, `wd` is `"0w 0d"` and `dh` is `"0d 18h"`, while `hm`/`ms` are the useful ones). Use `wd` for multi-week spans (a `year` frame), `dh` for multi-day, `hm` for intra-day, `ms` for short visits, `s` for exact seconds. The set is a menu, not five views you'd show at once.
 
 Pick whichever representation fits (dot or bracket access both work):
 

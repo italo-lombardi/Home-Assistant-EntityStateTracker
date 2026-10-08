@@ -187,7 +187,7 @@ automation:
 
 ## Breakdown attributes (all-states mode)
 
-Each `sensor..._state_breakdown_<frame>` carries the full per-state breakdown in its attributes. `breakdown_pct` is a `{state: percent}` dict, `breakdown_seconds` is `{state: seconds}`, `breakdown_text` is `{state: {ms, hm, dh, wd}}` (humanized, same keys/order as `breakdown_seconds`), `counts` is `{state: entries}`, and `avg_duration_seconds` is `{state: seconds}`. The sensor's own state is the dominant (longest-duration) state for that frame.
+Each `sensor..._state_breakdown_<frame>` carries the full per-state breakdown in its attributes. `breakdown_pct` is a `{state: percent}` dict, `breakdown_seconds` is `{state: seconds}`, `breakdown_text` is `{state: {s, ms, hm, dh, wd}}` (humanized, same keys/order as `breakdown_seconds`), `counts` is `{state: entries}`, and `avg_duration_seconds` is `{state: seconds}`. The sensor's own state is the dominant (longest-duration) state for that frame.
 
 > **Note:** breakdown attributes are unrecorded (they change roughly every minute), so they don't bloat the recorder — but templates and `template` triggers read them live just fine.
 
@@ -306,7 +306,7 @@ automation:
 > {# → "Boiler ran for 18h 33m in the last 7 days." #}
 > ```
 >
-> `duration_text` is a dict of two-unit representations ordered finest→coarsest — `ms`, `hm`, `dh`, `wd` — each truncated to match HA's own frontend duration formatter. Pick the key matching the magnitude you expect (`hm` for intra-day, `dh` for multi-day, `wd` for multi-week); a rep reads `0` above its range (`wd` is `"0w 0d"` for an 18-hour value). The per-state equivalent is **`breakdown_text`** — `{state: {ms, hm, dh, wd}}` on both the specific duration sensor (tracked states) and the all-states breakdown sensor (every state), with the same keys and ordering as `breakdown_seconds`:
+> `duration_text` is a dict of representations ordered finest→coarsest — `s` (total seconds), `ms`, `hm`, `dh`, `wd` — each truncated to match HA's own frontend duration formatter. Pick the key matching the magnitude you expect (`s` for exact seconds, `hm` for intra-day, `dh` for multi-day, `wd` for multi-week); a pair reads `0` above its range (`wd` is `"0w 0d"` for an 18-hour value). The per-state equivalent is **`breakdown_text`** — `{state: {s, ms, hm, dh, wd}}` on both the specific duration sensor (tracked states) and the all-states breakdown sensor (every state), with the same keys and ordering as `breakdown_seconds`:
 >
 > ```jinja
 > On for {{ state_attr('sensor.entity_state_tracker_boiler_state_breakdown_last_7_days', 'breakdown_text').on.hm }} this week.

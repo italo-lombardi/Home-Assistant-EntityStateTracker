@@ -386,7 +386,7 @@ def test_duration_attributes_without_target() -> None:
 
 
 def test_duration_text_humanized_total() -> None:
-    """duration_text is the humanized tracked total, ordered ms→wd (§5).
+    """duration_text is the humanized tracked total, ordered s→wd (§5).
 
     Tracked heat 1800 + auto 600 = 2400s = 40m. Built from RAW tracked seconds so
     it matches HA's own frontend duration formatter (which floors each unit).
@@ -395,14 +395,15 @@ def test_duration_text_humanized_total() -> None:
     sensor = DurationSensor(coord, "today")
     attrs = sensor.extra_state_attributes
     assert attrs["duration_text"] == {
+        "s": "2400s",
         "ms": "40m 0s",
         "hm": "0h 40m",
         "dh": "0d 0h",
         "wd": "0w 0d",
     }
-    # Order is min→max granularity — templates index by key but order is the
-    # documented contract.
-    assert list(attrs["duration_text"]) == ["ms", "hm", "dh", "wd"]
+    # Order is min→max granularity (s finest) — templates index by key but order
+    # is the documented contract.
+    assert list(attrs["duration_text"]) == ["s", "ms", "hm", "dh", "wd"]
 
 
 def test_duration_text_breakdown_per_tracked_state() -> None:
