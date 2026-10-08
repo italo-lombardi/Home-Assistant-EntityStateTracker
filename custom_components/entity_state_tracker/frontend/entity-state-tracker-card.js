@@ -1008,7 +1008,7 @@ class EntityStateTrackerCard extends LitElement {
       return html`<li class="gm-row">
         <span class="gm-bullet">•</span>
         <span
-          class="gm-name source-link"
+          class="gm-name"
           role="button"
           tabindex="0"
           @click=${(e) => this._handleEntityClick(e, mid)}
@@ -1021,7 +1021,7 @@ class EntityStateTrackerCard extends LitElement {
           >${friendly}</span
         >
         <span
-          class="gm-state source-link"
+          class="gm-state"
           role="button"
           tabindex="0"
           @click=${(e) => this._handleEntityClick(e, mid)}
@@ -1636,6 +1636,12 @@ class EntityStateTrackerCard extends LitElement {
       // raw seconds attr.
       inSecs =
         (a.duration_seconds != null ? Number(a.duration_seconds) : Number(pick.state)) || 0;
+      // SYNTHETIC slice label — a joined list of the tracked states ("on, off")
+      // or "tracked", NOT a real entity state. It is deliberately NOT marked
+      // `derived`, so downstream label formatting runs _formatTrackedState on it;
+      // formatEntityState can't resolve the joined string, so it falls through to
+      // toLabel ("On, Off"), which is the intended display. Don't "fix" this into
+      // a single real state — it represents the combined tracked set.
       const label = tracked.join(", ") || "tracked";
       inSlices = [{ state: label, secs: inSecs, color: stateColor(label) }];
     }
