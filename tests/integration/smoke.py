@@ -2557,7 +2557,7 @@ def ec29_no_phantom_other_slice():
 
 
 def ec30_humanized_duration_text():
-    """EC30: duration_text / breakdown_text humanized attrs, both modes (v0.1.7).
+    """EC30: duration_text / breakdown_text humanized attrs, both modes (v0.1.6).
 
     The sensor state is seconds (HA converts to hours for templates), and HA's
     pretty "18h 33m" string is frontend-only. This feature exposes it server-side
