@@ -98,9 +98,9 @@ def unique_id(entry_id: str, frame: str, metric: str) -> str:
 # Fixed two-unit duration representations, ordered minimum granularity → maximum
 # (minutes/seconds up to weeks/days). Each is a (big_unit, small_unit) pair where
 # the pair tiles the whole duration: the big unit is uncapped (``1113m``,
-# ``365d``) and the small unit is its immediate subdivision. The attribute dict is
-# emitted in THIS order (ms, hm, dh, wd) — dict insertion order, which HA
-# preserves when serializing attributes.
+# ``365d``) and the small unit is its immediate subdivision. humanize_duration
+# emits the single-unit ``s`` (total seconds) first, then these pairs — dict
+# insertion order (s, ms, hm, dh, wd), which HA preserves when serializing.
 _DURATION_REPS: tuple[tuple[str, str, int, str, int], ...] = (
     # key, big_suffix, big_seconds, small_suffix, small_seconds
     ("ms", "m", 60, "s", 1),
@@ -111,28 +111,30 @@ _DURATION_REPS: tuple[tuple[str, str, int, str, int], ...] = (
 
 
 def humanize_duration(seconds: float) -> dict[str, str]:
-    """Humanize a seconds duration into fixed two-unit representations (§5).
+    """Humanize a seconds duration into fixed representations (§5).
 
     The sensor STATE is seconds (``device_class: duration``); HA pretty-prints it
     in the FRONTEND only, so a template reading ``states(...)`` gets a raw number
     (hours after unit conversion), never the human form. This exposes the human
-    form server-side as an attribute dict, keyed by unit pair, ordered minimum →
-    maximum granularity:
+    form server-side as an attribute dict, ordered minimum → maximum granularity:
 
-        {"ms": "1113m 36s", "hm": "18h 33m", "dh": "0d 18h", "wd": "0w 0d"}
+        {"s": "66816s", "ms": "1113m 36s", "hm": "18h 33m", "dh": "0d 18h",
+         "wd": "0w 0d"}
 
-    Each value TRUNCATES (never rounds up), so the text never overstates elapsed
-    time — ``119s`` → ``{"ms": "1m 59s", ...}`` not ``"2m"``. The big unit is
-    uncapped (``1113m``); the small unit is its subdivision, ``0``-padded in value
-    only (``"0w 0d"`` for a sub-day duration). Negative input is clamped to zero
-    (a duration is never negative).
+    The ``s`` key is the whole total seconds (single unit, finest); the rest are
+    two-unit pairs. Each value TRUNCATES (never rounds up), so the text never
+    overstates elapsed time — ``119s`` → ``{"s": "119s", "ms": "1m 59s", ...}``
+    not ``"2m"``. The pair's big unit is uncapped (``1113m``); the small unit is
+    its subdivision, ``0``-padded in value only (``"0w 0d"`` for a sub-day
+    duration). Negative input is clamped to zero (a duration is never negative).
 
     Unit suffixes (``w``/``d``/``h``/``m``/``s``) are locale-neutral symbols, like
     ``%`` or ``kWh`` — the sensor already ships bare ``%``/``UnitOfTime`` untranslated
     — so this dict needs no per-locale translation.
     """
     total = int(max(0.0, seconds))
-    out: dict[str, str] = {}
+    # "s" first — the whole duration in seconds, finest granularity, single unit.
+    out: dict[str, str] = {"s": f"{total}s"}
     for key, big_suffix, big_secs, small_suffix, small_secs in _DURATION_REPS:
         big, rem = divmod(total, big_secs)
         small = rem // small_secs
@@ -305,11 +307,12 @@ if __name__ == "__main__":  # pragma: no cover
         binary_frame_entity_id("Front Door", "month", TRANSLATION_KEY_COMPLIANT)
         == "binary_sensor.entity_state_tracker_front_door_compliant_this_month"
     )
-    # humanize_duration: ordered ms→wd, two-unit, TRUNCATE (never round up).
-    # 66816s = 18h 33m 36s: the hm rep floors to "18h 33m" (not 34). Pin it so a
-    # refactor that accidentally rounds fails here; this is the value that must
-    # match HA's own frontend duration string.
+    # humanize_duration: ordered s→ms→hm→dh→wd; "s" is total seconds (single
+    # unit), the rest two-unit, all TRUNCATE (never round up). 66816s = 18h 33m
+    # 36s: the hm rep floors to "18h 33m" (not 34). Pin it so a refactor that
+    # accidentally rounds fails here; hm is the value matching HA's frontend.
     assert humanize_duration(66816) == {
+        "s": "66816s",
         "ms": "1113m 36s",
         "hm": "18h 33m",
         "dh": "0d 18h",
@@ -317,11 +320,15 @@ if __name__ == "__main__":  # pragma: no cover
     }
     # Truncation guard: 119s must read 1m 59s, never 2m.
     assert humanize_duration(119)["ms"] == "1m 59s"
+    # "s" is the whole duration in seconds, truncated to a whole second.
+    assert humanize_duration(66816)["s"] == "66816s"
+    assert humanize_duration(119.9)["s"] == "119s"
     # Zero and negative both floor to all-zero reps (duration never negative).
     assert humanize_duration(0)["hm"] == "0h 0m"
+    assert humanize_duration(0)["s"] == "0s"
     assert humanize_duration(-5)["ms"] == "0m 0s"
     # Week rollover: 1313000s = 2w 1d 4h… → wd pair "2w 1d".
     assert humanize_duration(1313000)["wd"] == "2w 1d"
-    # Order is min→max granularity (ms first, wd last) — templates rely on it.
-    assert list(humanize_duration(100)) == ["ms", "hm", "dh", "wd"]
+    # Order is min→max granularity (s first, wd last) — templates rely on it.
+    assert list(humanize_duration(100)) == ["s", "ms", "hm", "dh", "wd"]
     print("helpers self-check OK")
