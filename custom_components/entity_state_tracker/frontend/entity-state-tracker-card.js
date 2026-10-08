@@ -1718,7 +1718,9 @@ class EntityStateTrackerCard extends LitElement {
       const count = s.derived ? null : (a.counts || {})[s.state];
       const avg = s.derived ? null : (a.avg_duration_seconds || {})[s.state];
       const tip = {
-        label: s.state,
+        label: s.derived
+          ? s.state
+          : this._formatTrackedState(a.source_entity, s.state),
         secs: s.secs,
         pct: s.pct,
         color: s.color,
