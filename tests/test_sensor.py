@@ -384,6 +384,37 @@ def test_duration_attributes_without_target() -> None:
     assert "last_seen" not in attrs
 
 
+def test_duration_text_humanized_total() -> None:
+    """duration_text is the humanized tracked total, ordered ms→wd (§5).
+
+    Tracked heat 1800 + auto 600 = 2400s = 40m. Built from RAW tracked seconds so
+    it matches HA's own frontend duration formatter (which floors each unit).
+    """
+    coord = _duration_coord(tracked=("heat", "auto"), target=None)
+    sensor = DurationSensor(coord, "today")
+    attrs = sensor.extra_state_attributes
+    assert attrs["duration_text"] == {
+        "ms": "40m 0s",
+        "hm": "0h 40m",
+        "dh": "0d 0h",
+        "wd": "0w 0d",
+    }
+    # Order is min→max granularity — templates index by key but order is the
+    # documented contract.
+    assert list(attrs["duration_text"]) == ["ms", "hm", "dh", "wd"]
+
+
+def test_duration_text_breakdown_per_tracked_state() -> None:
+    """breakdown_text mirrors breakdown_seconds — same tracked keys, humanized."""
+    coord = _duration_coord(tracked=("heat", "auto"), target=None)
+    sensor = DurationSensor(coord, "today")
+    attrs = sensor.extra_state_attributes
+    assert set(attrs["breakdown_text"]) == {"heat", "auto"}
+    # heat 1800s = 30m, auto 600s = 10m.
+    assert attrs["breakdown_text"]["heat"]["hm"] == "0h 30m"
+    assert attrs["breakdown_text"]["auto"]["ms"] == "10m 0s"
+
+
 def test_duration_attributes_breakdown_tracked_only() -> None:
     """breakdown_seconds/pct expose the per-state slice, tracked states only."""
     coord = _duration_coord(tracked=("heat", "auto"))
@@ -539,8 +570,10 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
         "percent",
         "compliance_percent",
         "duration_seconds",
+        "duration_text",
         "breakdown_seconds",
         "breakdown_pct",
+        "breakdown_text",
         "window_start",
         "data_start",
         "window_coverage",
@@ -596,6 +629,7 @@ def test_breakdown_unrecorded_attributes_exact_set() -> None:
         {
             "breakdown_seconds",
             "breakdown_pct",
+            "breakdown_text",
             "counts",
             "avg_duration_seconds",
             "previous_state",
@@ -630,6 +664,21 @@ def test_breakdown_attributes_sorted_by_seconds_desc() -> None:
     assert list(attrs["breakdown_pct"]) == ["heat", "off", "auto", "unaccounted"]
     assert list(attrs["counts"]) == ["heat", "off", "auto"]
     assert list(attrs["avg_duration_seconds"]) == ["heat", "off", "auto"]
+
+
+def test_breakdown_text_per_state_humanized() -> None:
+    """breakdown_text mirrors breakdown_seconds in all-states mode — same desc
+    order + keys, each value the humanized ms→wd dict (§5)."""
+    coord = _breakdown_coord()
+    sensor = BreakdownSensor(coord, "today")
+    attrs = sensor.extra_state_attributes
+    # Same desc order as breakdown_seconds: heat 1800 > off 1200 > auto 600.
+    assert list(attrs["breakdown_text"]) == ["heat", "off", "auto"]
+    assert attrs["breakdown_text"]["heat"]["hm"] == "0h 30m"  # 1800s
+    assert attrs["breakdown_text"]["off"]["ms"] == "20m 0s"  # 1200s
+    assert attrs["breakdown_text"]["auto"]["ms"] == "10m 0s"  # 600s
+    # "unaccounted" is a pct-only sentinel — must NOT appear in breakdown_text.
+    assert "unaccounted" not in attrs["breakdown_text"]
 
 
 def test_breakdown_attributes_carry_window_metrics_and_previous_state() -> None:

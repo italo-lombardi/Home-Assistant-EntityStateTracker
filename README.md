@@ -140,7 +140,7 @@ Per **enabled frame**, one **duration sensor**:
 |--------|-------|
 | State | Seconds spent in the tracked states during the frame (`device_class: duration`, unit seconds, suggested display in hours, 1 dp) |
 | `state_class` | `measurement` |
-| Key attributes | `source_entity`, `frame`, `percent`, `compliance_percent` and `target_threshold` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`counts`, `avg_duration_seconds`, `previous_state`, `last_entered`, `last_exited`), and `duration_seconds`, `window_seconds`, `unaccounted_seconds` |
+| Key attributes | `source_entity`, `frame`, `percent`, `compliance_percent` and `target_threshold` (when a target is set), `tracked_states`, `target_states`, `window_start`, `data_start`, `window_coverage`, `has_gap`, plus transition metrics (`counts`, `avg_duration_seconds`, `previous_state`, `last_entered`, `last_exited`), `duration_seconds`, `window_seconds`, `unaccounted_seconds`, and the humanized `duration_text` / `breakdown_text` (see [Humanized durations](#humanized-durations)) |
 
 Per enabled frame, the **percent** — and, when a target set is configured, the **compliance percent** — also get their own standalone `%` sensors, so `numeric_state` triggers, history graphs, and long-term Statistics can bind to them directly (they also ride along as attributes on the duration sensor):
 
@@ -168,13 +168,54 @@ Each `compliant` binary sensor also exposes `source_entity`, `compliance_percent
 
 | Entity | State | Attributes |
 |--------|-------|------------|
-| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `frame`, `breakdown_seconds` `{state: float}`, `breakdown_pct` `{state: float}`, `counts` `{state: int}`, `avg_duration_seconds` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
+| `sensor..._state_breakdown_<frame>` | The dominant (max-duration) state name for that frame | `source_entity`, `frame`, `breakdown_seconds` `{state: float}`, `breakdown_pct` `{state: float}`, `breakdown_text` `{state: {ms,hm,dh,wd}}` (see [Humanized durations](#humanized-durations)), `counts` `{state: int}`, `avg_duration_seconds` `{state: int}`, `previous_state`, `window_seconds`, `unaccounted_seconds`, `data_start`, `window_coverage`, `has_gap` |
 
 - **Every state literal gets its own row** — `unavailable`, `unknown`, and `none` are counted as ordinary state names against a single wall-clock denominator, so the rows sum to ~100% of the covered window.
 - **A new state seen at runtime becomes a new key**, accumulating from first-seen. No entity is created, no restart is needed. One INFO log line is written and an `entity_state_tracker_new_state` event always fires — automations can react to it with no extra configuration.
 - The breakdown attributes are marked unrecorded (they change roughly every minute), so they never bloat the recorder — the ledger is the history store, and the card reads it live.
 
 ![All-states breakdown sensor + attributes](assets/07_allstates_sensor.png)
+
+### Humanized durations
+
+The duration sensor's **state** is seconds (`device_class: duration`), so Home Assistant converts it for display — a template reading the raw state gets a number, not the pretty string the UI shows:
+
+```jinja
+{{ states('sensor.entity_state_tracker_working_from_home_for_italo_specific_states_duration_this_week') }}
+{# → "18.55"  (hours, after HA's unit conversion — not "18h 33m") #}
+```
+
+To get that human-readable form in a template, card, or notification, read the **`duration_text`** attribute. It is a dict of fixed two-unit representations, ordered from finest to coarsest granularity — minutes/seconds, hours/minutes, days/hours, weeks/days — each **truncated** (never rounded up) so it matches Home Assistant's own frontend duration formatter:
+
+```yaml
+duration_text:
+  ms: "1113m 36s"
+  hm: "18h 33m"
+  dh: "0d 18h"
+  wd: "0w 0d"
+```
+
+Pick whichever representation fits (dot or bracket access both work):
+
+```jinja
+{{ state_attr('sensor.entity_state_tracker_working_from_home_for_italo_specific_states_duration_this_week', 'duration_text').hm }}
+{# → "18h 33m" #}
+
+{{ state_attr('sensor.entity_state_tracker_working_from_home_for_italo_specific_states_duration_this_week', 'duration_text')['wd'] }}
+{# → "0w 0d" #}
+```
+
+The same shape is exposed **per state** as **`breakdown_text`** — in specific-states mode for each tracked state, and in all-states mode for every observed state (same keys and ordering as `breakdown_seconds`):
+
+```jinja
+{{ state_attr('sensor.entity_state_tracker_..._state_breakdown_this_week', 'breakdown_text').on.hm }}
+{# → "18h 33m" — time the entity spent "on" this week #}
+
+{# bracket form when the state name has spaces or symbols #}
+{{ state_attr('sensor.entity_state_tracker_..._state_breakdown_this_week', 'breakdown_text')['not_home']['dh'] }}
+```
+
+The `w`/`d`/`h`/`m`/`s` suffixes are locale-neutral unit symbols (like `%` or `kWh`). Both attributes are computed live and excluded from the recorder — the ledger remains the single history store.
 
 ### Frames
 

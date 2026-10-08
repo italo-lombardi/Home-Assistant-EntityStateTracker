@@ -43,7 +43,13 @@ from .const import (
     TRANSLATION_KEY_PERCENT,
 )
 from .coordinator import EntityStateTrackerCoordinator
-from .helpers import frame_entity_id, frame_label, tracker_device_name, unique_id
+from .helpers import (
+    frame_entity_id,
+    frame_label,
+    humanize_duration,
+    tracker_device_name,
+    unique_id,
+)
 from .models import FrameResult
 from .write_dedup import DedupCoordinatorSensor
 
@@ -204,10 +210,12 @@ class DurationSensor(_FrameSensor):
             "percent",
             "compliance_percent",
             "duration_seconds",
+            "duration_text",
             # Per-state breakdown churns every tick like the all-states
             # BreakdownSensor's dicts — strip from the recorder (§5.3).
             "breakdown_seconds",
             "breakdown_pct",
+            "breakdown_text",
             "window_start",
             "data_start",
             "window_coverage",
@@ -241,6 +249,19 @@ class DurationSensor(_FrameSensor):
             "duration_seconds": _tracked_seconds(
                 result, self.coordinator.tracked_states
             ),
+            # Humanized two-unit representations (ms/hm/dh/wd) of the tracked
+            # total, for templates/cards that want the pretty "18h 33m" string
+            # HA only renders in the frontend. Built from the RAW tracked seconds
+            # (not the minute-floored state) so it matches HA's own frontend
+            # duration formatter, which floors each unit.
+            "duration_text": humanize_duration(
+                sum(
+                    result.breakdown_seconds.get(s, 0.0)
+                    for s in self.coordinator.tracked_states
+                )
+                if self.coordinator.tracked_states is not None
+                else sum(result.breakdown_seconds.values())
+            ),
             "tracked_states": self.coordinator.tracked_states,
             "target_states": self.coordinator.target_states,
             "window_start": result.window_start,
@@ -267,6 +288,12 @@ class DurationSensor(_FrameSensor):
                 s: result.breakdown_seconds.get(s, 0.0) for s in tracked
             }
             attrs["breakdown_pct"] = {s: result.breakdown_pct.get(s) for s in tracked}
+            # Per-state humanized reps, parallel to breakdown_seconds (same keys,
+            # same tracked-only slice; a 0s tracked state reads "0m 0s"/… etc).
+            attrs["breakdown_text"] = {
+                s: humanize_duration(result.breakdown_seconds.get(s, 0.0))
+                for s in tracked
+            }
         if self.coordinator.target_states:
             attrs["compliance_percent"] = result.compliance_percent
             attrs["target_threshold"] = self.coordinator.target_threshold
@@ -359,6 +386,7 @@ class BreakdownSensor(_FrameSensor):
         {
             "breakdown_seconds",
             "breakdown_pct",
+            "breakdown_text",
             "counts",
             "avg_duration_seconds",
             "previous_state",
@@ -400,6 +428,12 @@ class BreakdownSensor(_FrameSensor):
             "frame": self._frame,
             "breakdown_seconds": {s: result.breakdown_seconds[s] for s in order},
             "breakdown_pct": breakdown_pct,
+            # Per-state humanized reps (ms/hm/dh/wd), same desc order + keys as
+            # breakdown_seconds — the all-states parallel to the DurationSensor's
+            # breakdown_text, so both modes expose the pretty string identically.
+            "breakdown_text": {
+                s: humanize_duration(result.breakdown_seconds[s]) for s in order
+            },
             "counts": {s: result.counts.get(s, 0) for s in order},
             "avg_duration_seconds": {s: result.avg_duration.get(s) for s in order},
             "previous_state": self.coordinator.data.previous_state

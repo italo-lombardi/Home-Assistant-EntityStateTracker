@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7]
+
+### Added
+- **Humanized duration attributes (`duration_text` / `breakdown_text`)** — the duration sensor's state is seconds, so a template reading it gets `"18.55"` (hours, after HA's unit conversion), never the pretty `"18h 33m"` the UI shows (HA's duration formatting is frontend-only). Both the specific-states `DurationSensor` and the all-states `BreakdownSensor` now expose the human form server-side as nested dicts of fixed two-unit representations, ordered finest→coarsest and **truncated** to match HA's own frontend formatter:
+  ```yaml
+  duration_text: {ms: "1113m 36s", hm: "18h 33m", dh: "0d 18h", wd: "0w 0d"}
+  ```
+  `duration_text` carries the tracked total (specific mode); `breakdown_text` carries the same shape per state (tracked states in specific mode, every observed state in all-states mode, same keys/order as `breakdown_seconds`). Read any representation with `state_attr(..., 'duration_text').hm` / `['wd']`. The `w`/`d`/`h`/`m`/`s` suffixes are locale-neutral symbols. Both attributes are computed live and excluded from the recorder — the ledger stays the single history store. See the [Humanized durations](README.md#humanized-durations) README section.
+
 ## [0.1.6]
 
 ### Fixed
