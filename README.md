@@ -272,6 +272,8 @@ The integration ships a custom Lovelace card, auto-registered as a Lovelace reso
 - **Pie / donut** — one donut per selected frame; each donut is that frame's breakdown as slices (all-states) or in-state-vs-rest (specific mode). Each state gets a deterministic colour (hashed from the state name), so slices keep their colour as new states appear.
 - **Table** — a frame-total row per enabled frame (Frame · Duration · %, plus a Compliance column when a target is set). Turn on **Show per-state breakdown** to add a per-state table (ordered by share, biggest first) under each frame; states are capped at 5 per frame by default (the rest fold into a "… N more" row) — toggle that cap off to list every state.
 
+**Group members (optional).** If the tracked entity is a *domain-group helper* (a switch/binary_sensor/… group that exposes an `entity_id` member list), the card can list the group's members with their current live state below the chart, under any chart type. Turn it on with the **Show group members** checkbox in the card editor — the checkbox only appears when the tracked entity is actually a group. It shows live states only (not tracked history), each member links to its more-info dialog, and member/tracked states are shown with Home Assistant's own device-class labels (a moisture sensor reads `Clear (off)`, not raw `off`).
+
 <!-- TODO: capture card screenshots (multi-frame picker UI, post-#22)
 ![Card: bars](assets/08_card_bars.png)
 ![Card: pie / donut](assets/09_card_pie.png)
@@ -289,6 +291,7 @@ chart: bars                     # bars | pie | table
 frames: [today, month]          # optional — any chart; which frames to show. Omit/empty = all frames
 show_states: false              # table only — add a per-state table under each frame total
 limit_states: true              # table only — cap per-state rows at 5 (only when show_states)
+show_group_members: false       # group-tracked entities only — list the group's members + live state
 ```
 
 The `tracker_id` is the tracker's config-entry id. You normally never type it by hand — the visual editor sets it for you. To find it manually, open the tracker under **Settings → Devices & Services → Entity State Tracker**; the id is the last path segment of the config-entry URL.
