@@ -437,19 +437,6 @@ const cardStyles = css`
     padding: 3px 0;
     font-size: 14px;
   }
-  .group-members .gm-dot {
-    flex: 0 0 auto;
-    width: 9px;
-    height: 9px;
-    border-radius: 50%;
-    box-sizing: border-box;
-  }
-  .group-members .gm-dot.on {
-    background: var(--est-accent, var(--primary-color));
-  }
-  .group-members .gm-dot.off {
-    border: 1.5px solid var(--est-text-secondary, var(--secondary-text-color));
-  }
   .group-members .gm-name {
     flex: 1 1 auto;
     color: var(--est-text-primary, var(--primary-text-color));
@@ -1006,12 +993,12 @@ class EntityStateTrackerCard extends LitElement {
       const st = this.hass.states[mid];
       const friendly =
         (st && st.attributes && st.attributes.friendly_name) || mid;
+      // Show the member's literal state as-is (on/off, but also Clear/Dry/Safe/
+      // Home/…) — group members span every domain, so NO on/off assumption, no
+      // active/inactive dot, no "N active" count (meaningless across mixed
+      // state types). Just name + current state, like HA's own entity rows.
       const state = st ? st.state : "unavailable";
-      // "on"/open/locked-ish states read as active; everything else inactive.
-      // Purely cosmetic (dot fill) — the literal state text is always shown.
-      const active = st ? ["on", "open", "home", "unlocked"].includes(st.state) : false;
       return html`<li class="gm-row">
-        <span class="gm-dot ${active ? "on" : "off"}"></span>
         <span
           class="gm-name source-link"
           role="button"
@@ -1028,19 +1015,13 @@ class EntityStateTrackerCard extends LitElement {
         <span class="gm-state">${state}</span>
       </li>`;
     });
-    const onCount = members.filter((mid) => {
-      const st = this.hass.states[mid];
-      return st && ["on", "open", "home", "unlocked"].includes(st.state);
-    }).length;
 
     return html`<div class="group-members">
       <div class="gm-head">Members · live state</div>
       <ul class="gm-list">
         ${rows}
       </ul>
-      <div class="gm-caption">
-        Live now — not tracked history. ${onCount} of ${members.length} active.
-      </div>
+      <div class="gm-caption">Live member states — not tracked history.</div>
     </div>`;
   }
 
