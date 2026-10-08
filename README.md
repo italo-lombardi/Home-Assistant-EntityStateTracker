@@ -239,6 +239,24 @@ Every duration/breakdown sensor exists per **enabled frame**:
 
 All rolling frames (`24h`/`7d`/`30d`/`365d`) are true-rolling: `now − N days → now`, **including the current moment**, consistent with each other. The recent portion is read from the **recorder's** real intra-day timeline (not a whole-day ledger bucket) so the partial window-start day isn't over-counted; the ledger fills only whole days older than the recorder covers. `30d` and `365d` reach past the recorder's retention, so their deep history comes from the ledger's whole-day buckets — the single partial day at the far edge of the window is dropped from the ledger sum (bounded under, never over), the mirror of the closed-frame seam guard. If you set recorder `purge_keep_days` very low, the oldest purged day of any rolling frame falls back to whole-day ledger granularity for that one day — bounded and unavoidable, since daily-sum buckets carry no intra-day timeline.
 
+### Reducing recorder usage (optional)
+
+An **open-frame** duration/breakdown sensor (`today`, `week`, `month`, `year`, `24h`, `7d`, `30d`, `365d`) updates its live value every poll — its window `now − start` grows continuously — so it records roughly **one small history row per update interval** (~175/day at the 1-minute poll), whether or not the tracked entity changed state. **Closed** frames (`yesterday`, `last_week`, `last_month`) are static and record only a handful of rows per day. The rows are tiny (the churny breakdown/percent/window attributes are unrecorded — only the state and a few static config attributes are stored), which is why the footprint stays within ~250–400 KB/yr per tracker.
+
+This is inseparable from the live card refresh: in Home Assistant a sensor's recorder row and its UI update are the same `state_changed` event, so a continuously-updating window sensor inherently writes per tick. The integration keeps its **own** daily-totals ledger as the real long-run history store — Home Assistant's recorder is not needed for the numbers to stay correct.
+
+So if you don't need Home Assistant's **native** history graph / long-term statistics for these sensors, you can exclude them from the recorder to drop that row cost entirely:
+
+```yaml
+# configuration.yaml
+recorder:
+  exclude:
+    entity_globs:
+      - sensor.entity_state_tracker_*
+```
+
+**Trade-off:** this removes the HA history graph, logbook, and long-term statistics for the excluded sensors. The card, templates, and all the live values keep working (they read the current state, not recorder history), and the ledger continues to back every frame — so your durations stay accurate. Only opt in if you're comfortable the ledger (not HA's recorder) is your history source for these entities.
+
 ---
 
 ## The Card
