@@ -413,6 +413,69 @@ const cardStyles = css`
     padding: 4px 16px 16px;
   }
 
+  /* Group members (tier-1 live states) — a chart-agnostic block below .body */
+  .group-members {
+    padding: 0 16px 12px;
+  }
+  .group-members .gm-head {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--est-text-secondary, var(--secondary-text-color));
+    margin: 4px 0 6px;
+  }
+  .group-members .gm-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .group-members .gm-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 3px 0;
+    font-size: 14px;
+  }
+  .group-members .gm-dot {
+    flex: 0 0 auto;
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+    box-sizing: border-box;
+  }
+  .group-members .gm-dot.on {
+    background: var(--est-accent, var(--primary-color));
+  }
+  .group-members .gm-dot.off {
+    border: 1.5px solid var(--est-text-secondary, var(--secondary-text-color));
+  }
+  .group-members .gm-name {
+    flex: 1 1 auto;
+    color: var(--est-text-primary, var(--primary-text-color));
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .group-members .gm-name:hover {
+    color: var(--est-accent);
+    text-decoration: underline;
+  }
+  .group-members .gm-name:focus-visible {
+    outline: 2px solid var(--est-accent);
+    outline-offset: 1px;
+  }
+  .group-members .gm-state {
+    flex: 0 0 auto;
+    color: var(--est-text-secondary, var(--secondary-text-color));
+    text-transform: capitalize;
+  }
+  .group-members .gm-caption {
+    margin-top: 6px;
+    font-size: 12px;
+    color: var(--est-text-secondary, var(--secondary-text-color));
+    font-style: italic;
+  }
+
   .error-message {
     padding: 16px;
     color: var(--error-color, #f44336);
@@ -911,9 +974,74 @@ class EntityStateTrackerCard extends LitElement {
       </div>
       <div class="card-body-wrap">
         <div class="body">${body}</div>
+        ${this._renderGroupMembers(sensors)}
         ${this._renderTip()}
       </div>
     </ha-card>`;
+  }
+
+  // Live member states for a GROUP tracked entity (tier-1 group expand). When the
+  // tracked source entity is a domain-group helper (it carries an `entity_id`
+  // attribute listing its members) AND the card's `show_group_members` option is
+  // on, render a flat list of each member with its CURRENT state. This is a
+  // chart-agnostic sibling of `.body` (renders identically under bars/pie/table),
+  // mirroring `_renderTip`.
+  //
+  // IMPORTANT: re-validates group-ness here independent of the config flag — a
+  // stale `show_group_members: true` can persist in a saved config after the
+  // tracked entity stopped being a group (same stale-key class as the gauge
+  // option), so the flag means "user asked", not "safe to render". Degrades to
+  // `nothing` (like `_renderSourceContext`) when the option is off, the source
+  // isn't a group, or it's unavailable — never a crash or an empty box.
+  _renderGroupMembers(sensors) {
+    if (!this._config.show_group_members) return nothing;
+    const sourceId = (sensors[0]?.attrs || {}).source_entity;
+    if (!sourceId) return nothing;
+    const src = this.hass.states[sourceId];
+    const members = src?.attributes?.entity_id;
+    // Re-validate: a real domain group exposes entity_id as a non-empty array.
+    if (!Array.isArray(members) || members.length === 0) return nothing;
+
+    const rows = members.map((mid) => {
+      const st = this.hass.states[mid];
+      const friendly =
+        (st && st.attributes && st.attributes.friendly_name) || mid;
+      const state = st ? st.state : "unavailable";
+      // "on"/open/locked-ish states read as active; everything else inactive.
+      // Purely cosmetic (dot fill) — the literal state text is always shown.
+      const active = st ? ["on", "open", "home", "unlocked"].includes(st.state) : false;
+      return html`<li class="gm-row">
+        <span class="gm-dot ${active ? "on" : "off"}"></span>
+        <span
+          class="gm-name source-link"
+          role="button"
+          tabindex="0"
+          @click=${(e) => this._handleEntityClick(e, mid)}
+          @keydown=${(e) => {
+            if (e.key === "Enter" || e.key === " ") {
+              e.preventDefault();
+              this._handleEntityClick(e, mid);
+            }
+          }}
+          >${friendly}</span
+        >
+        <span class="gm-state">${state}</span>
+      </li>`;
+    });
+    const onCount = members.filter((mid) => {
+      const st = this.hass.states[mid];
+      return st && ["on", "open", "home", "unlocked"].includes(st.state);
+    }).length;
+
+    return html`<div class="group-members">
+      <div class="gm-head">Members · live state</div>
+      <ul class="gm-list">
+        ${rows}
+      </ul>
+      <div class="gm-caption">
+        Live now — not tracked history. ${onCount} of ${members.length} active.
+      </div>
+    </div>`;
   }
 
   // Per-card context for the tracked SOURCE entity (all frames share one
@@ -1939,6 +2067,19 @@ class EntityStateTrackerCardEditor extends LitElement {
     );
   }
 
+  // True when the selected tracker's SOURCE entity is a domain-group helper (it
+  // exposes a non-empty `entity_id` member list). The "show group members"
+  // checkbox is meaningless for a single-entity tracker, so it only appears when
+  // this holds. Mirrors `_hasTarget()`: resolve source_entity off any frame
+  // sensor's live attrs, then check the source's own entity_id attribute.
+  _isGroup() {
+    const sensors = trackerFrameSensors(this.hass, this._config?.tracker_id);
+    const sourceId =
+      this.hass?.states?.[sensors[0]?.entity_id]?.attributes?.source_entity;
+    const members = this.hass?.states?.[sourceId]?.attributes?.entity_id;
+    return Array.isArray(members) && members.length > 0;
+  }
+
   render() {
     if (!this._config) return html``;
 
@@ -2033,6 +2174,27 @@ class EntityStateTrackerCardEditor extends LitElement {
               <div class="editor-hint">
                 Adds a compliance-score gauge (green when the target is met,
                 red when not) beside the state pie.
+              </div>
+            </div>`
+          : nothing}
+        ${this._isGroup()
+          ? html`<div class="editor-row">
+              <label>
+                <input
+                  type="checkbox"
+                  ?checked=${!!this._config.show_group_members}
+                  @change=${(e) =>
+                    this._updateConfig(
+                      "show_group_members",
+                      e.target.checked || undefined
+                    )}
+                />
+                Show group members
+              </label>
+              <div class="editor-hint">
+                The tracked entity is a group — list its members with their
+                current live state below the chart. Shows live states only, not
+                tracked history.
               </div>
             </div>`
           : nothing}
