@@ -160,7 +160,10 @@ def _tracked_seconds(result: FrameResult, tracked: list[str] | None) -> float:
         total = sum(result.breakdown_seconds.values())
     else:
         total = sum(result.breakdown_seconds.get(state, 0.0) for state in tracked)
-    return total
+    # Round to milliseconds: far finer than history_stats' second-granularity, but
+    # tames the float-sum tail (e.g. 32021.287099999463) so the stored state
+    # string / history graph / API read clean, not an ugly long float.
+    return round(total, 3)
 
 
 def _transition_metrics(
