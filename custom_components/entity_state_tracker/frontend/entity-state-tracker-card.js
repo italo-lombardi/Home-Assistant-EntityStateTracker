@@ -1428,13 +1428,14 @@ class EntityStateTrackerCard extends LitElement {
   _transitionLine(attrs, stateKey) {
     const counts = attrs.counts || {};
     const avg = attrs.avg_duration_seconds || {};
+    const sourceId = attrs.source_entity;
     let count;
     let avgSecs;
     let label;
     if (stateKey != null) {
       count = counts[stateKey];
       avgSecs = avg[stateKey];
-      label = stateKey;
+      label = this._formatTrackedState(sourceId, stateKey);
     } else {
       const keys = Object.keys(counts);
       count = keys.reduce((n, k) => n + (counts[k] || 0), 0);
@@ -1443,7 +1444,8 @@ class EntityStateTrackerCard extends LitElement {
       const tracked = Array.isArray(attrs.tracked_states)
         ? attrs.tracked_states
         : null;
-      if (tracked && tracked.length === 1) label = tracked[0];
+      if (tracked && tracked.length === 1)
+        label = this._formatTrackedState(sourceId, tracked[0]);
       else if (tracked && tracked.length > 1) label = "tracked states";
       else label = null;
     }
