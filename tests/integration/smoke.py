@@ -28,7 +28,7 @@ own config entries via the REST config-flow — no hardcoded entity IDs from the
 live HA. Every EST entity is discovered via the entity-registry websocket by its
 predictable unique_id (``<entry_id>_<frame>_<metric>``), so no entity_id guessing.
 
-Edge cases covered (EC1-EC29, plus sub-checks). See tests/integration/README.md.
+Edge cases covered (EC1-EC30, plus sub-checks). See tests/integration/README.md.
 """
 
 from __future__ import annotations
@@ -2152,6 +2152,29 @@ def ec24_last_week_last_month_frames():
         True,
         f"end={this_first} now={now_local}",
     )
+
+    # --- v0.1.6 regression: closed frames must never report > 100% ---
+    # The ledger-seam over-count bug surfaced here: last_week/last_month summed
+    # ledger days AFTER the window closed, pushing percent past 100 (prod dump
+    # showed last_week 142.9%). Assert both closed frames stay within bounds and
+    # the percent field is clamped. (With no backfillable history the live values
+    # are usually 0/low, but the invariant must hold regardless.)
+    for frame_key, dur_attrs in (("last_week", lw), ("last_month", lm)):
+        pct = dur_attrs.get("percent")
+        chk(
+            f"EC24 {frame_key} percent <= 100 (v0.1.6 seam/clamp)",
+            pct is None or pct <= 100.0,
+            True,
+            f"percent={pct}",
+        )
+        win = dur_attrs.get("window_seconds") or 0
+        in_secs = dur_attrs.get("duration_seconds") or 0
+        chk(
+            f"EC24 {frame_key} tracked seconds <= window (no over-count)",
+            in_secs <= win + 1,
+            True,
+            f"in={in_secs} window={win}",
+        )
     return entry, eid
 
 
@@ -2533,6 +2556,114 @@ def ec29_no_phantom_other_slice():
     return entry, eid
 
 
+def ec30_humanized_duration_text():
+    """EC30: duration_text / breakdown_text humanized attrs, both modes (v0.1.6).
+
+    The sensor state is seconds (HA converts to hours for templates), and HA's
+    pretty "18h 33m" string is frontend-only. This feature exposes it server-side
+    as nested two-unit dicts (ms/hm/dh/wd, ordered min→max granularity). Assert
+    both modes carry it, the key order, and that the humanized value is consistent
+    with the raw seconds (reconstruct seconds from the hm pair and compare).
+    """
+    print(
+        "\n=== EC30: humanized duration_text / breakdown_text (both modes) ===",
+        flush=True,
+    )
+
+    def _hm_to_seconds(text: str) -> int:
+        # "18h 33m" → 18*3600 + 33*60 (the floor of real seconds to the minute).
+        h, m = text.split()
+        return int(h.rstrip("h")) * 3600 + int(m.rstrip("m")) * 60
+
+    # --- specific mode: duration_text (total) + breakdown_text (per state) ---
+    eid = make_entity("humanize", "on")
+    entry = create_tracker(
+        eid, "specific_states", states=["on", "off"], frames={"today": True}
+    )
+    reg = wait_entities(entry, min_count=1)
+    dur = eid_for(entry, "today", M_DURATION, reg)
+    chk("EC30 duration sensor exists", dur is not None, True, f"uids={list(reg)}")
+    if not dur:
+        return entry, eid
+
+    # Accrue a little real "on" time so duration_text is non-zero.
+    ss(eid, "on")
+    time.sleep(4)
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
+    wait_until(
+        lambda: bool(gs(dur).get("attributes", {}).get("duration_text")),
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    attrs = gs(dur).get("attributes", {})
+
+    dtext = attrs.get("duration_text")
+    chk("EC30 duration_text present (specific)", isinstance(dtext, dict), True)
+    if isinstance(dtext, dict):
+        chk(
+            "EC30 duration_text ordered ms→hm→dh→wd",
+            list(dtext),
+            ["ms", "hm", "dh", "wd"],
+            f"keys={list(dtext)}",
+        )
+        # hm must agree with the raw duration_seconds, floored to the minute —
+        # i.e. match HA's own frontend duration formatter (which floors).
+        secs = attrs.get("duration_seconds") or 0
+        chk(
+            "EC30 duration_text.hm matches floored duration_seconds",
+            _hm_to_seconds(dtext["hm"]),
+            int(secs) // 60 * 60,
+            f"hm={dtext['hm']} secs={secs}",
+        )
+
+    btext = attrs.get("breakdown_text")
+    chk("EC30 breakdown_text present (specific)", isinstance(btext, dict), True)
+    if isinstance(btext, dict):
+        chk(
+            "EC30 breakdown_text keyed per tracked state",
+            {"on", "off"} <= set(btext),
+            True,
+            f"keys={list(btext)}",
+        )
+        chk(
+            "EC30 breakdown_text['on'] carries all four reps",
+            isinstance(btext.get("on"), dict)
+            and list(btext["on"]) == ["ms", "hm", "dh", "wd"],
+            True,
+            f"on={btext.get('on')}",
+        )
+
+    # --- all-states mode: breakdown_text per state, consistent shape ---
+    eid2 = make_entity("humanize_all", "on")
+    entry2 = create_tracker(eid2, "all_states", frames={"today": True})
+    reg2 = wait_entities(entry2, min_count=1)
+    bd_eid = eid_for(entry2, "today", M_BREAKDOWN, reg2)
+    chk("EC30 breakdown sensor exists (all-states)", bd_eid is not None, True)
+    if bd_eid:
+        ss(eid2, "on")
+        time.sleep(3)
+        api("POST", "/api/services/homeassistant/update_entity", {"entity_id": bd_eid})
+        wait_until(
+            lambda: bool(gs(bd_eid).get("attributes", {}).get("breakdown_text")),
+            timeout=WAIT_FOR_TIMEOUT,
+        )
+        a2 = gs(bd_eid).get("attributes", {})
+        bt2 = a2.get("breakdown_text", {})
+        bs2 = a2.get("breakdown_seconds", {})
+        chk(
+            "EC30 all-states breakdown_text keys == breakdown_seconds keys, same order",
+            list(bt2),
+            list(bs2),
+            f"text={list(bt2)} secs={list(bs2)}",
+        )
+        chk(
+            "EC30 all-states breakdown_text has no 'unaccounted' key",
+            "unaccounted" not in bt2,
+            True,
+            f"keys={list(bt2)}",
+        )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -2605,6 +2736,9 @@ def main():
 
         if ec_enabled(29):
             ec29_no_phantom_other_slice()
+
+        if ec_enabled(30):
+            ec30_humanized_duration_text()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
