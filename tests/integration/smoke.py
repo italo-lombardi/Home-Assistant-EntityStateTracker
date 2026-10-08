@@ -2614,6 +2614,18 @@ def ec30_humanized_duration_text():
             int(secs) // 60 * 60,
             f"hm={dtext['hm']} secs={secs}",
         )
+        # Precision fix: duration_seconds is the RAW tracked-seconds sum — NOT
+        # minute-floored. It must equal the sum of breakdown_seconds exactly (to
+        # the second), so EST matches a plain history_stats sensor rather than
+        # reading up to 59s lower from the old floor.
+        bd = attrs.get("breakdown_seconds") or {}
+        raw_sum = sum(float(v) for v in bd.values())
+        chk(
+            "EC30 duration_seconds == raw breakdown sum (no minute-floor)",
+            abs(float(secs) - raw_sum) < 0.01,
+            True,
+            f"duration_seconds={secs} breakdown_sum={raw_sum}",
+        )
 
     btext = attrs.get("breakdown_text")
     chk("EC30 breakdown_text present (specific)", isinstance(btext, dict), True)

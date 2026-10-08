@@ -139,20 +139,28 @@ class _FrameSensor(DedupCoordinatorSensor):
         return data.frames.get(self._frame)
 
 
-def _tracked_seconds(result: FrameResult, tracked: list[str] | None) -> int:
+def _tracked_seconds(result: FrameResult, tracked: list[str] | None) -> float:
     """Sum the tracked states' seconds (all recorded states when none declared).
 
-    Rounded DOWN to whole minutes (still seconds unit). At a 5-min tick an
-    idle-ish entity's total barely moves, so minute-granularity means most ticks
-    don't change the recorded value → hash-dedup skips the write instead of
-    churning a recorder state row every tick (§5.1). Invisible at the sensor's
-    hour display (suggested_display_precision=1).
+    Returns the RAW float seconds — no minute-flooring. Earlier versions floored
+    to whole minutes to coarsen the state for recorder hash-dedup, but that made
+    the headline value read up to 59s LOWER than a plain ``history_stats`` sensor
+    over the same window (and the ``suggested_display_precision=1`` display
+    compounded it) — defeating the integration's purpose of an *accurate* long-run
+    duration. Measurement showed the floor saved zero recorder rows anyway: every
+    open frame carries ``window_seconds = (now − start)`` as an attribute, so the
+    write-dedup mixin already fires a write every tick regardless of the state
+    value — the floored state was never the recorder's dedup key. So we now emit
+    the exact seconds; the state equals ``duration_seconds`` and the raw
+    ``breakdown_seconds`` sum, matching ``history_stats`` to the second. The UI
+    shows ``suggested_display_precision=2`` hours (0.01 h ≈ 36 s), matching the
+    standard tool's display granularity.
     """
     if tracked is None:
         total = sum(result.breakdown_seconds.values())
     else:
         total = sum(result.breakdown_seconds.get(state, 0.0) for state in tracked)
-    return int(total // 60) * 60
+    return total
 
 
 def _transition_metrics(
@@ -187,7 +195,10 @@ class DurationSensor(_FrameSensor):
     _attr_device_class = SensorDeviceClass.DURATION
     _attr_native_unit_of_measurement = UnitOfTime.SECONDS
     _attr_suggested_unit_of_measurement = UnitOfTime.HOURS
-    _attr_suggested_display_precision = 1
+    # 2 dp of hours (0.01 h ≈ 36 s) matches the display granularity of a plain
+    # history_stats sensor; 1 dp (0.1 h = 6 min) read coarser than the standard
+    # tool. Pure display hint — never changes the stored value or statistics.
+    _attr_suggested_display_precision = 2
     # MEASUREMENT on every frame — our ledger + card are the history store, not
     # HA long-term statistics, so TOTAL/last_reset buys nothing (§5.1).
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -226,7 +237,7 @@ class DurationSensor(_FrameSensor):
     )
 
     @property
-    def native_value(self) -> int | None:
+    def native_value(self) -> float | None:
         """Return tracked-state seconds this frame (``None`` before first data)."""
         result = self._result
         if result is None:
