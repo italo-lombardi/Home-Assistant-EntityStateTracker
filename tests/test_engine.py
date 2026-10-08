@@ -1453,10 +1453,16 @@ def test_subset_percent_state_with_spaces_and_underscores() -> None:
 
 def test_subset_percent_clamped_to_100_on_seam_overflow() -> None:
     # matched is a subset of breakdown_seconds; if a seam/rounding overshoot
-    # pushes it just past the window, percent must cap at 100.0 — never surface
-    # a nonsensical >100% (the last_week 142.9% symptom) on the sensor. The
+    # pushes it past the window, percent must cap at 100.0 — never surface a
+    # nonsensical >100% (the last_week 142.9% symptom) on the sensor. The
     # genuine-overcount diagnostic lives in _warn_overflow, not here.
-    assert E._subset_percent({"on": 604801.0}, ["on"], 604800.0) == 100.0
+    #
+    # The overshoot must survive 1-dp rounding to actually exercise the clamp:
+    # 605200/604800 = 100.066% → unclamped round(…,1) = 100.1, so this fails
+    # against the pre-clamp code (which returned 100.1) and passes only with the
+    # min(100.0, …) cap. (An overshoot under 100.05% rounds to 100.0 on its own
+    # and would not test the clamp at all.)
+    assert E._subset_percent({"on": 605200.0}, ["on"], 604800.0) == 100.0
     # And an exactly-full window is 100.0, not 100.1 from rounding.
     assert E._subset_percent({"on": 604800.0}, ["on"], 604800.0) == 100.0
 
