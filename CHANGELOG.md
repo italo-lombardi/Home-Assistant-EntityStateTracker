@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6]
+
+### Fixed
+- **Closed-frame ledger over-count (`last_week` / `last_month` > 100%)** — `compute_frame` summed ledger buckets up to *today*'s local day for every calendar frame, defaulting the ledger↔recorder seam to `now`'s day. That is correct for open frames (which end at `now`) but wrong for the closed `last_week` / `last_month` frames, which end on an *earlier* local midnight: the seam pulled in the current week's/month's whole-day buckets that fall *after* the window closed, inflating the window total (a 7-day `last_week` summed ~9–12 real days, e.g. 864000s in a 604800s window → **142.9%**). The seam now defaults to the frame's own `end_utc` local day, so a closed frame counts only ledger days inside its window; open frames and rolling frames (which pass an explicit seam) are unchanged. Present since 0.1.1 when the closed frames were introduced.
+
 ## [0.1.5]
 
 ### Fixed

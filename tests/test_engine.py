@@ -1744,9 +1744,12 @@ def test_frame_agnostic_breakdown_never_exceeds_window(
     #   * rolling (24h/7d): recorder recent over [recorder_floor==window_start,
     #     now) as a leading continuation; ledger seam = window_start's day.
     #   * calendar open (today/month/year): recent = today-slice only; ledger
-    #     fills closed days (seam = today, the default).
-    #   * calendar closed (yesterday/30d): recent empty (window ends at
-    #     midnight); ledger fills its whole days (seam = today).
+    #     fills closed days (default seam = end_utc's day == today).
+    #   * calendar closed (yesterday/30d/last_week/last_month): recent empty
+    #     (window ends at a past midnight); ledger fills whole days below the
+    #     default seam = end_utc's day (today for yesterday/30d, an earlier
+    #     midnight for last_week/last_month — the days-after-window-close the
+    #     over-count fix excludes).
     today_midnight = dt.datetime.combine(now.date(), dt.time(), tzinfo=tz).astimezone(
         dt.UTC
     )
@@ -1817,6 +1820,54 @@ def test_rolling_24h_partial_oldest_day_not_whole_bucket(tz: ZoneInfo) -> None:
     assert sum(fr.breakdown_seconds.values()) <= fr.window_seconds + 1e-6
     assert fr.unaccounted_seconds == pytest.approx(0.0)
     assert sum(fr.breakdown_pct.values()) <= 100.0 + 1.0
+
+
+@pytest.mark.parametrize("frame", ["last_week", "last_month"])
+def test_closed_frame_ledger_seam_excludes_days_after_window(frame: str) -> None:
+    """A CLOSED frame sums ledger days only below its OWN end, not below today.
+
+    Regression for the 142.9% ``last_week`` over-count: the ledger seam defaulted
+    to today's local day, so a closed frame (which ends on an EARLIER local
+    midnight) summed the current week's/month's whole-day buckets ON TOP of its 7
+    (or ~30) real days. With a ledger holding a full 86400s/day bucket for every
+    day from the window start through today, the pre-fix sum blew past the window
+    (864000s in a 604800s window → 142.9%); the fix caps the seam at ``end_utc``'s
+    local day so only in-window days count.
+    """
+    # Wed 2026-10-07 09:30 — mirrors the production dump. this-week Monday =
+    # 2026-10-05, so last_week = [2026-09-28, 2026-10-05); last_month = Sep.
+    now = dt.datetime(2026, 10, 7, 9, 30, tzinfo=NY)
+    start_utc, end_utc = E.resolve_frame_bounds(frame, now, NY)
+
+    # Full-day buckets from a few days BEFORE the window start through today —
+    # the days after end_utc are the trap the old seam wrongly summed.
+    ledger: dict[str, dict[str, dict[str, float]]] = {}
+    day = start_utc.astimezone(NY).date() - dt.timedelta(days=2)
+    while day <= now.date():
+        ledger[day.isoformat()] = {"on": {"secs": 86400.0, "count": 1}}
+        day += dt.timedelta(days=1)
+
+    fr = E.compute_frame(
+        frame,
+        now,
+        NY,
+        {},  # closed frame: recorder owns nothing, window ends at a past midnight
+        ledger,
+        None,
+        mode="specific_states",
+        tracked_states=["on"],
+        target_states=None,
+        prior_dominant=None,
+    )
+    assert sum(fr.breakdown_seconds.values()) <= fr.window_seconds + 1e-6
+    assert fr.percent is not None and fr.percent <= 100.0
+    assert fr.unaccounted_seconds >= 0.0
+    # Days strictly before the window start are also excluded, so the breakdown
+    # equals the whole-day buckets inside [start_day, end_day) exactly.
+    in_window_days = (
+        end_utc.astimezone(NY).date() - start_utc.astimezone(NY).date()
+    ).days
+    assert fr.breakdown_seconds["on"] == pytest.approx(in_window_days * 86400.0)
 
 
 def test_rolling_count_only_in_window_entries() -> None:

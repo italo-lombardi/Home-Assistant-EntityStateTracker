@@ -369,12 +369,14 @@ def _ledger_days_before(
     """Sum ledger buckets for closed local days inside ``[start_day, upper)``.
 
     ``upper_exclusive_local_day`` is the local day at which the *recorder* takes
-    over. For a calendar frame that is ``today_local_day`` (the ledger owns every
-    closed day; the open day is recomputed fresh from the recorder). For a
-    ROLLING frame it is the recorder-floor's local day — the ledger only fills
-    WHOLE days strictly below the point the recorder query starts at, so a
-    mid-day window_start never pulls in the oldest partial day as a whole bucket
-    (§6.4, no double count, no over-count at the seam).
+    over. For an OPEN calendar frame that is today (``end_utc``'s day == today;
+    the ledger owns every closed day, the open day is recomputed from the
+    recorder); for a CLOSED calendar frame it is ``end_utc``'s earlier midnight
+    day (the ledger owns only days below the window's close, never the days after
+    it). For a ROLLING frame it is the recorder-floor's local day — the ledger
+    only fills WHOLE days strictly below the point the recorder query starts at,
+    so a mid-day window_start never pulls in the oldest partial day as a whole
+    bucket (§6.4, no double count, no over-count at the seam).
     """
     agg: BlockMap = {}
     for day, states in daily.items():
@@ -410,9 +412,13 @@ def compute_frame(
 
     * **Calendar frames** (``today``/``yesterday``/``30d``/``last_week``/
       ``month``/``last_month``/``year``) start on a local midnight, so their
-      windows are whole local days and the seam is ``today_local_day`` (the
-      default): the ledger owns every closed day and the recorder recomputes the
-      open day.
+      windows are whole local days and the seam defaults to ``end_utc``'s local
+      day: an OPEN frame (``today``/``week``/``month``/``year``) ends at ``now``
+      so that seam is today — the ledger owns every closed day and the recorder
+      recomputes the open day; a CLOSED frame (``yesterday``/``last_week``/
+      ``last_month``) ends on an EARLIER local midnight, so the ledger owns only
+      days below THAT midnight and never the days after the window closed (the
+      ``last_week`` over-count this seam closes).
     * **Rolling frames** (``24h``/``7d``) start MID-DAY. The caller anchors the
       recorder query at ``recorder_floor`` and passes that day here as
       ``ledger_upper_local_day``, so the ledger fills only WHOLE days strictly
@@ -447,9 +453,16 @@ def compute_frame(
     start_utc, end_utc = resolve_frame_bounds(frame_key, now, tz)
     window_seconds = (end_utc - start_utc).total_seconds()
 
-    today_local_day = now.astimezone(tz).date().isoformat()
     window_start_local_day = start_utc.astimezone(tz).date().isoformat()
-    upper_local_day = ledger_upper_local_day or today_local_day
+    # The ledger owns closed local days strictly below the point the recorder
+    # (recent_blocks) takes over. That seam is end_utc's local day, NOT today:
+    # an OPEN frame ends at now (seam == today, recorder owns the open day), but
+    # a CLOSED frame (yesterday/last_week/last_month) ends on an earlier local
+    # midnight — defaulting the seam to today would sum ledger days AFTER the
+    # window closed (the last_week 142.9% over-count). Rolling frames still pass
+    # an explicit ledger_upper_local_day (recorder_floor's day), which wins.
+    frame_upper_local_day = end_utc.astimezone(tz).date().isoformat()
+    upper_local_day = ledger_upper_local_day or frame_upper_local_day
 
     combined: BlockMap = {}
     _merge_block_maps(
