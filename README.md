@@ -241,11 +241,11 @@ All rolling frames (`24h`/`7d`/`30d`/`365d`) are true-rolling: `now − N days �
 
 ### Reducing recorder usage (optional)
 
-An **open-frame** duration/breakdown sensor (`today`, `week`, `month`, `year`, `24h`, `7d`, `30d`, `365d`) updates its live value every poll — its window `now − start` grows continuously — so it records roughly **one small history row per update interval** (~175/day at the 1-minute poll), whether or not the tracked entity changed state. **Closed** frames (`yesterday`, `last_week`, `last_month`) are static and record only a handful of rows per day. The rows are tiny (the churny breakdown/percent/window attributes are unrecorded — only the state and a few static config attributes are stored), which is why the footprint stays within ~250–400 KB/yr per tracker.
+An **open-frame** duration/breakdown sensor (`today`, `week`, `month`, `year`, `24h`, `7d`, `30d`, `365d`) updates its live value every poll — its window `now − start` grows continuously — so it records roughly **one small history row per update interval** (~175/day measured at the default 1-minute poll), whether or not the tracked entity changed state. **Closed** frames (`yesterday`, `last_week`, `last_month`) are static and record only a handful of rows per day. The rows are tiny (the churny breakdown/percent/window attributes are unrecorded — only the state and a few static config attributes are stored), which is why the footprint stays within ~250–400 KB/yr per tracker.
 
 This is inseparable from the live card refresh: in Home Assistant a sensor's recorder row and its UI update are the same `state_changed` event, so a continuously-updating window sensor inherently writes per tick. The integration keeps its **own** daily-totals ledger as the real long-run history store — Home Assistant's recorder is not needed for the numbers to stay correct.
 
-So if you don't need Home Assistant's **native** history graph / long-term statistics for these sensors, you can exclude them from the recorder to drop that row cost entirely:
+So if you don't need Home Assistant's **native** history graph / statistics for these sensors, you can exclude them from the recorder to drop that row cost entirely:
 
 ```yaml
 # configuration.yaml
@@ -255,7 +255,11 @@ recorder:
       - sensor.entity_state_tracker_*
 ```
 
-**Trade-off:** this removes the HA history graph, logbook, and long-term statistics for the excluded sensors. The card, templates, and all the live values keep working (they read the current state, not recorder history), and the ledger continues to back every frame — so your durations stay accurate. Only opt in if you're comfortable the ledger (not HA's recorder) is your history source for these entities.
+Notes:
+
+- **Renamed entities:** the glob matches the **default** entity IDs. If you've renamed any of these sensors' `entity_id`, the glob won't catch them — adjust the pattern or list them explicitly, or they'll keep recording.
+- **Compliance binary sensors** (`binary_sensor.entity_state_tracker_*`) are deliberately *not* in the glob: they only record on an actual state/threshold change (no per-tick window value), so they behave like closed frames — a few rows/day, not part of the per-tick cost. Add `binary_sensor.entity_state_tracker_*` too only if you also want zero HA history for them.
+- **Trade-off:** excluding removes the HA history graph, logbook, and both short- and long-term statistics for the excluded sensors. The card and live-state templates keep working (they read the current state); only templates or dashboards that query these sensors' *recorded history or statistics* are affected. The ledger continues to back every frame, so your durations stay accurate. Opt in only if you're comfortable the ledger (not HA's recorder) is your history source for these entities.
 
 ---
 
