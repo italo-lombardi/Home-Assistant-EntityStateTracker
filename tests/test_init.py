@@ -16,10 +16,10 @@ from pytest_homeassistant_custom_component.common import MockConfigEntry
 from custom_components import entity_state_tracker as _init_module
 from custom_components.entity_state_tracker import (
     _CARD_INSTALLED_KEY,
-    _async_purge_orphaned_storage,
     CARD_URL,
     PLATFORMS,
     _async_install_card,
+    _async_purge_orphaned_storage,
     _async_register_lovelace_resource,
     _async_update_options,
     _get_version,
