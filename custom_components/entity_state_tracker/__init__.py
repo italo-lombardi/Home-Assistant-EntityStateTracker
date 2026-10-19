@@ -68,15 +68,16 @@ async def _async_purge_orphaned_storage(hass: HomeAssistant) -> None:
         return [
             p
             for p in storage_dir.iterdir()
-            if p.name.startswith(prefix)
-            and p.name[len(prefix) :] not in known_ids
+            if p.name.startswith(prefix) and p.name[len(prefix) :] not in known_ids
         ]
 
     orphans = await hass.async_add_executor_job(_scan)
     for path in orphans:
         try:
             await hass.async_add_executor_job(path.unlink, True)  # missing_ok=True
-            _LOGGER.info("Entity State Tracker: removed orphaned storage file %s", path.name)
+            _LOGGER.info(
+                "Entity State Tracker: removed orphaned storage file %s", path.name
+            )
         except OSError as err:
             _LOGGER.warning(
                 "Entity State Tracker: could not remove orphaned storage file %s: %s",

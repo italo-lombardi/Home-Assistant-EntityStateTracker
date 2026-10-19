@@ -2806,9 +2806,7 @@ def ec32_remove_entry_cleans_storage():
     )
 
     # Entity registry must also be clean — no orphaned rows for this entry.
-    remaining = [
-        e for e in entity_registry_list() if e.get("config_entry_id") == entry
-    ]
+    remaining = [e for e in entity_registry_list() if e.get("config_entry_id") == entry]
     chk(
         "EC32 entity registry has no orphaned rows after removal",
         len(remaining),

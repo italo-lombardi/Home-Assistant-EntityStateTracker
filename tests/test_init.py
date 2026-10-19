@@ -242,7 +242,9 @@ async def test_purge_orphaned_storage_keeps_active_entry_file(
     assert active.exists()
 
 
-async def test_purge_orphaned_storage_no_storage_dir(hass: HomeAssistant, tmp_path) -> None:
+async def test_purge_orphaned_storage_no_storage_dir(
+    hass: HomeAssistant, tmp_path
+) -> None:
     """Missing .storage directory is handled gracefully (no error)."""
     missing = tmp_path / ".storage_nonexistent"
     with patch.object(hass.config, "path", return_value=str(missing)):
