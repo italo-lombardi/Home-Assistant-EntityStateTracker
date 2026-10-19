@@ -190,6 +190,8 @@ automation:
 Each `sensor..._state_breakdown_<frame>` carries the full per-state breakdown in its attributes. `breakdown_pct` is a `{state: percent}` dict, `breakdown_seconds` is `{state: seconds}`, `breakdown_text` is `{state: {s, ms, hm, dh, wd}}` (humanized, same keys/order as `breakdown_seconds`), `counts` is `{state: entries}`, and `avg_duration_seconds` is `{state: seconds}`. The sensor's own state is the dominant (longest-duration) state for that frame.
 
 > **Note:** breakdown attributes are unrecorded (they change roughly every minute), so they don't bloat the recorder — but templates and `template` triggers read them live just fine.
+>
+> **Do not use `attribute: breakdown_seconds` (or any other `{state: value}` dict attribute) on a `numeric_state` trigger or condition.** HA cannot compare a dict against a threshold — it will log an error every tick. Use a `template` trigger instead (see Automation 7 below), or bind to the duration sensor's state directly (which is the tracked total in hours).
 
 ---
 
