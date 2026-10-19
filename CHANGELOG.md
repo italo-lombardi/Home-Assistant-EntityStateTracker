@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7]
+
+### Fixed
+- **Orphaned storage files on entry deletion** — deleting a tracker now removes its `.storage/entity_state_tracker.<entry_id>` ledger file. Previously the file was left on disk forever. `async_remove_entry` is the HA lifecycle hook that fires after `async_unload_entry`; it constructs a fresh store from the entry ID and calls `Store.async_remove()`. Users on ≤ 0.1.6 with orphaned files from past deletions will have orphaned files cleaned up automatically on first restart after upgrading to v0.1.7.
+
 ## [0.1.6]
 
 ### Added

@@ -14,6 +14,7 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import EntityStateTrackerCoordinator
+from .storage import EntityStateTrackerStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -47,7 +48,42 @@ def _get_version() -> str:
 
 async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Entity State Tracker integration."""
+    await _async_purge_orphaned_storage(hass)
     return True
+
+
+async def _async_purge_orphaned_storage(hass: HomeAssistant) -> None:
+    """Delete .storage ledger files for entry IDs that no longer exist.
+
+    Versions ≤ 0.1.6 lacked async_remove_entry, so deleted trackers left their
+    storage files behind. This one-shot scan on integration load cleans them up.
+    """
+    storage_dir = Path(hass.config.path(".storage"))
+    known_ids = {e.entry_id for e in hass.config_entries.async_entries(DOMAIN)}
+    prefix = "entity_state_tracker."
+
+    def _scan() -> list[Path]:
+        if not storage_dir.is_dir():
+            return []
+        return [
+            p
+            for p in storage_dir.iterdir()
+            if p.name.startswith(prefix) and p.name[len(prefix) :] not in known_ids
+        ]
+
+    orphans = await hass.async_add_executor_job(_scan)
+    for path in orphans:
+        try:
+            await hass.async_add_executor_job(path.unlink, True)  # missing_ok=True
+            _LOGGER.info(
+                "Entity State Tracker: removed orphaned storage file %s", path.name
+            )
+        except OSError as err:
+            _LOGGER.warning(
+                "Entity State Tracker: could not remove orphaned storage file %s: %s",
+                path.name,
+                err,
+            )
 
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
@@ -178,3 +214,9 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data.get(DOMAIN, {}).pop(_CARD_INSTALLED_KEY, None)
 
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Delete the ledger file when the config entry is removed."""
+    await EntityStateTrackerStore(hass, entry.entry_id).remove()
+    _LOGGER.debug("Entity State Tracker: removed storage for entry %s", entry.entry_id)

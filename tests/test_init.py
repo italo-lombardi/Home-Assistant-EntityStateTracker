@@ -19,9 +19,12 @@ from custom_components.entity_state_tracker import (
     CARD_URL,
     PLATFORMS,
     _async_install_card,
+    _async_purge_orphaned_storage,
     _async_register_lovelace_resource,
     _async_update_options,
     _get_version,
+    async_remove_entry,
+    async_setup,
     async_unload_entry,
 )
 from custom_components.entity_state_tracker.const import DOMAIN
@@ -186,6 +189,98 @@ async def test_unload_failure_keeps_entry(
 
     assert result is False
     assert specific_config_entry.entry_id in hass.data[DOMAIN]
+
+
+async def test_remove_entry_deletes_ledger_file(
+    hass: HomeAssistant, specific_config_entry: MockConfigEntry
+) -> None:
+    """async_remove_entry constructs a store with the correct entry_id and calls remove()."""
+    with patch(
+        "custom_components.entity_state_tracker.EntityStateTrackerStore",
+        autospec=True,
+    ) as MockStore:
+        MockStore.return_value.remove = AsyncMock()
+        await async_remove_entry(hass, specific_config_entry)
+
+    MockStore.assert_called_once_with(hass, specific_config_entry.entry_id)
+    MockStore.return_value.remove.assert_awaited_once()
+
+
+# --------------------------------------------------------------------------- #
+# _async_purge_orphaned_storage
+# --------------------------------------------------------------------------- #
+
+
+async def test_purge_orphaned_storage_deletes_unknown_file(
+    hass: HomeAssistant, tmp_path
+) -> None:
+    """An orphaned .storage file (no matching config entry) is deleted."""
+    storage_dir = tmp_path / ".storage"
+    storage_dir.mkdir()
+    orphan = storage_dir / "entity_state_tracker.deadbeef"
+    orphan.write_text("{}")
+
+    with patch.object(hass.config, "path", return_value=str(tmp_path / ".storage")):
+        await _async_purge_orphaned_storage(hass)
+
+    assert not orphan.exists()
+
+
+async def test_purge_orphaned_storage_keeps_active_entry_file(
+    hass: HomeAssistant, tmp_path, specific_config_entry: MockConfigEntry
+) -> None:
+    """A .storage file whose suffix matches a registered entry is NOT deleted."""
+    specific_config_entry.add_to_hass(hass)
+    storage_dir = tmp_path / ".storage"
+    storage_dir.mkdir()
+    active = storage_dir / f"entity_state_tracker.{specific_config_entry.entry_id}"
+    active.write_text("{}")
+
+    with patch.object(hass.config, "path", return_value=str(storage_dir)):
+        await _async_purge_orphaned_storage(hass)
+
+    assert active.exists()
+
+
+async def test_purge_orphaned_storage_no_storage_dir(
+    hass: HomeAssistant, tmp_path
+) -> None:
+    """Missing .storage directory is handled gracefully (no error)."""
+    missing = tmp_path / ".storage_nonexistent"
+    with patch.object(hass.config, "path", return_value=str(missing)):
+        await _async_purge_orphaned_storage(hass)  # must not raise
+
+
+async def test_purge_orphaned_storage_oserror_warns(
+    hass: HomeAssistant, tmp_path, caplog
+) -> None:
+    """An OSError during unlink logs a warning and does not raise."""
+    storage_dir = tmp_path / ".storage"
+    storage_dir.mkdir()
+    orphan = storage_dir / "entity_state_tracker.deadbeef"
+    orphan.write_text("{}")
+
+    def _raise(missing_ok=False):
+        raise OSError("permission denied")
+
+    with (
+        patch.object(hass.config, "path", return_value=str(storage_dir)),
+        patch("pathlib.Path.unlink", side_effect=_raise),
+        caplog.at_level(logging.WARNING),
+    ):
+        await _async_purge_orphaned_storage(hass)
+
+    assert "could not remove orphaned storage file" in caplog.text
+
+
+async def test_async_setup_calls_purge(hass: HomeAssistant) -> None:
+    """async_setup calls _async_purge_orphaned_storage."""
+    with patch(
+        "custom_components.entity_state_tracker._async_purge_orphaned_storage",
+        new=AsyncMock(),
+    ) as mock_purge:
+        assert await async_setup(hass, {})
+    mock_purge.assert_awaited_once_with(hass)
 
 
 async def test_async_setup_component_returns_true(hass: HomeAssistant) -> None:

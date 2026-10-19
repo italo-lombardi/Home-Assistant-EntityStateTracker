@@ -2749,6 +2749,72 @@ def ec31_rolling_365d_frame():
     return entry, eid
 
 
+def ec32_remove_entry_cleans_storage():
+    """EC32: deleting a config entry removes its .storage ledger file.
+
+    Requires HA_DIR (same env var as EC12/EC17) so we can inspect the
+    filesystem. Without it the test is skipped — a DELETE via the API
+    succeeds but we cannot verify the file is gone.
+    """
+    print("\n=== EC32: REMOVE ENTRY → STORAGE FILE DELETED ===", flush=True)
+    if not HA_DIR:
+        note(
+            "EC32 SKIPPED: set EST_SMOKE_HA_DIR to the HA working dir "
+            "(same as EC12). Without it we cannot verify the .storage file."
+        )
+        return
+
+    config_dir = os.path.join(HA_DIR, HA_CONFIG)
+    storage_dir = os.path.join(config_dir, ".storage")
+
+    eid = make_entity("ec32remove", "on")
+    entry = create_tracker(eid, "all_states", frames={"today": True})
+    wait_entities(entry, min_count=1)
+
+    # Force a flush: a state transition causes a debounced refresh which
+    # marks the ledger dirty; the poll tick then persists it.
+    ss(eid, "off")
+    time.sleep(3)
+    ss(eid, "on")
+
+    storage_file = os.path.join(storage_dir, f"entity_state_tracker.{entry}")
+    # Give HA up to 90s to flush the ledger to disk.
+    wait_until(lambda: os.path.exists(storage_file), timeout=90)
+
+    chk(
+        "EC32 storage file exists after entry creation + flush",
+        os.path.exists(storage_file),
+        True,
+        f"path={storage_file}",
+    )
+
+    # Manually delete the entry (bypassing the test-suite cleanup list so we
+    # can verify the storage file is gone before cleanup runs).
+    _created_entries.remove(entry)
+    delete_entry(entry)
+
+    # Give HA a moment to process the DELETE (async_remove_entry runs after
+    # async_unload_entry which is itself async; a short poll is more reliable
+    # than a fixed sleep in a fast-mode run).
+    wait_until(lambda: not os.path.exists(storage_file), timeout=30)
+
+    chk(
+        "EC32 storage file deleted after entry removal",
+        os.path.exists(storage_file),
+        False,
+        f"path={storage_file}",
+    )
+
+    # Entity registry must also be clean — no orphaned rows for this entry.
+    remaining = [e for e in entity_registry_list() if e.get("config_entry_id") == entry]
+    chk(
+        "EC32 entity registry has no orphaned rows after removal",
+        len(remaining),
+        0,
+        f"remaining={remaining}",
+    )
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -2827,6 +2893,9 @@ def main():
 
         if ec_enabled(31):
             ec31_rolling_365d_frame()
+
+        if ec_enabled(32):
+            ec32_remove_entry_cleans_storage()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
