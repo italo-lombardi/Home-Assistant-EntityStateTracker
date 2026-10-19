@@ -24,6 +24,7 @@ from custom_components.entity_state_tracker import (
     _async_update_options,
     _get_version,
     async_remove_entry,
+    async_setup,
     async_unload_entry,
 )
 from custom_components.entity_state_tracker.const import DOMAIN
@@ -257,7 +258,7 @@ async def test_purge_orphaned_storage_oserror_warns(
     orphan = storage_dir / "entity_state_tracker.deadbeef"
     orphan.write_text("{}")
 
-    def _raise():
+    def _raise(missing_ok=False):
         raise OSError("permission denied")
 
     with (
@@ -268,6 +269,16 @@ async def test_purge_orphaned_storage_oserror_warns(
         await _async_purge_orphaned_storage(hass)
 
     assert "could not remove orphaned storage file" in caplog.text
+
+
+async def test_async_setup_calls_purge(hass: HomeAssistant) -> None:
+    """async_setup calls _async_purge_orphaned_storage."""
+    with patch(
+        "custom_components.entity_state_tracker._async_purge_orphaned_storage",
+        new=AsyncMock(),
+    ) as mock_purge:
+        assert await async_setup(hass, {})
+    mock_purge.assert_awaited_once_with(hass)
 
 
 async def test_async_setup_component_returns_true(hass: HomeAssistant) -> None:

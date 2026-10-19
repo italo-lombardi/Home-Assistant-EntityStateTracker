@@ -75,7 +75,7 @@ async def _async_purge_orphaned_storage(hass: HomeAssistant) -> None:
     orphans = await hass.async_add_executor_job(_scan)
     for path in orphans:
         try:
-            await hass.async_add_executor_job(path.unlink)
+            await hass.async_add_executor_job(path.unlink, True)  # missing_ok=True
             _LOGGER.info("Entity State Tracker: removed orphaned storage file %s", path.name)
         except OSError as err:
             _LOGGER.warning(
@@ -218,3 +218,4 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Delete the ledger file when the config entry is removed."""
     await EntityStateTrackerStore(hass, entry.entry_id).remove()
+    _LOGGER.debug("Entity State Tracker: removed storage for entry %s", entry.entry_id)
