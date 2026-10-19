@@ -327,6 +327,23 @@ A: Closed days persist in `.storage` and survive the restart. The open window is
 **Q: Why doesn't editing a tracker let me switch its mode?**
 A: Specific-states and all-states produce different sets of entities. Switching mode in place would change the output shape and break any card, automation, or dashboard consuming it. Create a new tracker instead — the ledger survives structurally.
 
+**Q: I deleted a tracker — is its storage file also removed?**
+A: Yes, from v0.1.7 onwards. `async_remove_entry` runs automatically when you delete a config entry via Settings → Devices & Services, and it removes the corresponding `.storage/entity_state_tracker.<entry_id>` file.
+
+If you're on an older version (≤ 0.1.6) and have orphaned files from previously-deleted trackers, clean them up manually:
+
+```bash
+# List orphaned ledger files (run on your HA host or inside the container)
+ls ~/.homeassistant/.storage/entity_state_tracker.*
+# or, inside a container:
+ls /config/.storage/entity_state_tracker.*
+
+# Remove files for entry IDs that no longer exist in Settings → Devices & Services
+rm /config/.storage/entity_state_tracker.<entry_id>
+```
+
+To find which entry IDs are still active, go to **Settings → Devices & Services → Entity State Tracker** and note the entry IDs shown in the URL when you click each integration instance — any `.storage/entity_state_tracker.*` file whose suffix doesn't match an active entry ID is safe to delete. HA must be stopped or the integration unloaded before deleting to avoid a concurrent write race; a clean restart after deletion is recommended.
+
 ---
 
 ## Contributing
