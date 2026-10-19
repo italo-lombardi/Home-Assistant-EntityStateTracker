@@ -22,6 +22,7 @@ from custom_components.entity_state_tracker import (
     _async_register_lovelace_resource,
     _async_update_options,
     _get_version,
+    async_remove_entry,
     async_unload_entry,
 )
 from custom_components.entity_state_tracker.const import DOMAIN
@@ -186,6 +187,21 @@ async def test_unload_failure_keeps_entry(
 
     assert result is False
     assert specific_config_entry.entry_id in hass.data[DOMAIN]
+
+
+async def test_remove_entry_deletes_ledger_file(
+    hass: HomeAssistant, specific_config_entry: MockConfigEntry
+) -> None:
+    """async_remove_entry constructs a store with the correct entry_id and calls remove()."""
+    with patch(
+        "custom_components.entity_state_tracker.EntityStateTrackerStore",
+        autospec=True,
+    ) as MockStore:
+        MockStore.return_value.remove = AsyncMock()
+        await async_remove_entry(hass, specific_config_entry)
+
+    MockStore.assert_called_once_with(hass, specific_config_entry.entry_id)
+    MockStore.return_value.remove.assert_awaited_once()
 
 
 async def test_async_setup_component_returns_true(hass: HomeAssistant) -> None:

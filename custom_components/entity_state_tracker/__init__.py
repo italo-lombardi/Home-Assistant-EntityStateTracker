@@ -14,6 +14,7 @@ from homeassistant.helpers import config_validation as cv
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import EntityStateTrackerCoordinator
+from .storage import EntityStateTrackerStore
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -178,3 +179,8 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass.data.get(DOMAIN, {}).pop(_CARD_INSTALLED_KEY, None)
 
     return unload_ok
+
+
+async def async_remove_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Delete the ledger file when the config entry is removed."""
+    await EntityStateTrackerStore(hass, entry.entry_id).remove()
