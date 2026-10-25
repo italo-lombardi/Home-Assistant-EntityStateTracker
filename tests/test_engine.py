@@ -833,6 +833,25 @@ def test_r4_trailing_shutdown_unavailable_dropped_as_gap_start() -> None:
     assert blocks["on"]["secs"] == pytest.approx(6 * 3600.0)
 
 
+def test_r4_trailing_shutdown_title_cased_unavailable_dropped() -> None:
+    # The shutdown marker is matched case-insensitively: a title-cased
+    # "Unavailable" trailing row is still the gap start and must be dropped, same
+    # as lowercase. This FAILS if carry_forward_states compares with a raw
+    # `== "unavailable"` (the pre-fix behaviour) — the title-cased row survives
+    # and the whole outage is wrongly attributed to it instead of carrying `on`.
+    start = _utc(2026, 1, 15, 0)
+    now = _utc(2026, 1, 15, 6)
+    raw = [
+        FakeState("on", start),
+        FakeState("Unavailable", _utc(2026, 1, 15, 2)),  # title-cased marker
+    ]
+    states = E.carry_forward_states(raw)
+    assert states == raw[:-1]  # dropped despite the capital U
+    blocks = E.accumulate_blocks(states, start, now, 0.0, now)
+    assert "unavailable" not in blocks
+    assert blocks["on"]["secs"] == pytest.approx(6 * 3600.0)
+
+
 def test_r4_mid_window_unavailable_kept_as_ordinary_state() -> None:
     # A pre-shutdown `unavailable` row that is NOT last (HA recovered from it) is
     # an ordinary state: it occupies only its own interval, and the list is

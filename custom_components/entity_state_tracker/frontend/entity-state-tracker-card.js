@@ -1456,8 +1456,15 @@ class EntityStateTrackerCard extends LitElement {
     } else {
       const keys = Object.keys(counts);
       count = keys.reduce((n, k) => n + (counts[k] || 0), 0);
-      // Weighted-ish: just show avg of the first tracked state if present.
-      avgSecs = keys.length ? avg[keys[0]] : null;
+      // Visit-weighted avg across ALL counted states = Σ(avg·count) / Σcount
+      // (total time in the set / total visits), not an arbitrary single state's
+      // avg. null only when there are no visits at all (count 0) — a genuine 0.0
+      // avg (sub-second flaps rounding to 0) is reported as 0, not hidden.
+      const totSecs = keys.reduce(
+        (n, k) => n + (avg[k] != null ? avg[k] * (counts[k] || 0) : 0),
+        0
+      );
+      avgSecs = count > 0 ? totSecs / count : null;
       const tracked = Array.isArray(attrs.tracked_states)
         ? attrs.tracked_states
         : null;

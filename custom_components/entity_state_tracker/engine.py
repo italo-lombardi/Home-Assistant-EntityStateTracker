@@ -306,7 +306,7 @@ def carry_forward_states(states_list: StatesList) -> StatesList:
     would erase all history, so it is kept — there is no preceding state to carry
     forward and an empty list is strictly worse.
     """
-    if len(states_list) > 1 and states_list[-1].state == "unavailable":
+    if len(states_list) > 1 and states_list[-1].state.lower() == "unavailable":
         return states_list[:-1]
     return states_list
 
