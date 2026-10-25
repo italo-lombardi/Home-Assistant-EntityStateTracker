@@ -2396,7 +2396,7 @@ def ec27_specific_breakdown_all_tracked_keyed():
 
 def ec28_case_insensitive_state_tracking():
     """EC28: tracked states stored as lowercase but HA emits title-cased state
-    values (e.g. "Casa Buonabitacolo").  breakdown_seconds must attribute time
+    values (e.g. "City Centre").  breakdown_seconds must attribute time
     under the lowercase key, not zero.
 
     Regression guard for the case-mismatch bug fixed in v0.1.4 where
@@ -2408,7 +2408,7 @@ def ec28_case_insensitive_state_tracking():
         flush=True,
     )
     # Post entity with a title-cased state (mirrors HA zone/person entity style).
-    title_state = "Casa Buonabitacolo"
+    title_state = "City Centre"
     eid = make_entity("caseic", title_state)
 
     # Config flow stores states lowercased; we pass lowercase explicitly to

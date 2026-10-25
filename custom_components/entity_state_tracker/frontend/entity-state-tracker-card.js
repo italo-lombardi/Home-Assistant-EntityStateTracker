@@ -163,8 +163,8 @@ const SEMANTIC_COLORS = {
   unknown: "#c2c8cf",
 };
 
-// Convert a stored state key ("casa nonna antonietta", "not_home") to a
-// human-readable label ("Casa Nonna Antonietta", "Not Home").
+// Convert a stored state key ("train station", "not_home") to a
+// human-readable label ("Train Station", "Not Home").
 function toLabel(state) {
   return String(state)
     .replace(/_/g, " ")
