@@ -148,6 +148,24 @@ async def test_currently_in_state_off_when_not_tracked(
     assert sensor.is_on is False
 
 
+async def test_currently_in_state_on_despite_case_and_separator(
+    hass: HomeAssistant, specific_config_entry: MockConfigEntry
+) -> None:
+    """is_on True when live state differs only by case/separator from tracked.
+
+    The reported bug: _live_state reads the raw state ("City Centre")
+    while tracked_states is stored lowercased with underscores
+    ("city_centre"), so a raw-string compare read OFF. Normalising both
+    operands fixes it.
+    """
+    coordinator = _make_coordinator(hass, specific_config_entry)
+    coordinator.tracked_states = ["city_centre"]
+    hass.states.async_set(coordinator.entity_id, "City Centre")
+    sensor = CurrentlyInStateBinarySensor(coordinator)
+
+    assert sensor.is_on is True
+
+
 async def test_currently_in_state_off_when_no_data(
     hass: HomeAssistant, specific_config_entry: MockConfigEntry
 ) -> None:

@@ -37,6 +37,7 @@ from .helpers import (
     binary_entity_id,
     binary_frame_entity_id,
     frame_label,
+    normalize_state,
     tracker_device_name,
     unique_id,
 )
@@ -158,9 +159,20 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
 
     @property
     def is_on(self) -> bool:
-        """Return True when the live state is one of the tracked states."""
-        tracked = self.coordinator.tracked_states or ()
-        return self._live_state in tracked
+        """Return True when the live state is one of the tracked states.
+
+        Matches through the canonical form so case AND separator variants line
+        up: the live state is read raw from the state machine (e.g.
+        ``City Centre``) while ``tracked_states`` is stored lowercased and may
+        carry underscores (``city_centre``). Comparing raw strings read ``off``
+        for an entity that WAS in a tracked state (the mismatch bug); normalising
+        both operands fixes it.
+        """
+        live = self._live_state
+        if live is None:
+            return False
+        wanted = {normalize_state(t) for t in (self.coordinator.tracked_states or ())}
+        return normalize_state(live) in wanted
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

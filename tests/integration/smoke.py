@@ -28,7 +28,7 @@ own config entries via the REST config-flow — no hardcoded entity IDs from the
 live HA. Every EST entity is discovered via the entity-registry websocket by its
 predictable unique_id (``<entry_id>_<frame>_<metric>``), so no entity_id guessing.
 
-Edge cases covered (EC1-EC31, plus sub-checks). See tests/integration/README.md.
+Edge cases covered (EC1-EC35, plus sub-checks). See tests/integration/README.md.
 """
 
 from __future__ import annotations
@@ -2464,6 +2464,18 @@ def ec28_case_insensitive_state_tracking():
         True,
         f"breakdown_pct={bp}",
     )
+    # Extended (v0.1.8): the SEPARATOR variant of the same state also matches —
+    # the title-cased HA state EC28 uses (a multi-word, space-separated zone name)
+    # is attributed under a config key written with an underscore, via the same
+    # canonical fold. Proven end-to-end in EC33; here we assert the lowercase-
+    # spaced key the config flow stored equals the recorded spaced form (no stray
+    # underscore crept in).
+    chk(
+        "EC28 stored tracked key matches recorded spaced form (no separator drift)",
+        lower_state == title_state.lower(),
+        True,
+        f"lower_state={lower_state!r}",
+    )
     return entry, eid
 
 
@@ -2815,6 +2827,165 @@ def ec32_remove_entry_cleans_storage():
     )
 
 
+def ec33_separator_insensitive_state_tracking():
+    """EC33: tracked states stored with underscores still match a recorded state
+    that uses spaces (and vice versa).
+
+    Regression guard for the separator-mismatch bug (v0.1.8): config
+    "city_centre" never matched the recorded "city centre", so the
+    tracked state read 0 s and its time fell into "other". State matching is now
+    separator- and case-insensitive on both operands.
+    """
+    print(
+        "\n=== EC33: separator-insensitive state tracking (config '_' ↔ recorded ' ') ===",
+        flush=True,
+    )
+    # The entity emits a SPACE-separated state; config tracks the UNDERSCORE form.
+    spaced_state = "city centre"
+    underscore_state = "city_centre"
+    eid = make_entity("sepmismatch", spaced_state)
+
+    entry = create_tracker(
+        eid, "specific_states", states=[underscore_state], frames={"today": True}
+    )
+    reg = wait_entities(entry, min_count=1)
+    dur = eid_for(entry, "today", M_DURATION, reg)
+    chk("EC33 duration sensor exists", dur is not None, True)
+    if not dur:
+        return entry, eid
+
+    # Close a visit in the spaced state so the engine has a completed block.
+    time.sleep(3 if FAST else 5)
+    ss(eid, "not_home")
+    time.sleep(2 if FAST else 3)
+    ss(eid, spaced_state)
+    time.sleep(2 if FAST else 3)
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
+
+    def _bd():
+        return gs(dur).get("attributes", {}).get("breakdown_seconds") or {}
+
+    # Slice is keyed by the CONFIG state (underscore); value pulled from the real
+    # spaced recorded key via the canonical fold.
+    wait_for(
+        lambda: _bd().get(underscore_state, 0) > 0,
+        True,
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    attrs = gs(dur).get("attributes", {})
+    breakdown = attrs.get("breakdown_seconds", {})
+    chk(
+        f"EC33 underscore key '{underscore_state}' holds the spaced state's time",
+        breakdown.get(underscore_state, 0) > 0,
+        True,
+        f"breakdown_seconds={breakdown}",
+    )
+    # The tracked total (duration_seconds) is non-zero: the state matched.
+    dur_secs = attrs.get("duration_seconds", 0)
+    chk(
+        "EC33 tracked duration_seconds > 0 (not dumped into 'other')",
+        dur_secs > 0,
+        True,
+        f"duration_seconds={dur_secs}",
+    )
+    # percent reflects the tracked time (not 0.0 as in the bug).
+    chk(
+        "EC33 percent > 0 (tracked share, was 0.0 in the bug)",
+        (attrs.get("percent") or 0) > 0,
+        True,
+        f"percent={attrs.get('percent')}",
+    )
+    return entry, eid
+
+
+def ec34_card_legend_truncates_name_not_value():
+    """EC34: the served card JS carries the legend layout fix (v0.1.8).
+
+    A CSS layout change can't be asserted in a headless, DOM-less smoke, so this
+    asserts the served JS contains the `legend-label` class (added so a long state
+    name truncates with an ellipsis while the percentage stays fully visible).
+    """
+    print(
+        "\n=== EC34: card legend layout fix present in served JS ===",
+        flush=True,
+    )
+    status, body = api_status(
+        "GET", "/entity_state_tracker/entity-state-tracker-card.js"
+    )
+    chk("EC34 card JS served (200)", status, 200)
+    text = body if isinstance(body, str) else ""
+    chk(
+        "EC34 served JS defines the legend-label truncation class",
+        "legend-label" in text,
+        True,
+    )
+    # The value span must keep its own class and not be the one that shrinks.
+    chk(
+        "EC34 served JS keeps legend-value (the always-visible % span)",
+        "legend-value" in text,
+        True,
+    )
+
+
+def ec35_config_heal_rewrites_drifted_states():
+    """EC35: a stored config state that drifts from the recorded name is healed.
+
+    Create a tracker whose configured state the entity has NOT yet reported (so
+    the config-flow snap can't resolve it at save time), then make the entity
+    report the real spaced form, reload the entry, and assert the stored config
+    state was rewritten to the recorded name on first-refresh.
+    """
+    print(
+        "\n=== EC35: config heal rewrites drifted stored states on reload ===",
+        flush=True,
+    )
+    # Entity starts "home" — the drifted underscore state is NOT in history yet,
+    # so the create-flow snap leaves it as typed.
+    eid = make_entity("healdrift", "home")
+    underscore_state = "train_station"
+    spaced_state = "train station"
+    entry = create_tracker(
+        eid, "specific_states", states=[underscore_state], frames={"today": True}
+    )
+
+    def _stored_states():
+        diag = api("GET", f"/api/diagnostics/config_entry/{entry}").get("data", {})
+        return (diag.get("entry", {}).get("data", {}) or {}).get("states") or []
+
+    # Precondition: the drifted underscore state is stored as typed.
+    chk(
+        "EC35 drifted state stored as typed before heal",
+        underscore_state in _stored_states(),
+        True,
+        f"stored={_stored_states()}",
+    )
+
+    # Now the entity reports the real SPACED form and closes the visit so it lands
+    # in the ledger (the heal's snap target).
+    time.sleep(2 if FAST else 3)
+    ss(eid, spaced_state)
+    time.sleep(2 if FAST else 3)
+    ss(eid, "home")
+    time.sleep(2 if FAST else 3)
+
+    # Reload the entry → coordinator first-refresh runs the heal against the now-
+    # recorded spaced state.
+    api("POST", f"/api/config/config_entries/entry/{entry}/reload")
+    wait_for(
+        lambda: spaced_state in _stored_states(),
+        True,
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    stored = _stored_states()
+    chk(
+        "EC35 stored state healed to the recorded spaced name",
+        spaced_state in stored and underscore_state not in stored,
+        True,
+        f"stored={stored}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -2896,6 +3067,15 @@ def main():
 
         if ec_enabled(32):
             ec32_remove_entry_cleans_storage()
+
+        if ec_enabled(33):
+            ec33_separator_insensitive_state_tracking()
+
+        if ec_enabled(34):
+            ec34_card_legend_truncates_name_not_value()
+
+        if ec_enabled(35):
+            ec35_config_heal_rewrites_drifted_states()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

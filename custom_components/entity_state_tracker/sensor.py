@@ -47,6 +47,7 @@ from .helpers import (
     frame_entity_id,
     frame_label,
     humanize_duration,
+    match_state,
     tracker_device_name,
     unique_id,
 )
@@ -159,7 +160,16 @@ def _tracked_seconds(result: FrameResult, tracked: list[str] | None) -> float:
     if tracked is None:
         total = sum(result.breakdown_seconds.values())
     else:
-        total = sum(result.breakdown_seconds.get(state, 0.0) for state in tracked)
+        # Resolve each CONFIG state to the REAL recorded key via the canonical
+        # form so a config "city_centre" picks up the recorded "city centre"
+        # (the underscore/space mismatch that zeroed the tracked total). Exact
+        # matches are unaffected.
+        real_keys = list(result.breakdown_seconds)
+        total = 0.0
+        for state in tracked:
+            real = match_state(state, real_keys)
+            if real is not None:
+                total += result.breakdown_seconds.get(real, 0.0)
     # Round to milliseconds: far finer than history_stats' second-granularity, but
     # tames the float-sum tail (e.g. 32021.287099999463) so the stored state
     # string / history graph / API read clean, not an ugly long float.
@@ -178,11 +188,33 @@ def _transition_metrics(
     ``states`` — consistent with the flat ``{state: iso_ts}`` shape the plan
     specifies.
     """
-    keys = states if states is not None else list(result.counts)
     data = coordinator.data
+    if states is None:
+        # All-states mode: keys ARE the real recorded names — pure identity, same
+        # as before the match change. Never route through match_state here: it is
+        # many-to-one (not_home / "not home" fold together), so resolving an
+        # already-real key could mis-map it onto a different fold-equal key.
+        keys = list(result.counts)
+        return {
+            "counts": {s: result.counts.get(s, 0) for s in keys},
+            "avg_duration_seconds": {s: result.avg_duration.get(s) for s in keys},
+            "previous_state": data.previous_state if data is not None else None,
+            "last_entered": dict(data.last_entered) if data is not None else {},
+            "last_exited": dict(data.last_exited) if data is not None else {},
+        }
+    # Specific mode: resolve each CONFIG key to the REAL recorded key via the
+    # canonical form so counts/avg land on a separator-variant state
+    # ("city_centre" → recorded "city centre"). Keep the config key so the card
+    # (mapping over tracked_states) still finds it. match_state prefers an EXACT
+    # recorded key over a fold, so a config value equal to a real state can't be
+    # mis-mapped onto a fold-equal sibling.
+    real_keys = list(result.counts)
+    resolved = {s: (match_state(s, real_keys) or s) for s in states}
     return {
-        "counts": {s: result.counts.get(s, 0) for s in keys},
-        "avg_duration_seconds": {s: result.avg_duration.get(s) for s in keys},
+        "counts": {s: result.counts.get(real, 0) for s, real in resolved.items()},
+        "avg_duration_seconds": {
+            s: result.avg_duration.get(real) for s, real in resolved.items()
+        },
         "previous_state": data.previous_state if data is not None else None,
         "last_entered": dict(data.last_entered) if data is not None else {},
         "last_exited": dict(data.last_exited) if data is not None else {},
@@ -265,16 +297,13 @@ class DurationSensor(_FrameSensor):
             ),
             # Humanized two-unit representations (ms/hm/dh/wd) of the tracked
             # total, for templates/cards that want the pretty "18h 33m" string
-            # HA only renders in the frontend. Built from the RAW tracked seconds
-            # (not the minute-floored state) so it matches HA's own frontend
-            # duration formatter, which floors each unit.
+            # HA only renders in the frontend. Built from the SAME
+            # _tracked_seconds as duration_seconds above (which resolves config→
+            # real via match_state) so the two public attrs can never diverge for
+            # a separator-drifted config — the earlier raw .get(s) sum here missed
+            # the recorded key and showed "0s" while duration_seconds was correct.
             "duration_text": humanize_duration(
-                sum(
-                    result.breakdown_seconds.get(s, 0.0)
-                    for s in self.coordinator.tracked_states
-                )
-                if self.coordinator.tracked_states is not None
-                else sum(result.breakdown_seconds.values())
+                _tracked_seconds(result, self.coordinator.tracked_states)
             ),
             "tracked_states": self.coordinator.tracked_states,
             "target_states": self.coordinator.target_states,
@@ -298,15 +327,26 @@ class DurationSensor(_FrameSensor):
         # its presence is also the card's specific-vs-all-states discriminator.
         tracked = self.coordinator.tracked_states
         if tracked is not None:
+            # Slice keyed by the CONFIG state, value pulled from the REAL recorded
+            # key via the canonical form, so "city_centre" surfaces the recorded
+            # "city centre" seconds. Keeping the config key means the card (which
+            # maps over tracked_states) finds each value with no JS change; the
+            # displayed label is identical either way.
+            real_keys = list(result.breakdown_seconds)
+            matched = {s: match_state(s, real_keys) for s in tracked}
             attrs["breakdown_seconds"] = {
-                s: result.breakdown_seconds.get(s, 0.0) for s in tracked
+                s: result.breakdown_seconds.get(real, 0.0)
+                for s, real in matched.items()
             }
-            attrs["breakdown_pct"] = {s: result.breakdown_pct.get(s) for s in tracked}
+            attrs["breakdown_pct"] = {
+                s: (result.breakdown_pct.get(real) if real is not None else None)
+                for s, real in matched.items()
+            }
             # Per-state humanized reps, parallel to breakdown_seconds (same keys,
             # same tracked-only slice; a 0s tracked state reads "0m 0s"/… etc).
             attrs["breakdown_text"] = {
-                s: humanize_duration(result.breakdown_seconds.get(s, 0.0))
-                for s in tracked
+                s: humanize_duration(result.breakdown_seconds.get(real, 0.0))
+                for s, real in matched.items()
             }
         if self.coordinator.target_states:
             attrs["compliance_percent"] = result.compliance_percent

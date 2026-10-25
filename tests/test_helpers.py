@@ -14,6 +14,7 @@ from custom_components.entity_state_tracker.helpers import (
     binary_entity_id,
     frame_entity_id,
     frame_label,
+    match_state,
     normalize_state,
     tracker_device_name,
     unique_id,
@@ -25,6 +26,56 @@ def test_normalize_state() -> None:
     assert normalize_state("  Heat ") == "heat"
     assert normalize_state("AUTO") == "auto"
     assert normalize_state("off") == "off"
+
+
+def test_normalize_state_folds_separators() -> None:
+    """Underscore↔space unify and whitespace runs collapse (the mismatch bug)."""
+    # Config "city_centre" must match recorded "city centre".
+    assert normalize_state("city_centre") == "city centre"
+    assert normalize_state("city centre") == "city centre"
+    assert normalize_state("not_home") == "not home"
+    assert normalize_state("City  Centre") == "city centre"
+    # NOT slugify: parens stay, so distinct states never merge.
+    assert normalize_state("Shopping Centre (North)") == "shopping centre (north)"
+    assert normalize_state("shopping centre (north)") != normalize_state(
+        "shopping centre"
+    )
+
+
+def test_match_state_snaps_to_real() -> None:
+    """match_state returns the real recorded string for a separator variant."""
+    real = ["city centre", "not_home", "shopping centre (north)"]
+    assert match_state("city_centre", real) == "city centre"
+    assert match_state("NOT HOME", real) == "not_home"
+    assert match_state("shopping centre (north)", real) == "shopping centre (north)"
+    # No real state corresponds → None (keep the typed value as-is).
+    assert match_state("somewhere_else", real) is None
+
+
+def test_match_state_exact_wins_over_fold() -> None:
+    """A candidate equal to a real state resolves to ITSELF, not a fold sibling.
+
+    normalize_state is many-to-one ("not_home" and "not home" fold the same), so
+    match_state must prefer an exact (case-insensitive) recorded key over any
+    fold-equal one — else two genuinely-distinct recorded states get conflated.
+    """
+    collide = ["not_home", "not home"]
+    assert match_state("not_home", collide) == "not_home"
+    assert match_state("not home", collide) == "not home"
+    assert match_state("NOT_HOME", collide) == "not_home"  # case-insensitive exact
+
+
+def test_match_state_ambiguous_fold_returns_none() -> None:
+    """A candidate matching 2+ reals only by fold (no exact) resolves to None.
+
+    Honours the heal's "unambiguous only" contract — never silently pick one of
+    several distinct recorded states that happen to fold together.
+    """
+    collide = ["not_home", "not home"]
+    # "not__home" folds to "not home" like both reals, matches neither exactly.
+    assert match_state("not__home", collide) is None
+    # Single fold match still resolves (the real mismatch-fix case).
+    assert match_state("city_centre", ["city centre"]) == "city centre"
 
 
 def test_frame_label_known_calendar() -> None:

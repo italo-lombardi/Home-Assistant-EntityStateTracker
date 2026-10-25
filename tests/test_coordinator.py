@@ -2117,3 +2117,147 @@ async def test_rolling_regression_calendar_frames_unchanged(
         fr = data.frames[key]
         assert sum(fr.breakdown_seconds.values()) <= fr.window_seconds + 1.0
     await c.async_shutdown()
+
+
+# --------------------------------------------------------------------------- #
+# Layer 3: config-state heal (separator/case drift → real recorded names)
+# --------------------------------------------------------------------------- #
+
+
+def _specific_entry_with(
+    states: list[str],
+    target: list[str] | None = None,
+    entity: str = "person.alex",
+) -> MockConfigEntry:
+    """Build a specific-mode entry with the given (possibly drifted) states."""
+    from custom_components.entity_state_tracker.const import (
+        CONF_ENABLE_COMPLIANCE as _CEC,
+    )
+    from custom_components.entity_state_tracker.const import CONF_ENTITY as _CE
+    from custom_components.entity_state_tracker.const import CONF_FRAMES as _CF
+    from custom_components.entity_state_tracker.const import (
+        CONF_MIN_STATE_DURATION as _CMD,
+    )
+    from custom_components.entity_state_tracker.const import CONF_MODE as _CMO
+    from custom_components.entity_state_tracker.const import CONF_STATES as _CS
+    from custom_components.entity_state_tracker.const import CONF_TARGET as _CT
+    from custom_components.entity_state_tracker.const import (
+        FRAMES as _FR,
+    )
+    from custom_components.entity_state_tracker.const import (
+        MODE_SPECIFIC as _MS,
+    )
+
+    data: dict[str, Any] = {
+        _CE: entity,
+        _CMO: _MS,
+        _CS: states,
+        _CEC: target is not None,
+        _CF: {f: f in ("today",) for f in _FR},
+        _CMD: 0,
+    }
+    if target is not None:
+        data[_CT] = target
+        from custom_components.entity_state_tracker.const import (
+            CONF_TARGET_THRESHOLD as _CTT,
+        )
+
+        data[_CTT] = 80
+    return MockConfigEntry(
+        version=1,
+        domain=DOMAIN,
+        title="Alex",
+        data=data,
+        entry_id="est_heal_entry",
+    )
+
+
+async def test_heal_rewrites_drifted_tracked_states(hass: HomeAssistant) -> None:
+    """Stored underscore states snap to the recorded spaced names on first-refresh."""
+    from custom_components.entity_state_tracker.const import CONF_STATES as _CS
+
+    entry = _specific_entry_with(["city_centre", "gym"])
+    c = await _make_coordinator(hass, entry)
+    # Simulate the ledger carrying the REAL recorded state names.
+    c._seen = {"city centre", "gym"}
+    c._heal_config_states()
+    # In-memory config healed THIS boot.
+    assert c.tracked_states == ["city centre", "gym"]
+    # Entry rewritten permanently.
+    assert entry.data[_CS] == ["city centre", "gym"]
+
+
+async def test_heal_rewrites_target_states_too(hass: HomeAssistant) -> None:
+    """The compliance target has the same drift class and is healed too."""
+    from custom_components.entity_state_tracker.const import CONF_TARGET as _CT
+
+    entry = _specific_entry_with(["city_centre"], target=["train_station"])
+    c = await _make_coordinator(hass, entry)
+    c._seen = {"city centre", "train station"}
+    c._heal_config_states()
+    assert c.target_states == ["train station"]
+    assert entry.data[_CT] == ["train station"]
+
+
+async def test_heal_noop_when_already_correct(hass: HomeAssistant) -> None:
+    """A clean config is not rewritten (no reload loop)."""
+    entry = _specific_entry_with(["city centre", "gym"])
+    c = await _make_coordinator(hass, entry)
+    c._seen = {"city centre", "gym"}
+    with patch.object(hass.config_entries, "async_update_entry") as upd:
+        c._heal_config_states()
+    upd.assert_not_called()
+
+
+async def test_heal_leaves_unmatched_state_untouched(hass: HomeAssistant) -> None:
+    """A stored state with no recorded match is kept as-is (Layer 2 covers it)."""
+    from custom_components.entity_state_tracker.const import CONF_STATES as _CS
+
+    entry = _specific_entry_with(["never_seen_zone", "gym"])
+    c = await _make_coordinator(hass, entry)
+    c._seen = {"gym"}  # never_seen_zone absent from history
+    c._heal_config_states()
+    assert c.tracked_states == ["never_seen_zone", "gym"]
+    # Nothing changed → entry not rewritten.
+    assert entry.data[_CS] == ["never_seen_zone", "gym"]
+
+
+async def test_heal_noop_when_no_recorded_states(hass: HomeAssistant) -> None:
+    """Empty seen-set → heal is a no-op (nothing to snap against)."""
+    entry = _specific_entry_with(["city_centre"])
+    c = await _make_coordinator(hass, entry)
+    c._seen = set()
+    with patch.object(hass.config_entries, "async_update_entry") as upd:
+        c._heal_config_states()
+    upd.assert_not_called()
+    assert c.tracked_states == ["city_centre"]
+
+
+async def test_heal_fires_on_fresh_install_via_first_refresh(
+    hass: HomeAssistant,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """End-to-end: a FRESH install heals on the first refresh, not only boot 2.
+
+    Regression for the seed-order bug — _seen was frozen before backfill, so on a
+    fresh install (empty ledger) the heal snapped against an empty set and no-oped.
+    The fix unions the backfill-discovered states into _seen before the heal. Here
+    the ledger starts empty and the recorder returns the SPACED state for each
+    backfilled day; the stored underscore config must heal to the spaced name on
+    THIS first refresh.
+    """
+    from custom_components.entity_state_tracker.const import CONF_STATES as _CS
+
+    now = _utc(2026, 6, 10, 12, 0)
+    entry = _specific_entry_with(["city_centre"])
+    # Recorder reports the real SPACED state for every backfilled closed day.
+    patch_recorder.mock.side_effect = lambda *a, **k: [  # type: ignore[attr-defined]
+        _FakeState("city centre", a[2])
+    ]
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        c = await _make_coordinator(hass, entry)
+        await _first_refresh(hass, c)
+    # Healed in-memory this boot AND persisted to the entry — no second boot needed.
+    assert c.tracked_states == ["city centre"]
+    assert entry.data[_CS] == ["city centre"]
+    await c.async_shutdown()
