@@ -1433,27 +1433,54 @@ def test_subset_percent_case_insensitive_match() -> None:
     # are normalized to lowercase in compute_frame. Both sides must be lowercase
     # for the match to succeed. Regression guard for the title-case zone bug.
     assert E._subset_percent(
-        {"casa buonabitacolo": 3600.0}, ["casa buonabitacolo"], 7200.0
+        {"city centre": 3600.0}, ["city centre"], 7200.0
     ) == pytest.approx(50.0)
 
 
-def test_subset_percent_mismatched_case_returns_zero() -> None:
-    # If breakdown keys are NOT normalized and tracked_states are lowercase,
-    # the match fails and percent is 0. This documents the pre-fix behaviour
-    # and guards that the normalization fix in compute_frame is the fix point.
+def test_subset_percent_normalizes_both_operands() -> None:
+    # _subset_percent now canonicalizes BOTH the subset and the breakdown keys
+    # (case + underscore/space fold via normalize_state), so a title-cased or
+    # separator-variant breakdown key still matches a lowercased config state.
+    # This was the "mismatched case returns 0" limitation before the separator
+    # fix — the match point is now _subset_percent itself, independent of any
+    # upstream normalization in compute_frame.
     assert E._subset_percent(
-        {"Casa Buonabitacolo": 3600.0}, ["casa buonabitacolo"], 7200.0
-    ) == pytest.approx(0.0)
+        {"City Centre": 3600.0}, ["city centre"], 7200.0
+    ) == pytest.approx(50.0)
+    # Separator variant: config underscores vs recorded spaces (the reported bug).
+    assert E._subset_percent(
+        {"city centre": 3600.0}, ["city_centre"], 7200.0
+    ) == pytest.approx(50.0)
 
 
 def test_subset_percent_state_with_spaces_and_underscores() -> None:
-    # States with spaces ("casa nonna antonietta") and underscores ("not_home")
-    # must match exactly (no further transform in _subset_percent itself).
+    # States with spaces ("train station") and underscores ("not_home")
+    # match regardless of which separator each side uses — the canonical form
+    # folds them (the example tracker: config "city_centre" /
+    # "train_station" vs recorded spaced keys).
     assert E._subset_percent(
-        {"not_home": 1800.0, "casa nonna antonietta": 3600.0},
-        ["not_home", "casa nonna antonietta"],
+        {"not_home": 1800.0, "train station": 3600.0},
+        ["not_home", "train station"],
         10800.0,
     ) == pytest.approx(50.0)
+    # Config underscores, recorded spaces — the exact reported mismatch.
+    assert E._subset_percent(
+        {"city centre": 3600.0, "train station": 1800.0},
+        ["city_centre", "train_station"],
+        10800.0,
+    ) == pytest.approx(50.0)
+
+
+def test_subset_percent_collision_does_not_overcount() -> None:
+    # Two genuinely-distinct recorded states can fold to the same canonical form
+    # ("not_home" literal + a zone "not home"). A config tracking ONE of them must
+    # sum ONLY that exact recorded key, never both — else percent over-counts
+    # (the many-to-one regression). match_state prefers the exact recorded key.
+    bd = {"not_home": 3600.0, "not home": 1800.0}
+    # Tracking the literal "not_home" counts only its 3600, not the 5400 sum.
+    assert E._subset_percent(bd, ["not_home"], 7200.0) == pytest.approx(50.0)
+    # Tracking the spaced "not home" counts only its 1800.
+    assert E._subset_percent(bd, ["not home"], 7200.0) == pytest.approx(25.0)
 
 
 def test_subset_percent_clamped_to_100_on_seam_overflow() -> None:
@@ -1474,11 +1501,11 @@ def test_subset_percent_clamped_to_100_on_seam_overflow() -> None:
 
 def test_compute_frame_normalizes_titlecase_breakdown_keys() -> None:
     # Regression: recorder may return State objects whose .state is title-cased
-    # (e.g. "Casa Buonabitacolo" from a zone friendly name). compute_frame must
+    # (e.g. "City Centre" from a zone friendly name). compute_frame must
     # lowercase all breakdown keys so tracked_states (always lowercase) match.
     now = dt.datetime(2026, 1, 15, 12, 0, tzinfo=NY)
     recent = {
-        "Casa Buonabitacolo": {"secs": 7200.0, "count": 2},
+        "City Centre": {"secs": 7200.0, "count": 2},
         "Not Home": {"secs": 3600.0, "count": 1},
     }
     fr = E.compute_frame(
@@ -1489,12 +1516,12 @@ def test_compute_frame_normalizes_titlecase_breakdown_keys() -> None:
         {},
         None,
         mode="specific_states",
-        tracked_states=["casa buonabitacolo", "not home"],
+        tracked_states=["city centre", "not home"],
     )
     # Keys must be lowercase in breakdown_seconds
-    assert "casa buonabitacolo" in fr.breakdown_seconds
+    assert "city centre" in fr.breakdown_seconds
     assert "not home" in fr.breakdown_seconds
-    assert "Casa Buonabitacolo" not in fr.breakdown_seconds
+    assert "City Centre" not in fr.breakdown_seconds
     # percent must reflect the matched time, not 0
     assert fr.percent is not None
     assert fr.percent > 0.0
@@ -1513,10 +1540,10 @@ def test_compute_frame_normalizes_mixed_case_open_state() -> None:
         {},
         None,
         mode="all_states",
-        open_state="Casa Buonabitacolo",
+        open_state="City Centre",
     )
-    assert "casa buonabitacolo" in fr.breakdown_seconds
-    assert "Casa Buonabitacolo" not in fr.breakdown_seconds
+    assert "city centre" in fr.breakdown_seconds
+    assert "City Centre" not in fr.breakdown_seconds
 
 
 # --------------------------------------------------------------------------- #

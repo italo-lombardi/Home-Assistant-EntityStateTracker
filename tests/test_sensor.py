@@ -33,6 +33,9 @@ from custom_components.entity_state_tracker.sensor import (
 from custom_components.entity_state_tracker.sensor import (
     _device_info as sensor_device_info,
 )
+from custom_components.entity_state_tracker.sensor import (
+    _transition_metrics,
+)
 
 
 def _frame_result(**kw: Any) -> FrameResult:
@@ -264,6 +267,78 @@ def test_duration_native_value_tracked_subset() -> None:
     assert sensor.native_value == pytest.approx(2400.0)
     # Raw float now (no minute-floor), so it matches history_stats to the second.
     assert isinstance(sensor.native_value, float)
+
+
+def test_duration_native_value_matches_separator_variant() -> None:
+    """Config underscores resolve to recorded spaced keys (the mismatch bug)."""
+    res = _frame_result(
+        breakdown_seconds={"city centre": 3600.0, "gym": 600.0},
+        breakdown_pct={"city centre": 85.7, "gym": 14.3},
+        counts={"city centre": 2, "gym": 1},
+        avg_duration={"city centre": 1800.0, "gym": 600.0},
+    )
+    coord = _duration_coord(tracked=("city_centre", "gym"), result=res)
+    sensor = DurationSensor(coord, "today")
+    # city_centre must match recorded "city centre" (3600) + gym.
+    assert sensor.native_value == pytest.approx(4200.0)
+    attrs = sensor.extra_state_attributes
+    # Slice stays keyed by the CONFIG state (card maps over tracked_states), value
+    # pulled from the recorded key.
+    assert attrs["breakdown_seconds"]["city_centre"] == pytest.approx(3600.0)
+    assert attrs["breakdown_pct"]["city_centre"] == pytest.approx(85.7)
+    assert attrs["counts"]["city_centre"] == 2
+
+
+def test_duration_text_matches_duration_seconds_for_drifted_config() -> None:
+    """duration_text and duration_seconds share one path — agree under drift.
+
+    Regression: duration_text summed raw breakdown_seconds.get(s) while
+    duration_seconds routed through match_state, so a separator-drifted config
+    (config "city_centre", recorded "city centre") got a correct
+    duration_seconds but a "0s" duration_text. Both now use _tracked_seconds.
+    """
+    res = _frame_result(
+        breakdown_seconds={"city centre": 3600.0},
+        breakdown_pct={"city centre": 100.0},
+        counts={"city centre": 1},
+        avg_duration={"city centre": 3600.0},
+    )
+    coord = _duration_coord(tracked=("city_centre",), result=res)
+    sensor = DurationSensor(coord, "today")
+    attrs = sensor.extra_state_attributes
+    assert attrs["duration_seconds"] == pytest.approx(3600.0)
+    # duration_text must reflect the SAME 3600s (1h), not "0s".
+    assert attrs["duration_text"]["hm"] == "1h 0m"
+    assert attrs["duration_text"]["s"] == "3600s"
+
+
+def test_transition_metrics_all_states_identity_under_collision() -> None:
+    """All-states counts/avg stay pure identity even when keys fold-collide.
+
+    Regression: _transition_metrics routed every key through match_state (first-
+    win), so for all-states with two fold-equal recorded keys ("not_home" +
+    "not home") each would re-map onto the other's value. All-states must be
+    untouched by the match change — it resolves keys to themselves.
+    """
+    res = _frame_result(
+        breakdown_seconds={"not_home": 3600.0, "not home": 1800.0},
+        breakdown_pct={"not_home": 66.7, "not home": 33.3},
+        counts={"not_home": 3, "not home": 1},
+        avg_duration={"not_home": 1200.0, "not home": 1800.0},
+    )
+    coord = _fake_coordinator(
+        mode=MODE_ALL,
+        enabled_frames=["today"],
+        tracked_states=None,
+        target_states=None,
+        data=TrackerData(frames={"today": res}),
+    )
+    metrics = _transition_metrics(res, coord, None)
+    # Each recorded key keeps its OWN count/avg — no first-win cross-mapping.
+    assert metrics["counts"]["not_home"] == 3
+    assert metrics["counts"]["not home"] == 1
+    assert metrics["avg_duration_seconds"]["not_home"] == 1200.0
+    assert metrics["avg_duration_seconds"]["not home"] == 1800.0
 
 
 def test_duration_native_value_all_states_when_tracked_none() -> None:

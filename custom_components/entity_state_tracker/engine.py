@@ -29,6 +29,7 @@ import logging
 from homeassistant.core import HomeAssistant, State
 
 from .const import DOMINANT_HYSTERESIS_PCT, FRAMES, LEDGER_MAX_DAYS
+from .helpers import match_state
 from .models import FrameResult
 
 _LOGGER = logging.getLogger(__name__)
@@ -679,7 +680,15 @@ def _subset_percent(
     """
     if not subset or window_seconds <= 0:
         return None
-    wanted = set(subset)
+    # Resolve each CONFIG state to the one REAL recorded key it denotes, then sum
+    # EXACT on those real keys. match_state prefers an exact recorded key over a
+    # canonical fold and returns None on an ambiguous fold, so a config
+    # "city_centre" picks up recorded "city centre" (the mismatch fix) WITHOUT a
+    # second distinct recorded key that merely folds the same ("not_home" vs a
+    # zone "Not home") being swept in and over-counting. Exact-config matches are
+    # unchanged. A config value with no real match contributes nothing.
+    real_keys = list(breakdown_seconds)
+    wanted = {m for s in subset if (m := match_state(s, real_keys)) is not None}
     matched = sum(secs for name, secs in breakdown_seconds.items() if name in wanted)
     return min(100.0, round(matched / window_seconds * 100, 1))
 

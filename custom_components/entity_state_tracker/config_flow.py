@@ -32,8 +32,14 @@ from .const import (
     MODE_ALL,
     MODE_SPECIFIC,
 )
+from .helpers import match_state, normalize_state
 
 _LOGGER = logging.getLogger(__name__)
+
+# Domains whose state, while the entity is inside a zone, IS that zone's friendly
+# name (plus the "home"/"not_home" literals). Only these get zone-aware resolution
+# of a typed state — a climate/vacuum state ("cleaning") has no zone meaning.
+_ZONE_STATE_DOMAINS = ("person", "device_tracker")
 
 # Cap on the RECORDER-derived distinct seen states offered as prefilled options.
 # A numeric entity (e.g. an input_number cycling through hundreds of distinct
@@ -214,7 +220,93 @@ async def _async_seen_states(hass: HomeAssistant, entity_id: str) -> list[str]:
     # states display sort; unavailable/unknown stay pinned last regardless.
     head = [live] if live is not None else []
     real = sorted(dict.fromkeys([*head, *distinct]))
-    return [*real, STATE_UNAVAILABLE, STATE_UNKNOWN]
+    # For a person/device_tracker, "home" and "not_home" are the zone specials HA
+    # emits (in zone.home / in no zone). They may not appear in recent history, so
+    # always offer them — like the unavailable/unknown tail — deduped against the
+    # real set. Zone friendly names the user wants are typed/resolved via zones.
+    specials: list[str] = []
+    if entity_id.split(".", 1)[0] in _ZONE_STATE_DOMAINS:
+        specials = [s for s in ("home", "not_home") if s not in real]
+    return [*real, *specials, STATE_UNAVAILABLE, STATE_UNKNOWN]
+
+
+def _zone_state_map(hass: HomeAssistant) -> dict[str, str]:
+    """Map every zone's identifiers → the state a tracker reports inside it.
+
+    A ``person``/``device_tracker`` entity, while inside a zone, reports that
+    zone's FRIENDLY NAME as its state (and the literal ``home`` for ``zone.home``,
+    ``not_home`` when in no zone). So to turn a user-typed zone reference into the
+    string the entity will actually emit, we map each zone's friendly name, its
+    ``entity_id``, and its object_id (all canonicalised) → the emitted state.
+
+    ``zone.home`` is special-cased to the ``home`` literal, not its friendly name
+    ("Home"), because HA reports ``home`` (lowercase literal) for the home zone.
+    """
+    out: dict[str, str] = {}
+    for state in hass.states.async_all("zone"):
+        entity_id = state.entity_id  # "zone.dublin_city_center_usc"
+        object_id = entity_id.split(".", 1)[1]
+        friendly = state.attributes.get("friendly_name") or object_id
+        emitted = "home" if entity_id == "zone.home" else friendly
+        emitted_stored = normalize_state(emitted)
+        # All the ways a user might refer to this zone → the emitted state.
+        for key in (friendly, entity_id, object_id):
+            out[normalize_state(key)] = emitted_stored
+    return out
+
+
+def _resolve_state(
+    raw: str,
+    seen: list[str],
+    zone_map: dict[str, str],
+) -> str:
+    """Snap a user-selected/typed state to the string the entity actually emits.
+
+    Order (ground truth first):
+
+    1. ``match_state`` against ``seen`` — the recorder/live states the entity has
+       really reported. A real recorded state always wins (its exact separators
+       and case are authoritative).
+    2. Zone map — only reached when the entity has never yet been in that zone
+       (not in history). A typed zone friendly_name / ``zone.x`` id / object_id
+       resolves to the state the entity WILL emit there.
+    3. Fallback — the canonicalised typed value as-is. The runtime match (Layer 2)
+       still catches it once the entity emits the matching form; the first-refresh
+       heal re-snaps it later if a real match appears.
+
+    Zone resolution is best-effort config-time convenience: if the zone is absent
+    at config time, or its friendly_name is later renamed, the stored value can
+    drift. Case/separator drift is covered by the runtime normalize + the heal;
+    a full rename is not (same limitation as any label-based config).
+    """
+    real = match_state(raw, seen)
+    if real is not None:
+        return real
+    zoned = zone_map.get(normalize_state(raw))
+    if zoned is not None:
+        return zoned
+    return normalize_state(raw)
+
+
+def _resolve_states(
+    hass: HomeAssistant,
+    source_entity_id: str,
+    raw_states: list[str],
+    seen: list[str],
+) -> list[str]:
+    """Resolve + dedup a list of user states against seen + (gated) zones.
+
+    Zone resolution applies ONLY when the tracked entity is a ``person`` or
+    ``device_tracker`` (the domains whose state is a zone name); every other
+    domain just snaps to the seen-set / canonical form. Dedup is on the resolved
+    values so two inputs that resolve to the same real state collapse to one. A
+    value that canonicalises to empty (e.g. a stray ``"___"``) is dropped — a
+    blank state name is never a real tracked state.
+    """
+    domain = source_entity_id.split(".", 1)[0]
+    zone_map = _zone_state_map(hass) if domain in _ZONE_STATE_DOMAINS else {}
+    resolved = [_resolve_state(s, seen, zone_map) for s in raw_states]
+    return list(dict.fromkeys(s for s in resolved if s))
 
 
 class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
@@ -281,11 +373,18 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            states = [s.strip().lower() for s in user_input.get(CONF_STATES, [])]
-            if not states:
+            raw = [s for s in user_input.get(CONF_STATES, []) if s.strip()]
+            if not raw:
                 errors[CONF_STATES] = "no_states_selected"
             else:
-                self._data[_KEY_STATES] = list(dict.fromkeys(states))
+                # Snap each selected/typed state to the string the entity really
+                # emits: a recorded state wins; else a typed zone reference
+                # resolves to its emitted state (person/device_tracker only).
+                entity_id = self._data[_KEY_ENTITY]
+                seen = await _async_seen_states(self.hass, entity_id)
+                self._data[_KEY_STATES] = _resolve_states(
+                    self.hass, entity_id, raw, seen
+                )
                 if user_input.get(CONF_ENABLE_COMPLIANCE):
                     return await self.async_step_compliance()
                 return await self.async_step_frames()
@@ -314,13 +413,19 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
         errors: dict[str, str] = {}
 
         if user_input is not None:
-            target = [s.strip().lower() for s in user_input.get(CONF_TARGET, [])]
+            raw = [s for s in user_input.get(CONF_TARGET, []) if s.strip()]
             threshold = user_input.get(CONF_TARGET_THRESHOLD)
             # The threshold selector already clamps to 0–100; only presence matters.
-            if not target:
+            if not raw:
                 errors[CONF_TARGET] = "no_target_selected"
             else:
-                self._data[CONF_TARGET] = list(dict.fromkeys(target))
+                # Target states have the same separator-mismatch class as tracked
+                # states — snap them to real emitted states too.
+                entity_id = self._data[_KEY_ENTITY]
+                seen = await _async_seen_states(self.hass, entity_id)
+                self._data[CONF_TARGET] = _resolve_states(
+                    self.hass, entity_id, raw, seen
+                )
                 if threshold is not None:
                     self._data[CONF_TARGET_THRESHOLD] = threshold
                 return await self.async_step_frames()
@@ -443,21 +548,34 @@ class EntityStateTrackerOptionsFlow(OptionsFlow):
             if not any(flags.values()):
                 errors["base"] = "no_frames_selected"
 
+            # Resolve edited states/target to real emitted states, same as the
+            # create flow. Fetch the seen-set once if either block needs it.
+            source_entity = current[CONF_ENTITY]
+            seen = (
+                await _async_seen_states(self.hass, source_entity)
+                if (tracked or has_compliance)
+                else []
+            )
+
             if tracked:  # specific mode: tracked states are editable + required
-                states = [s.strip().lower() for s in user_input.get(CONF_STATES, [])]
-                if not states:
+                raw = [s for s in user_input.get(CONF_STATES, []) if s.strip()]
+                if not raw:
                     errors[CONF_STATES] = "no_states_selected"
                 else:
-                    options[CONF_STATES] = list(dict.fromkeys(states))
+                    options[CONF_STATES] = _resolve_states(
+                        self.hass, source_entity, raw, seen
+                    )
 
             if has_compliance:
-                target = [s.strip().lower() for s in user_input.get(CONF_TARGET, [])]
+                raw_target = [s for s in user_input.get(CONF_TARGET, []) if s.strip()]
                 threshold = user_input.get(CONF_TARGET_THRESHOLD)
                 # The threshold selector already clamps to 0–100.
-                if not target:
+                if not raw_target:
                     errors[CONF_TARGET] = "no_target_selected"
                 else:
-                    options[CONF_TARGET] = list(dict.fromkeys(target))
+                    options[CONF_TARGET] = _resolve_states(
+                        self.hass, source_entity, raw_target, seen
+                    )
                     if threshold is not None:
                         options[CONF_TARGET_THRESHOLD] = threshold
 

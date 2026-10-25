@@ -71,12 +71,63 @@ def tracker_device_name(entity_label: str) -> str:
 
 
 def normalize_state(state: str) -> str:
-    """Case-normalize a state string (lower + strip).
+    """Canonical comparison form of a state string.
 
-    Config flow and engine must agree on this so a user-typed ``Heat`` matches a
-    recorded ``heat`` (§4 prefilled states are case-normalized).
+    THE single equivalence rule for matching a CONFIG state against a RECORDED
+    state. Config flow, engine, sensors and the card must all agree on it so a
+    user-typed ``Heat`` matches a recorded ``heat`` AND a user-typed
+    ``city_centre`` matches the recorded ``city centre`` — the underscore/space
+    mismatch that silently dropped states from ``percent`` and the tracked
+    breakdown (config stored ``_``; a ``person``/zone state is space-separated).
+
+    The rule, in order: strip, lowercase, fold every ``_`` to a space, then
+    collapse any run of whitespace to one space. Underscore↔space only — NOT a
+    full slugify: parentheses/accents are preserved, so two genuinely distinct
+    states that differ by more than their separators never merge
+    (``shopping centre (north)`` stays distinct from ``shopping centre``).
+
+    This is a MATCH key, not a display or storage value: the ledger keeps the
+    real recorded state verbatim (spaces) and the card still shows the real
+    label — only comparisons route through here.
     """
-    return state.strip().lower()
+    return " ".join(state.strip().lower().replace("_", " ").split())
+
+
+def match_state(candidate: str, real_states: list[str]) -> str | None:
+    """Return the real state equivalent to ``candidate`` under :func:`normalize_state`.
+
+    The config-flow "snap to a real HA state" primitive: given a value the user
+    selected or typed and the list of states the entity actually reports, return
+    the real recorded string whose canonical form matches ``candidate`` so the
+    stored config holds the real separator/case by construction. ``None`` when no
+    real state matches (the entity has never emitted that value — keep the typed
+    value as-is; the runtime defensive match still handles it if it appears
+    later).
+
+    EXACT MATCH WINS; an AMBIGUOUS fold resolves to nothing. Because
+    :func:`normalize_state` is many-to-one (``not_home`` and ``not home`` fold to
+    the same key), resolution is layered:
+
+    1. An exact (case-insensitive) hit on a real recorded state returns THAT
+       state — a candidate that is itself a real state never maps to a fold-equal
+       sibling. This keeps two genuinely-distinct recorded states (``not_home``
+       vs a zone literally named ``Not home``) separate.
+    2. Else, if EXACTLY ONE real state folds to the candidate's canonical form,
+       return it — the real "config underscores vs recorded spaces" case.
+    3. Else (no fold match, or TWO-OR-MORE reals fold to it — ambiguous), return
+       ``None``. Ambiguous never silently picks one: the caller (heal / slice)
+       then leaves the value alone, honouring the "unambiguous only" contract.
+    """
+    cand_lower = candidate.strip().lower()
+    target = normalize_state(candidate)
+    fold_hits: list[str] = []
+    for real in real_states:
+        if real.strip().lower() == cand_lower:
+            return real  # exact (case-insensitive) match — always wins
+        if normalize_state(real) == target:
+            fold_hits.append(real)
+    # One fold match → snap to it; zero or ambiguous (>1) → no resolution.
+    return fold_hits[0] if len(fold_hits) == 1 else None
 
 
 def frame_label(frame_key: str) -> str:
@@ -240,6 +291,29 @@ def binary_frame_entity_id(name: str, frame: str, metric: str) -> str:
 if __name__ == "__main__":  # pragma: no cover
     # Self-check: normalization, device name, and every canonical frame labels.
     assert normalize_state("  Heat ") == "heat"
+    # Separator fold: underscore↔space unify, whitespace runs collapse, so a
+    # config "city_centre" matches the recorded "city centre".
+    assert normalize_state("city_centre") == "city centre"
+    assert normalize_state("City  Centre") == "city centre"
+    assert normalize_state("not_home") == "not home"
+    # NOT slugify: parens/accents preserved so distinct states don't merge.
+    assert normalize_state("Shopping Centre (North)") == "shopping centre (north)"
+    assert normalize_state("shopping centre (north)") != normalize_state(
+        "shopping centre"
+    )
+    # match_state snaps a config value to the real recorded string (real wins).
+    _real = ["city centre", "not_home", "shopping centre (north)"]
+    assert match_state("city_centre", _real) == "city centre"
+    assert match_state("NOT HOME", _real) == "not_home"
+    assert match_state("nonexistent", _real) is None
+    # EXACT recorded key wins over a fold-equal sibling (many-to-one safety): with
+    # both "not_home" and "not home" recorded, each resolves to ITSELF, not the
+    # other; an AMBIGUOUS candidate matching both by fold (and neither exactly)
+    # resolves to None rather than silently picking one.
+    _coll = ["not_home", "not home"]
+    assert match_state("not_home", _coll) == "not_home"  # exact wins
+    assert match_state("not home", _coll) == "not home"  # exact wins
+    assert match_state("not__home", _coll) is None  # folds to both → ambiguous
     assert tracker_device_name("Front Door") == ("Entity State Tracker — Front Door")
     # Prefix-doubling guard: a label already carrying the integration name must not
     # double it in the device name or the entity_id slug (the reported bug).

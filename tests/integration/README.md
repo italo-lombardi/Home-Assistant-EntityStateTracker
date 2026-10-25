@@ -124,6 +124,10 @@ ECs cannot run.
 | EC29 | No phantom "other" slice: on a fully-covered specific tracker (gap=0) the card's `other = window − Σ(tracked) − gap` stays <1 s, and `breakdown_seconds` values are numeric floats (regression for the `int()`-truncation residue) |
 | EC30 | Humanized `duration_text` (specific total) + `breakdown_text` (per state, both modes): nested `{ms,hm,dh,wd}` dicts, ordered min→max, `hm` matches floored `duration_seconds`, no `unaccounted` key in the per-state text |
 | EC31 | `365d` (and `30d`) are true-rolling frames (`now − N days → now`, include now, NOT midnight-snapped): sensor exists, window spans exactly `N*86400s`, `window_start ≈ now − N days`, `percent <= 100` and tracked seconds `<= window` (far-edge whole-day over-count guard) |
+| EC32 | Deleting a config entry removes its `.storage/entity_state_tracker.<entry_id>` ledger file and leaves no orphaned registry rows (needs `EST_SMOKE_HA_DIR`) |
+| EC33 | Separator-insensitive state tracking: a config state with underscores (`city_centre`) is attributed the time of the recorded spaced state (`city centre`) — `breakdown_seconds` under the config key, `duration_seconds` and `percent` non-zero (not dumped into "other") |
+| EC34 | Served card JS carries the legend layout fix: the `legend-label` (name truncation) and `legend-value` (always-visible %) classes are present |
+| EC35 | Config heal: a stored state that drifts from the recorded name (typed before the entity reported it) is rewritten to the recorded spaced form on the next entry reload (coordinator first-refresh) |
 
 ## Notes on semantics that shape the tests
 

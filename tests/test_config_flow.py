@@ -15,6 +15,9 @@ from custom_components.entity_state_tracker.config_flow import (
     EntityStateTrackerConfigFlow,
     EntityStateTrackerOptionsFlow,
     _async_seen_states,
+    _resolve_state,
+    _resolve_states,
+    _zone_state_map,
 )
 from custom_components.entity_state_tracker.const import (
     CONF_ENABLE_COMPLIANCE,
@@ -238,8 +241,87 @@ async def test_seen_states_cap_dedups_live_from_recorder(hass: HomeAssistant) ->
 
 
 # ---------------------------------------------------------------------------
-# Flow-driving helpers
+# Zone-aware state resolution (smart config)
 # ---------------------------------------------------------------------------
+
+
+async def test_seen_states_person_offers_home_not_home(hass: HomeAssistant) -> None:
+    """person/device_tracker prefill always offers the home/not_home specials."""
+    hass.states.async_set("person.alice", "city centre")
+    with patch(
+        "homeassistant.components.recorder.get_instance",
+        side_effect=KeyError("recorder"),
+    ):
+        seen = await _async_seen_states(hass, "person.alice")
+    # home + not_home offered (not in history), before the unavailable/unknown tail.
+    assert "home" in seen
+    assert "not_home" in seen
+    assert seen[-2:] == [STATE_UNAVAILABLE, "unknown"]
+
+
+async def test_seen_states_non_person_no_specials(hass: HomeAssistant) -> None:
+    """A climate entity gets no home/not_home specials (no zone semantics)."""
+    hass.states.async_set("climate.lr", "heat")
+    with patch(
+        "homeassistant.components.recorder.get_instance",
+        side_effect=KeyError("recorder"),
+    ):
+        seen = await _async_seen_states(hass, "climate.lr")
+    assert "not_home" not in seen
+    assert "home" not in seen
+
+
+def test_zone_state_map_friendly_id_and_object(hass: HomeAssistant) -> None:
+    """Zone map keys on friendly name, entity_id, and object_id → emitted state."""
+    hass.states.async_set(
+        "zone.dublin_city_center_usc",
+        "zoning",
+        {"friendly_name": "Dublin City Center (USC)"},
+    )
+    hass.states.async_set("zone.home", "zoning", {"friendly_name": "Home"})
+    m = _zone_state_map(hass)
+    # Keys are canonicalised (normalize_state folds _→space, lowercases). All three
+    # references resolve to the zone's friendly name (canonicalised).
+    assert m["dublin city center (usc)"] == "dublin city center (usc)"
+    assert m["zone.dublin city center usc"] == "dublin city center (usc)"
+    # object_id normalised ("dublin_city_center_usc" → "dublin city center usc").
+    assert m["dublin city center usc"] == "dublin city center (usc)"
+    # zone.home special-cases to the "home" literal, not its friendly name "Home".
+    assert m["home"] == "home"
+    assert m["zone.home"] == "home"
+
+
+def test_resolve_state_prefers_seen_over_zone(hass: HomeAssistant) -> None:
+    """A real recorded state wins over a zone-name resolution (ground truth)."""
+    seen = ["city centre"]
+    zone_map = {"city centre": "city centre (zone label)"}
+    # The recorded separator variant wins.
+    assert _resolve_state("city_centre", seen, zone_map) == "city centre"
+
+
+def test_resolve_state_falls_to_zone_then_canonical() -> None:
+    """Unseen value resolves via zone map; else canonical form."""
+    zone_map = {"dublin city center (usc)": "dublin city center (usc)"}
+    # Typed with different case/separator, not in seen → zone resolution.
+    assert (
+        _resolve_state("Dublin_City_Center (USC)", [], zone_map)
+        == "dublin city center (usc)"
+    )
+    # Nothing matches → canonical form of the typed value (Layer 2 covers later).
+    assert _resolve_state("Somewhere New", [], {}) == "somewhere new"
+
+
+def test_resolve_states_zone_gated_on_domain(hass: HomeAssistant) -> None:
+    """Zone resolution runs for person/device_tracker only; dedups resolved."""
+    hass.states.async_set("zone.office", "zoning", {"friendly_name": "The Office"})
+    # person: typed zone name resolves to the zone friendly name.
+    assert _resolve_states(hass, "person.bob", ["The_Office"], []) == ["the office"]
+    # climate: no zone resolution — canonical form only, zone ignored.
+    assert _resolve_states(hass, "climate.x", ["The_Office"], []) == ["the office"]
+    # dedup: two inputs resolving to the same real state collapse to one.
+    assert _resolve_states(hass, "person.bob", ["The Office", "the_office"], []) == [
+        "the office"
+    ]
 
 
 def _patch_seen(states: list[str] | None = None) -> Any:
@@ -326,6 +408,57 @@ async def test_specific_no_compliance_creates_entry(hass: HomeAssistant) -> None
     # No derived unique_id — entries rely on their auto-generated entry_id.
     entry = hass.config_entries.async_entries(DOMAIN)[0]
     assert entry.unique_id is None
+
+
+async def test_specific_snaps_typed_state_to_recorded(hass: HomeAssistant) -> None:
+    """A typed underscore state is stored as the recorded spaced state."""
+    flow_id = await _start_to_mode(hass, entity="person.alex")
+    # Recorder has the real spaced state; user types the underscore variant.
+    with _patch_seen(["city centre", "gym"]):
+        result = await hass.config_entries.flow.async_configure(
+            flow_id, {"next_step_id": MODE_SPECIFIC}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_STATES: ["city_centre", "gym"],
+                CONF_ENABLE_COMPLIANCE: False,
+            },
+        )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], _frames_input("today")
+    )
+    assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
+    # Stored as the recorded spaced name, NOT the typed underscore form.
+    assert result["data"][CONF_STATES] == ["city centre", "gym"]
+
+
+async def test_specific_resolves_typed_zone_name(hass: HomeAssistant) -> None:
+    """A typed zone the entity never visited resolves to the zone's emitted state."""
+    hass.states.async_set(
+        "zone.dublin_city_center_usc",
+        "zoning",
+        {"friendly_name": "Dublin City Center (USC)"},
+    )
+    flow_id = await _start_to_mode(hass, entity="person.alice")
+    # Entity has only visited "gym"; user types a zone name not yet in history.
+    with _patch_seen(["gym"]):
+        result = await hass.config_entries.flow.async_configure(
+            flow_id, {"next_step_id": MODE_SPECIFIC}
+        )
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"],
+            {
+                CONF_STATES: ["Dublin_City_Center (USC)", "gym"],
+                CONF_ENABLE_COMPLIANCE: False,
+            },
+        )
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], _frames_input("today")
+    )
+    assert result["type"] is data_entry_flow.FlowResultType.CREATE_ENTRY
+    # Resolved to the zone's emitted (friendly-name) state, canonicalised.
+    assert result["data"][CONF_STATES] == ["dublin city center (usc)", "gym"]
 
 
 async def test_specific_empty_states_error(hass: HomeAssistant) -> None:

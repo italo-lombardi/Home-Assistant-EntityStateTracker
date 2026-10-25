@@ -7,7 +7,7 @@
  * self-contained file, vanilla LitElement via the home-assistant-main prototype.
  */
 
-const CARD_VERSION = "0.1.6";
+const CARD_VERSION = "0.1.8";
 
 console.info(
   `%c ENTITY-STATE-TRACKER-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi `,
@@ -715,6 +715,21 @@ const cardStyles = css`
     font-size: 13px;
     margin: 3px 0;
     color: var(--est-text-primary);
+    /* Allow the row to shrink so the label can ellipsize instead of pushing the
+       value past the legend's max-width (where ha-card{overflow:hidden} clips
+       it — the hidden-percentage bug). */
+    min-width: 0;
+  }
+
+  /* The state name: takes the slack and truncates with an ellipsis when long
+     ("Shopping Centre (Nor…"), so the value beside it is never shoved out of
+     view. */
+  .legend-label {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .legend-swatch {
@@ -728,6 +743,8 @@ const cardStyles = css`
     margin-left: 12px;
     color: var(--est-text-secondary);
     white-space: nowrap;
+    /* Pin the duration·% so it always renders in full; only the name truncates. */
+    flex: 0 0 auto;
   }
 
   .frame-picker {
@@ -1493,7 +1510,7 @@ class EntityStateTrackerCard extends LitElement {
             ${legendItems.map(
               (i) => html`<div class="legend-item">
                 <span class="legend-swatch" style="background:${i.color}"></span>
-                <span>${i.label}</span>
+                <span class="legend-label" title="${i.label}">${i.label}</span>
                 ${i.value != null
                   ? html`<span class="legend-value">${i.value}</span>`
                   : nothing}

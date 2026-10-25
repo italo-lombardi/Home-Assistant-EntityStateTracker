@@ -67,6 +67,7 @@ from .engine import (
     resolve_frame_bounds,
     split_visit_across_days,
 )
+from .helpers import match_state
 from .models import FrameResult, TrackerData, TrackerLedger
 from .storage import EntityStateTrackerStore
 
@@ -202,6 +203,18 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
 
         self._reconcile_min_state_duration(self._ledger)
         await self._async_backfill()
+        # Backfill populates ledger.daily with the real recorded state names on a
+        # fresh install — states the pre-backfill seed (line above) could not know.
+        # Union them into _seen so the heal below snaps against them on the FIRST
+        # boot, not only the second. Union (not reassign) preserves the durable-set
+        # semantics: a state that has since aged out of daily stays "seen".
+        self._seen |= self._ledger_seen_states(self._ledger)
+        # Heal a stored config whose states drifted from the real recorded ones
+        # (e.g. underscores "city_centre" vs recorded "city centre").
+        # Runs after backfill so the ledger carries the real state names to snap
+        # against; mutates self.tracked_states/target_states in-memory for THIS
+        # boot and rewrites the entry only when something actually changed.
+        self._heal_config_states()
         await super().async_config_entry_first_refresh()
 
         # Subscribe INSIDE async_at_start so the live stream is wired only after
@@ -505,6 +518,83 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             self._last_fold = None
         ledger.built_min_state_duration = self.min_state_duration
         self._dirty = True
+
+    @callback
+    def _heal_config_states(self) -> None:
+        """Rewrite stored config states that drifted from the real recorded ones.
+
+        A tracker configured with a separator/case variant of a real state (the
+        reported ``city_centre`` vs recorded ``city centre``) matches
+        at read time via the runtime canonical fold, but the STORED config stays
+        wrong. This one-shot heal snaps each stored ``CONF_STATES``/``CONF_TARGET``
+        value to the real recorded state name (from the ledger's buckets, which
+        hold exactly what the entity emitted) and persists the corrected config.
+
+        Safety:
+
+        * Only an UNAMBIGUOUS match heals — a value that resolves to exactly one
+          real recorded state. An unmatched value is left as-is (the entity may
+          not have emitted it yet; the runtime fold still covers it, and a later
+          boot re-snaps once it appears).
+        * In-memory ``self.tracked_states``/``self.target_states`` are updated for
+          THIS boot so the current session uses the healed values immediately,
+          independent of the entry rewrite's reload.
+        * The entry is rewritten ONLY when a value actually changed, so a clean
+          config never dirties the entry (which would reload-loop every boot).
+        """
+        # Real recorded state names (lowercased, real separators) the entity has
+        # emitted — the snap targets. self._seen was seeded from the ledger above.
+        real_states = sorted(self._seen)
+        if not real_states:
+            return
+
+        def _snap(values: list[str] | None) -> tuple[list[str] | None, bool]:
+            if not values:
+                return values, False
+            out: list[str] = []
+            changed = False
+            for v in values:
+                real = match_state(v, real_states)
+                if real is not None and real != v:
+                    changed = True
+                    out.append(real)
+                else:
+                    out.append(v)
+            # Dedup in case two config variants snapped to the same real state.
+            deduped = list(dict.fromkeys(out))
+            return deduped, changed or len(deduped) != len(values)
+
+        new_tracked, tracked_changed = _snap(self.tracked_states)
+        new_target, target_changed = _snap(self.target_states)
+        if not (tracked_changed or target_changed):
+            return
+
+        # Mirror into this boot's in-memory config so the current session uses the
+        # healed values right away (the entry reload below is async/deferred).
+        self.tracked_states = new_tracked
+        self.target_states = new_target
+
+        # Persist: rewrite the entry's stored states so the fix is permanent. The
+        # stored config is entry.data (the create-flow sink); options may also
+        # carry CONF_STATES/CONF_TARGET (options-flow edits) — rewrite both where
+        # present so the merged {**data, **options} the coordinator reads is clean.
+        new_data = dict(self.entry.data)
+        new_options = dict(self.entry.options)
+        for store in (new_data, new_options):
+            if CONF_STATES in store and new_tracked is not None:
+                store[CONF_STATES] = new_tracked
+            if CONF_TARGET in store and new_target is not None:
+                store[CONF_TARGET] = new_target
+        _LOGGER.info(
+            "Entity State Tracker: healing config states for %s to match recorded "
+            "names (tracked=%s, target=%s)",
+            self.entity_id,
+            new_tracked,
+            new_target,
+        )
+        self.hass.config_entries.async_update_entry(
+            self.entry, data=new_data, options=new_options
+        )
 
     async def _async_backfill(self) -> None:
         """Recompute closed days since ``last_updated_day`` from the recorder (§8).

@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8]
+
+### Fixed
+- **Tracked states with underscores vs spaces silently read 0%** — a tracker configured with a state like `city_centre` (underscores) never matched the state the entity actually reports, `city centre` (spaces), because every comparison was an exact string match. The affected states showed **0 seconds**, their real time was dumped into the grey "other" slice, and the `In a Tracked State %` / compliance sensors read **0%** even while the entity sat in a tracked state all day. State matching is now **separator- and case-insensitive**: underscores and spaces are treated as equivalent (and runs of whitespace collapse) wherever a configured state is compared against a recorded one — the percent/compliance sensors (`engine._subset_percent`), the duration sensor's tracked total and its `breakdown_seconds`/`breakdown_pct`/`breakdown_text`/`counts`/`avg_duration` attributes, and the Lovelace card. This repairs an already-misconfigured tracker **immediately on upgrade**, with no re-save required.
+- **"Currently in a Tracked State" binary sensor could read `off` while in a tracked state** — its live-state comparison read the raw entity state (never lowercased) against the lowercased tracked set, so it broke on *any* case mismatch (e.g. HA `Home` vs stored `home`) in addition to the separator issue. Both operands are now canonicalised, so it reads `on` correctly regardless of case or underscore/space.
+- **Card: long state names clipped the percentage** — a legend row with a long name (e.g. `Shopping Centre (North)`) pushed the `· 53.4%` value off the right edge of the card, where it was clipped. The state **name** now truncates with an ellipsis (`Shopping Centre (Nor…`, full name on hover) and the duration·percentage is always shown in full.
+
+### Added
+- **Smarter config — states snap to what the entity really reports** — when you pick or type a tracked/target state in the config or options flow, it is now stored as the exact string the entity emits, so a separator/case typo can't silently break tracking at the source. A value is resolved against the entity's recorded history first; for a `person`/`device_tracker`, a typed value that isn't in history is matched against your **zones** (by zone friendly name, `zone.*` entity_id, or object_id) and stored as the state that zone produces — so typing `Dublin City Center (USC)` for a person you've not yet tracked there still stores the correct state. `home`/`not_home` are offered and handled as the zone specials. This is best-effort config-time convenience: a later zone *rename* can still drift (runtime matching and the heal below cover case/separator drift, not a full rename).
+- **Automatic self-heal of drifted configs on startup** — on the first refresh after upgrading, a tracker whose stored states drifted from the real recorded names (the underscore/space case above) rewrites them to the real names, permanently — but only on an unambiguous match, leaving anything unmatched untouched, and only when something actually changed (so a clean config is never rewritten).
+
 ## [0.1.7]
 
 ### Fixed
