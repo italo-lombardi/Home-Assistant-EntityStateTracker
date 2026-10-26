@@ -1,0 +1,140 @@
+// Unit tests for the Entity State Tracker card's pure rendering logic.
+//
+// Harness note: the card is loaded via ./_harness.mjs, which stubs the browser
+// globals the card reads at module-load and captures the card class. The three
+// methods under test are reached off the prototype — _breakdownSlices and
+// _specificSlices use no `this`; _transitionLine needs a stub `this` carrying
+// _formatTrackedState and inherits the stubbed html/nothing.
+//
+// Scope note (issue #39): there is deliberately NO normalizeState↔Python
+// normalize_state parity test. The card has no client-side normalize function —
+// by design it does exact-key lookups on keys the backend has already
+// normalized (engine norm loop + match_state emit canonical keys). The card's
+// only folds are display-only (toLabel: `_`→space + title-case; stateColor:
+// toLowerCase for a color key), neither implementing Python's
+// strip→lower→`_`→space→whitespace-collapse rule. There is nothing on the JS
+// side to assert parity against, so the gap is documented here rather than
+// guarded by a test against code that does not exist.
+
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { Card, NOTHING } from "./_harness.mjs";
+
+const fakeThis = { _formatTrackedState: (_id, s) => s };
+
+test("_transitionLine: sub-second weighted avg renders '0 s', not hidden (PR #36 guard)", () => {
+  // Two tracked states, every per-visit avg rounds to 0 s, but there ARE visits.
+  // Visit-weighted mean = (0.2*3 + 0.3*2) / 5 = 0.24 → fmtDuration → "0 s".
+  // The count>0 guard means this is reported as 0, NOT hidden as "no data".
+  const frag = Card.prototype._transitionLine.call(
+    fakeThis,
+    {
+      counts: { on: 3, off: 2 },
+      avg_duration_seconds: { on: 0.2, off: 0.3 },
+      tracked_states: ["on", "off"],
+      source_entity: "sensor.x",
+    },
+    null
+  );
+  assert.notEqual(frag, NOTHING, "sub-second avg must not be hidden");
+  assert.match(frag.__html, /5 visits/);
+  assert.match(
+    frag.__html,
+    /avg 0 s per visit/,
+    "a genuine 0.0 avg is shown as '0 s', not dropped"
+  );
+});
+
+test("_transitionLine: zero visits is hidden (returns nothing)", () => {
+  // The discriminating case: count === 0 → null avg → whole line hidden.
+  const frag = Card.prototype._transitionLine.call(
+    fakeThis,
+    {
+      counts: {},
+      avg_duration_seconds: {},
+      tracked_states: ["on"],
+      source_entity: "sensor.x",
+    },
+    null
+  );
+  assert.equal(frag, NOTHING);
+});
+
+test("_transitionLine: single-state key path reports that state's count + avg", () => {
+  const frag = Card.prototype._transitionLine.call(
+    fakeThis,
+    {
+      counts: { active: 4 },
+      avg_duration_seconds: { active: 90 },
+      source_entity: "sensor.x",
+    },
+    "active"
+  );
+  assert.match(frag.__html, /active — 4 visits/);
+  assert.match(frag.__html, /avg 1\.5 min per visit/); // 90 s → "1.5 min"
+});
+
+test("_breakdownSlices: share-of-window math, sorted secs-descending", () => {
+  const slices = Card.prototype._breakdownSlices.call(
+    {},
+    {
+      breakdown_seconds: { on: 300, off: 100 },
+      window_seconds: 600,
+      unaccounted_seconds: 0,
+      counts: { on: 2, off: 1 },
+      avg_duration_seconds: { on: 150, off: 100 },
+    }
+  );
+  assert.deepEqual(
+    slices.map((s) => s.state),
+    ["on", "off"],
+    "biggest first"
+  );
+  assert.equal(Math.round(slices[0].pct), 50); // 300/600
+  assert.equal(Math.round(slices[1].pct), 17); // 100/600
+});
+
+test("_breakdownSlices: gap > 10 s appends a 'No data' derived slice", () => {
+  const slices = Card.prototype._breakdownSlices.call(
+    {},
+    {
+      breakdown_seconds: { on: 500 },
+      window_seconds: 600,
+      unaccounted_seconds: 100,
+    }
+  );
+  const tail = slices[slices.length - 1];
+  assert.equal(tail.state, "No data");
+  assert.equal(tail.derived, true);
+  assert.equal(tail.secs, 100);
+});
+
+test("_breakdownSlices: gap <= 10 s is absorbed (no 'No data' slice)", () => {
+  const slices = Card.prototype._breakdownSlices.call(
+    {},
+    {
+      breakdown_seconds: { on: 595 },
+      window_seconds: 600,
+      unaccounted_seconds: 5,
+    }
+  );
+  assert.ok(!slices.some((s) => s.state === "No data"));
+});
+
+test("_specificSlices: tracked share + synthetic 'other' remainder", () => {
+  const slices = Card.prototype._specificSlices.call(
+    {},
+    {
+      window_seconds: 1000,
+      unaccounted_seconds: 0,
+      breakdown_seconds: { active: 400 },
+      tracked_states: ["active"],
+    },
+    null
+  );
+  const active = slices.find((s) => s.state === "active");
+  const other = slices.find((s) => s.state === "other");
+  assert.equal(Math.round(active.pct), 40); // 400/1000
+  assert.ok(other, "remainder is surfaced as an 'other' slice");
+  assert.equal(Math.round(other.pct), 60); // (1000-400)/1000
+});
