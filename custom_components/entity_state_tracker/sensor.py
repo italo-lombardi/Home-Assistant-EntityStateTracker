@@ -56,8 +56,12 @@ from .helpers import (
 from .models import FrameResult
 from .write_dedup import DedupCoordinatorSensor
 
+_ZONE_STATE_DOMAINS = ("person", "device_tracker")
 
-def _zone_labels(hass: HomeAssistant | None, keys: list[str]) -> dict[str, str]:
+
+def _zone_labels(
+    hass: HomeAssistant | None, source_entity: str | None, keys: list[str]
+) -> dict[str, str]:
     """Map each breakdown key that names a LIVE zone -> its real friendly name.
 
     Resolved fresh from ``hass`` on every attribute read, NEVER stored -- so a
@@ -65,8 +69,15 @@ def _zone_labels(hass: HomeAssistant | None, keys: list[str]) -> dict[str, str]:
     live-zone match are omitted; a consumer falls back to its own title-casing
     for those (unchanged behaviour). Lets templates / other dashboards show the
     real "Casa ... (Parma)" instead of the lossy lowercased storage key.
+
+    ONLY person/device_tracker get zone resolution -- their state IS a zone
+    name. For any other domain a state that merely collides with a zone's name
+    (a climate "away", a vacuum state) must NOT be rewritten (mirrors the config
+    flow's ``_ZONE_STATE_DOMAINS`` gate).
     """
-    if hass is None:
+    if hass is None or source_entity is None:
+        return {}
+    if source_entity.split(".", 1)[0] not in _ZONE_STATE_DOMAINS:
         return {}
     zmap = zone_label_map(
         [
@@ -379,7 +390,7 @@ class DurationSensor(_FrameSensor):
             }
             # Real zone friendly names for any tracked key that names a live zone
             # (resolved fresh — honours a zone rename). Omits non-zone keys.
-            labels = _zone_labels(self.hass, list(tracked))
+            labels = _zone_labels(self.hass, self.coordinator.entity_id, list(tracked))
             if labels:
                 attrs["breakdown_labels"] = labels
         if self.coordinator.target_states:
@@ -514,7 +525,7 @@ class BreakdownSensor(_FrameSensor):
         breakdown_pct["unaccounted"] = result.breakdown_pct.get("unaccounted")
         # Real zone friendly names for any breakdown key that names a live zone
         # (resolved fresh — honours a zone rename). Omits non-zone keys.
-        labels = _zone_labels(self.hass, order)
+        labels = _zone_labels(self.hass, self.coordinator.entity_id, order)
         attrs = {
             "source_entity": self.coordinator.entity_id,
             "frame": self._frame,

@@ -72,8 +72,15 @@ def _to_label(state: str, zone_names: dict[str, str] | None = None) -> str:
     return " ".join(w.capitalize() for w in state.replace("_", " ").split())
 
 
-def _live_zone_names(hass: HomeAssistant) -> dict[str, str]:
-    """Map each live zone's state key → its real friendly name (see helpers)."""
+def _live_zone_names(hass: HomeAssistant, source_entity_id: str) -> dict[str, str]:
+    """Map each live zone's state key → its friendly name (see helpers).
+
+    Empty for a non-``person``/``device_tracker`` source: only those domains
+    report a zone name as state, so a climate/vacuum state that merely collides
+    with a zone's name must not be relabelled (same gate as ``_resolve_states``).
+    """
+    if source_entity_id.split(".", 1)[0] not in _ZONE_STATE_DOMAINS:
+        return {}
     return zone_label_map(
         [
             z.attributes.get("friendly_name") or z.entity_id.split(".", 1)[1]
@@ -419,7 +426,9 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Optional(
                         CONF_STATES, default=(user_input or {}).get(CONF_STATES, seen)
-                    ): _seen_states_schema(seen, _live_zone_names(self.hass)),
+                    ): _seen_states_schema(
+                        seen, _live_zone_names(self.hass, self._data[_KEY_ENTITY])
+                    ),
                     vol.Optional(
                         CONF_ENABLE_COMPLIANCE,
                         default=(user_input or {}).get(CONF_ENABLE_COMPLIANCE, False),
@@ -467,7 +476,8 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Optional(CONF_TARGET, default=tracked): _target_selector(
-                        options, _live_zone_names(self.hass)
+                        options,
+                        _live_zone_names(self.hass, self._data[_KEY_ENTITY]),
                     ),
                     vol.Optional(CONF_TARGET_THRESHOLD): _threshold_selector(),
                 }
@@ -627,7 +637,7 @@ class EntityStateTrackerOptionsFlow(OptionsFlow):
             # recomputes history retroactively (the ledger stores every state;
             # tracked_states is only a read-time filter).
             schema[vol.Optional(CONF_STATES, default=tracked)] = _seen_states_schema(
-                tracked, _live_zone_names(self.hass)
+                tracked, _live_zone_names(self.hass, current[CONF_ENTITY])
             )
 
         if has_compliance:
@@ -641,7 +651,9 @@ class EntityStateTrackerOptionsFlow(OptionsFlow):
             )
             schema[
                 vol.Optional(CONF_TARGET, default=current.get(CONF_TARGET, tracked))
-            ] = _target_selector(target_options, _live_zone_names(self.hass))
+            ] = _target_selector(
+                target_options, _live_zone_names(self.hass, current[CONF_ENTITY])
+            )
             default_threshold = current.get(CONF_TARGET_THRESHOLD)
             threshold_key = (
                 vol.Optional(CONF_TARGET_THRESHOLD, default=default_threshold)

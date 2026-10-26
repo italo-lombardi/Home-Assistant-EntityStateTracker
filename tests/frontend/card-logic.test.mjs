@@ -166,3 +166,30 @@ test("_formatTrackedState: non-zone key still title-cases via toLabel", () => {
   const out = Card.prototype._formatTrackedState.call(stub, "sensor.x", "not_home");
   assert.equal(out, "Not Home");
 });
+
+test("_formatTrackedState: non-tracker domain does NOT adopt a colliding zone name", () => {
+  // A climate "away" that happens to match a zone named "Away" must stay a
+  // climate state — only person/device_tracker report a zone name as state.
+  const stub = {
+    hass: {
+      states: { "zone.away": { attributes: { friendly_name: "Away" } } },
+      formatEntityState: () => null,
+    },
+  };
+  const out = Card.prototype._formatTrackedState.call(stub, "climate.hvac", "away");
+  assert.equal(out, "Away"); // toLabel title-case, NOT the zone lookup path
+  // Prove it's the toLabel path, not the zone path: a lowercase-preserving
+  // zone name would leak through if the gate were missing.
+  const stub2 = {
+    hass: {
+      states: { "zone.x": { attributes: { friendly_name: "mixedCase Zone" } } },
+      formatEntityState: () => null,
+    },
+  };
+  const out2 = Card.prototype._formatTrackedState.call(
+    stub2,
+    "climate.hvac",
+    "mixedcase zone"
+  );
+  assert.equal(out2, "Mixedcase Zone"); // toLabel, not the zone's "mixedCase Zone"
+});
