@@ -1041,7 +1041,7 @@ class EntityStateTrackerCard extends LitElement {
       <div class="card-header">
         <ha-icon class="header-icon" icon="mdi:chart-timeline-variant"></ha-icon>
         <div class="header-text">
-          <div class="title">${title}</div>
+          <div class="title" title="${title}">${title}</div>
           ${this._renderSourceContext(sensors)}
         </div>
       </div>
