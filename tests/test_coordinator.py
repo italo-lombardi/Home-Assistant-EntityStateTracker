@@ -563,6 +563,121 @@ async def test_l4_overflow_warns_independently_per_coordinator(
     assert "24h" in cb._warned_overflow
 
 
+async def test_one_frame_failure_does_not_blank_other_frames(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """A compute_frame failure for ONE frame is isolated (S-hardening).
+
+    The frames dict is shared entry-wide: before the per-frame try/except an
+    exception propagated out of _async_update_data, flipping
+    last_update_success=False and stranding EVERY sensor. Now the bad frame is
+    skipped (or keeps its prior value) and the rest still populate.
+    """
+    now = _utc(2026, 6, 10, 12, 0)
+    patch_recorder([_FakeState("heat", _utc(2026, 6, 10, 0, 0))])
+    c = await _make_coordinator(hass, specific_config_entry)
+    real_compute = coord_mod.compute_frame
+
+    def _boom(frame_key, *a, **k):
+        if frame_key == "24h":
+            raise ValueError("synthetic frame failure")
+        return real_compute(frame_key, *a, **k)
+
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        await _first_refresh(hass, c)
+        c._ledger.last_state = "heat"
+        c._ledger.last_changed_ts = _utc(2026, 6, 10, 6, 0).isoformat()
+        prior_24h = c.data.frames["24h"]
+        prior_today = c.data.frames["today"]
+        with patch.object(coord_mod, "compute_frame", side_effect=_boom):
+            data = await c._async_update_data()  # must NOT raise
+
+    # No frame is lost: the failing frame keeps its PRIOR value (object
+    # identity proves it was carried forward, not recomputed) while every OTHER
+    # frame recomputed FRESH (new object, not a carried-forward prior).
+    assert set(data.frames) == set(c.enabled_frames)
+    assert data.frames["24h"] is prior_24h
+    assert data.frames["today"] is not prior_today  # recomputed, not stale
+    # The failed frame must NOT reach _warn_overflow (no result to check).
+    assert "24h" not in c._warned_overflow
+    await c.async_shutdown()
+
+
+async def test_frame_failure_with_no_prior_is_skipped(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """A frame that fails on the FIRST tick (no prior) is dropped, not fatal."""
+    now = _utc(2026, 6, 10, 12, 0)
+    patch_recorder([_FakeState("heat", _utc(2026, 6, 10, 0, 0))])
+    c = await _make_coordinator(hass, specific_config_entry)
+    real_compute = coord_mod.compute_frame
+
+    def _boom(frame_key, *a, **k):
+        if frame_key == "24h":
+            raise ValueError("synthetic frame failure")
+        return real_compute(frame_key, *a, **k)
+
+    # c.data is None on the very first _async_update_data, so prior is empty and
+    # the failing frame has nothing to carry forward — it is simply omitted.
+    with (
+        patch.object(coord_mod.dt_util, "utcnow", return_value=now),
+        patch.object(coord_mod, "compute_frame", side_effect=_boom),
+    ):
+        data = await c._async_update_data()  # must NOT raise
+
+    assert "24h" not in data.frames
+    assert set(data.frames) == set(c.enabled_frames) - {"24h"}
+    await c.async_shutdown()
+
+
+async def test_persistent_frame_failure_raises_and_clears_repair_issue(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """A frame failing FRAME_FAIL_ESCALATE ticks raises a Repair issue; a later
+    success clears it. Isolation keeps the tracker alive throughout."""
+    from homeassistant.helpers import issue_registry as ir
+
+    from custom_components.entity_state_tracker.const import DOMAIN
+
+    now = _utc(2026, 6, 10, 12, 0)
+    patch_recorder([_FakeState("heat", _utc(2026, 6, 10, 0, 0))])
+    c = await _make_coordinator(hass, specific_config_entry)
+    real_compute = coord_mod.compute_frame
+    fail = {"on": True}
+
+    def _boom(frame_key, *a, **k):
+        if frame_key == "24h" and fail["on"]:
+            raise ValueError("synthetic frame failure")
+        return real_compute(frame_key, *a, **k)
+
+    issue_id = f"frame_fail_{specific_config_entry.entry_id}_24h"
+    reg = ir.async_get(hass)
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        await _first_refresh(hass, c)
+        with patch.object(coord_mod, "compute_frame", side_effect=_boom):
+            # Below threshold: no issue yet.
+            for _ in range(coord_mod.FRAME_FAIL_ESCALATE - 1):
+                await c._async_update_data()
+            chk_none = reg.async_get_issue(DOMAIN, issue_id)
+            assert chk_none is None, "issue raised too early"
+            # Crossing the threshold raises it.
+            await c._async_update_data()
+            assert reg.async_get_issue(DOMAIN, issue_id) is not None
+        # Frame recovers → issue cleared + streak reset.
+        fail["on"] = False
+        await c._async_update_data()
+
+    assert reg.async_get_issue(DOMAIN, issue_id) is None
+    assert "24h" not in c._frame_fail_streak
+    await c.async_shutdown()
+
+
 # --------------------------------------------------------------------------- #
 # Live state-change fold
 # --------------------------------------------------------------------------- #

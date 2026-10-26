@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "Rejestrator jest niedostępny",
       "description": "Entity State Tracker polega na rejestratorze przy obliczaniu czasów trwania stanów. Rejestrator jest niedostępny, więc śledzenie od teraz przechodzi wyłącznie na akumulację na żywo i nie może uzupełnić przeszłej historii. Włącz integrację rejestratora, aby przywrócić pełną historię przedziałów czasowych."
+    },
+    "frame_compute_failed": {
+      "title": "Przedział czasowy przestał się aktualizować",
+      "description": "Entity State Tracker nie mógł obliczyć przedziału czasowego „{frame}” dla {entity} przez {count} kolejnych aktualizacji, więc ten czujnik utrzymuje swoją ostatnią wartość. Zwykle wskazuje to na uszkodzoną zapisaną historię tego trackera. Sprawdź błąd w dziennikach Home Assistant, a następnie przeładuj integrację."
     }
   }
 }

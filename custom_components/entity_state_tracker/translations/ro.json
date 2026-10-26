@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "Recorderul este indisponibil",
       "description": "Entity State Tracker se bazează pe recorder pentru a calcula duratele stărilor. Recorderul nu este disponibil, așa că urmărirea revine de acum înainte doar la acumularea în timp real și nu poate completa istoricul trecut. Activează integrarea recorder pentru a restabili istoricul complet al intervalelor de timp."
+    },
+    "frame_compute_failed": {
+      "title": "Un interval de timp a încetat să se actualizeze",
+      "description": "Entity State Tracker nu a putut calcula intervalul de timp „{frame}” pentru {entity} timp de {count} actualizări la rând, așa că acel senzor își păstrează ultima valoare. Acest lucru indică de obicei un istoric stocat corupt pentru acest tracker. Verifică eroarea în jurnalele Home Assistant, apoi reîncarcă integrarea."
     }
   }
 }

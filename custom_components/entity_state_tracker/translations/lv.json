@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "Ierakstītājs nav pieejams",
       "description": "Entity State Tracker paļaujas uz ierakstītāju, lai aprēķinātu stāvokļu ilgumus. Ierakstītājs nav pieejams, tāpēc sekošana no šī brīža atgriežas tikai pie tiešā uzkrājuma un nevar aizpildīt pagājušo vēsturi. Iespējojiet ierakstītāja integrāciju, lai atjaunotu pilnu laika posmu vēsturi."
+    },
+    "frame_compute_failed": {
+      "title": "Laika posms vairs netiek atjaunināts",
+      "description": "Entity State Tracker nevarēja aprēķināt laika posmu “{frame}” vienībai {entity} {count} atjauninājumus pēc kārtas, tāpēc šis sensors saglabā savu pēdējo vērtību. Tas parasti norāda uz bojātu šī sekotāja saglabāto vēsturi. Pārbaudiet kļūdu Home Assistant žurnālos un pēc tam atkārtoti ielādējiet integrāciju."
     }
   }
 }

@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "記錄器無法使用",
       "description": "Entity State Tracker 依賴記錄器來計算狀態時長。記錄器無法使用，因此追蹤從現在起回退為僅即時累積，無法回填過去的歷史。啟用記錄器整合以還原完整的時間範圍歷史。"
+    },
+    "frame_compute_failed": {
+      "title": "某個時間範圍已停止更新",
+      "description": "Entity State Tracker 連續 {count} 次更新都無法為 {entity} 計算「{frame}」時間範圍，因此該感測器保持其最後的值。這通常表示此追蹤器儲存的歷史已損毀。請在 Home Assistant 記錄中查看該錯誤，然後重新載入此整合。"
     }
   }
 }

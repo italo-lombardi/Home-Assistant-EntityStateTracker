@@ -311,6 +311,26 @@ def test_duration_text_matches_duration_seconds_for_drifted_config() -> None:
     assert attrs["duration_text"]["s"] == "3600s"
 
 
+def test_duration_native_value_dedups_folded_config_keys() -> None:
+    """Two config keys folding to ONE recorded key count that key once.
+
+    Regression: _tracked_seconds summed per config state, so a config listing
+    both "not home" and "not_home" (which match_state folds to the single
+    recorded "not home") double-counted its seconds — making the headline
+    duration diverge above the set-based percent. It must count once.
+    """
+    res = _frame_result(
+        breakdown_seconds={"not home": 3600.0},
+        breakdown_pct={"not home": 100.0},
+        counts={"not home": 1},
+        avg_duration={"not home": 3600.0},
+    )
+    coord = _duration_coord(tracked=("not home", "not_home"), result=res)
+    sensor = DurationSensor(coord, "today")
+    # 3600, NOT 7200 — the folded duplicate resolves to one recorded key.
+    assert sensor.native_value == pytest.approx(3600.0)
+
+
 def test_transition_metrics_all_states_identity_under_collision() -> None:
     """All-states counts/avg stay pure identity even when keys fold-collide.
 

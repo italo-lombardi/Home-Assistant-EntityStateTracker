@@ -26,6 +26,7 @@ from custom_components.entity_state_tracker import (
     async_remove_entry,
     async_setup,
     async_unload_entry,
+    disable_orphaned_entities,
 )
 from custom_components.entity_state_tracker.const import DOMAIN
 
@@ -271,6 +272,143 @@ async def test_purge_orphaned_storage_oserror_warns(
         await _async_purge_orphaned_storage(hass)
 
     assert "could not remove orphaned storage file" in caplog.text
+
+
+# --------------------------------------------------------------------------- #
+# disable_orphaned_entities — a frame toggled off strands its per-frame sensors
+# as restored/unavailable forever (the "this_month stuck unavailable" bug). We
+# DISABLE the orphan (history preserved), never remove it (removal would purge
+# the recorder history + statistics). A user-disabled entity is left alone; a
+# re-enabled frame is un-disabled.
+# --------------------------------------------------------------------------- #
+
+
+async def test_disable_orphaned_entity_not_in_valid_set(hass: HomeAssistant) -> None:
+    """An orphan (unique_id not in the live set) is DISABLED, not removed."""
+    from homeassistant.helpers import entity_registry as er
+
+    from custom_components.entity_state_tracker.helpers import unique_id
+
+    entry = MockConfigEntry(domain=DOMAIN)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    keep = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        unique_id(entry.entry_id, "today", "duration"),
+        config_entry=entry,
+    )
+    orphan = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        unique_id(entry.entry_id, "month", "duration"),
+        config_entry=entry,
+    )
+
+    disable_orphaned_entities(hass, entry, "sensor", {keep.unique_id})
+
+    # Orphan still EXISTS (history kept) but is disabled by the integration;
+    # the live frame is untouched.
+    assert registry.async_get(orphan.entity_id) is not None
+    assert (
+        registry.async_get(orphan.entity_id).disabled_by
+        == er.RegistryEntryDisabler.INTEGRATION
+    )
+    assert registry.async_get(keep.entity_id).disabled_by is None
+
+
+async def test_disable_orphaned_preserves_user_disabled(hass: HomeAssistant) -> None:
+    """A USER-disabled entity is left alone even if not in the valid set."""
+    from homeassistant.helpers import entity_registry as er
+
+    from custom_components.entity_state_tracker.helpers import unique_id
+
+    entry = MockConfigEntry(domain=DOMAIN)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    ent = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        unique_id(entry.entry_id, "month", "duration"),
+        config_entry=entry,
+        disabled_by=er.RegistryEntryDisabler.USER,
+    )
+
+    # Not in the valid set (frame off), but user-disabled → must stay USER.
+    disable_orphaned_entities(hass, entry, "sensor", set())
+
+    assert (
+        registry.async_get(ent.entity_id).disabled_by == er.RegistryEntryDisabler.USER
+    )
+
+
+async def test_disable_orphaned_reenables_on_frame_return(hass: HomeAssistant) -> None:
+    """An entity WE disabled is re-enabled when its frame comes back."""
+    from homeassistant.helpers import entity_registry as er
+
+    from custom_components.entity_state_tracker.helpers import unique_id
+
+    entry = MockConfigEntry(domain=DOMAIN)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    uid = unique_id(entry.entry_id, "month", "duration")
+    ent = registry.async_get_or_create(
+        "sensor",
+        DOMAIN,
+        uid,
+        config_entry=entry,
+        disabled_by=er.RegistryEntryDisabler.INTEGRATION,
+    )
+
+    # Frame re-enabled → its unique_id is valid again → we un-disable it.
+    disable_orphaned_entities(hass, entry, "sensor", {uid})
+
+    assert registry.async_get(ent.entity_id).disabled_by is None
+
+
+async def test_disable_orphaned_noop_on_unchanged(hass: HomeAssistant) -> None:
+    """When the valid set equals the registered set, nothing is disabled."""
+    from homeassistant.helpers import entity_registry as er
+
+    from custom_components.entity_state_tracker.helpers import unique_id
+
+    entry = MockConfigEntry(domain=DOMAIN)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    uids = {unique_id(entry.entry_id, f, "duration") for f in ("today", "yesterday")}
+    for u in uids:
+        registry.async_get_or_create("sensor", DOMAIN, u, config_entry=entry)
+
+    disable_orphaned_entities(hass, entry, "sensor", uids)
+
+    for u in uids:
+        e = next(
+            x
+            for x in er.async_entries_for_config_entry(registry, entry.entry_id)
+            if x.unique_id == u
+        )
+        assert e.disabled_by is None
+
+
+async def test_disable_orphaned_ignores_other_platform(hass: HomeAssistant) -> None:
+    """A binary_sensor entry is untouched when disabling for the sensor platform."""
+    from homeassistant.helpers import entity_registry as er
+
+    from custom_components.entity_state_tracker.helpers import unique_id
+
+    entry = MockConfigEntry(domain=DOMAIN)
+    entry.add_to_hass(hass)
+    registry = er.async_get(hass)
+    other = registry.async_get_or_create(
+        "binary_sensor",
+        DOMAIN,
+        unique_id(entry.entry_id, "today", "compliant"),
+        config_entry=entry,
+    )
+
+    disable_orphaned_entities(hass, entry, "sensor", set())
+
+    assert registry.async_get(other.entity_id).disabled_by is None
 
 
 async def test_async_setup_calls_purge(hass: HomeAssistant) -> None:

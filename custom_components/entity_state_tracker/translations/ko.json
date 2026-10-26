@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "레코더를 사용할 수 없음",
       "description": "Entity State Tracker는 상태 지속 시간을 계산하기 위해 레코더에 의존합니다. 레코더를 사용할 수 없으므로 추적은 이제부터 라이브 전용 누적으로 대체되며 과거 기록을 채울 수 없습니다. 전체 기간 기록을 복원하려면 레코더 통합을 활성화하세요."
+    },
+    "frame_compute_failed": {
+      "title": "기간 업데이트가 중지됨",
+      "description": "Entity State Tracker가 {entity}의 \"{frame}\" 기간을 {count}회 연속으로 계산하지 못해 해당 센서가 마지막 값을 유지하고 있습니다. 이는 보통 이 추적기의 저장된 기록이 손상되었음을 나타냅니다. Home Assistant 로그에서 오류를 확인한 다음 통합을 다시 불러오세요."
     }
   }
 }

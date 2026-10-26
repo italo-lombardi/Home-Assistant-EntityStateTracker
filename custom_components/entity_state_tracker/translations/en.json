@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "Recorder is unavailable",
       "description": "Entity State Tracker relies on the recorder to compute state durations. The recorder is not available, so tracking falls back to live-only accumulation from now on and cannot backfill past history. Enable the recorder integration to restore full time-frame history."
+    },
+    "frame_compute_failed": {
+      "title": "A time frame stopped updating",
+      "description": "Entity State Tracker could not compute the \"{frame}\" time frame for {entity} for {count} updates in a row, so that sensor is holding its last value. This usually points to corrupted stored history for this tracker. Check the Home Assistant logs for the error, then reload the integration."
     }
   }
 }

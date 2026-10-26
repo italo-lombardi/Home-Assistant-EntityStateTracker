@@ -49,6 +49,7 @@ from .helpers import (
     humanize_duration,
     match_state,
     normalize_state,
+    resolve_wanted,
     tracker_device_name,
     unique_id,
     zone_label_map,
@@ -99,6 +100,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the tracker's per-frame sensors for the config entry."""
+    from . import disable_orphaned_entities
+
     entities: list[Entity] = []
 
     coordinator: EntityStateTrackerCoordinator = hass.data[DOMAIN][entry.entry_id]
@@ -120,6 +123,11 @@ async def async_setup_entry(
         )
 
     async_add_entities(entities)
+    # AFTER the add: the valid set is the entities just added, so a reload that
+    # re-adds a frame can't race its own disable. Do not move above the add.
+    disable_orphaned_entities(
+        hass, entry, "sensor", {e.unique_id for e in entities if e.unique_id}
+    )
 
 
 def _device_info(coordinator: EntityStateTrackerCoordinator) -> DeviceInfo:
@@ -199,16 +207,15 @@ def _tracked_seconds(result: FrameResult, tracked: list[str] | None) -> float:
     if tracked is None:
         total = sum(result.breakdown_seconds.values())
     else:
-        # Resolve each CONFIG state to the REAL recorded key via the canonical
-        # form so a config "city_centre" picks up the recorded "city centre"
-        # (the underscore/space mismatch that zeroed the tracked total). Exact
-        # matches are unaffected.
+        # Resolve each CONFIG state to the REAL recorded key (match_state folds
+        # the underscore/space + case mismatch) and sum each resolved key ONCE —
+        # resolve_wanted dedups the many-to-one fold so the headline can't
+        # double-count a state and diverge above the set-based percent.
         real_keys = list(result.breakdown_seconds)
-        total = 0.0
-        for state in tracked:
-            real = match_state(state, real_keys)
-            if real is not None:
-                total += result.breakdown_seconds.get(real, 0.0)
+        total = sum(
+            result.breakdown_seconds.get(real, 0.0)
+            for real in resolve_wanted(tracked, real_keys)
+        )
     # Round to milliseconds: far finer than history_stats' second-granularity, but
     # tames the float-sum tail (e.g. 32021.287099999463) so the stored state
     # string / history graph / API read clean, not an ugly long float.

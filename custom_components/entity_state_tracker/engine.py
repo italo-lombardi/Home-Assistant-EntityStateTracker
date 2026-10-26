@@ -29,7 +29,7 @@ import logging
 from homeassistant.core import HomeAssistant, State
 
 from .const import DOMINANT_HYSTERESIS_PCT, FRAMES, LEDGER_MAX_DAYS
-from .helpers import match_state
+from .helpers import resolve_wanted
 from .models import FrameResult
 
 _LOGGER = logging.getLogger(__name__)
@@ -688,7 +688,7 @@ def _subset_percent(
     # zone "Not home") being swept in and over-counting. Exact-config matches are
     # unchanged. A config value with no real match contributes nothing.
     real_keys = list(breakdown_seconds)
-    wanted = {m for s in subset if (m := match_state(s, real_keys)) is not None}
+    wanted = resolve_wanted(subset, real_keys)
     matched = sum(secs for name, secs in breakdown_seconds.items() if name in wanted)
     return min(100.0, round(matched / window_seconds * 100, 1))
 

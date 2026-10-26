@@ -3420,6 +3420,271 @@ def ec39_zone_rename_reflects_on_next_refresh():
     return entry, bd
 
 
+def ec41_disabled_frame_entity_disabled_not_removed():
+    """EC41: toggling a frame off DISABLES its entities (history preserved).
+
+    Before the fix, disabling a frame left its per-frame entities registered with
+    no live producer, stranded as restored `unavailable` forever (the "This month
+    stuck unavailable" bug). The fix DISABLES the orphan (disabled_by=integration)
+    rather than removing it — removal would purge the recorder history/statistics,
+    which a reversible toggle must never do. EC11 asserts the state goes
+    unavailable; EC41 asserts the STRONGER, correct behaviour: the registry entry
+    SURVIVES (history kept) but is disabled, and a still-enabled frame stays
+    enabled.
+    """
+    print(
+        "\n=== EC41: disabling a frame disables its entity (history kept, not removed) ===",
+        flush=True,
+    )
+    eid = make_entity("orphan", "on")
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on"],
+        frames={"today": True, "yesterday": True, "24h": True, "7d": True},
+    )
+    reg = wait_entities(entry, min_count=4)
+    yday_uid = f"{entry}_yesterday_{M_DURATION}"
+    today_uid = f"{entry}_today_{M_DURATION}"
+    chk("EC41 yesterday unique_id registered before toggle", yday_uid in reg, True)
+
+    # Options flow: turn yesterday OFF, keep today on.
+    r = api("POST", "/api/config/config_entries/options/flow", {"handler": entry})
+    fid = r["flow_id"]
+    assert r.get("step_id") == "init", f"expected init step, got {r}"
+    body = {
+        "today": True,
+        "yesterday": False,  # toggled OFF
+        "24h": True,
+        "7d": True,
+        "30d": False,
+        "last_week": False,
+        "month": False,
+        "last_month": False,
+        "year": False,
+        "min_state_duration": 0,
+    }
+    r2 = api("POST", f"/api/config/config_entries/options/flow/{fid}", body)
+    chk("EC41 options flow created entry", r2.get("type"), "create_entry")
+
+    # After reload the yesterday entry must STILL EXIST (history preserved) but be
+    # disabled_by=integration — never removed. today stays enabled.
+    def _yday_disabled():
+        e = est_entities(entry).get(yday_uid)
+        return bool(e) and e.get("disabled_by") == "integration"
+
+    disabled = wait_until(_yday_disabled, timeout=WAIT_FOR_TIMEOUT)
+    after = est_entities(entry)
+    chk(
+        "EC41 disabled-frame entry survives in registry (history NOT purged)",
+        yday_uid in after,
+        True,
+    )
+    chk(
+        "EC41 disabled-frame entry is disabled_by=integration",
+        disabled,
+        True,
+        f"disabled_by={(after.get(yday_uid) or {}).get('disabled_by')}",
+    )
+    chk(
+        "EC41 still-enabled today frame remains enabled",
+        today_uid in after
+        and (after.get(today_uid) or {}).get("disabled_by") in (None, ""),
+        True,
+    )
+    return entry, eid
+
+
+def ec42_headline_duration_matches_percent_no_doublecount():
+    """EC42: the headline tracked duration never exceeds its window (no double-count).
+
+    The headline `_tracked_seconds` de-duplicates on the RESOLVED recorded state,
+    so overlapping/folding config entries can't sum one state's time twice. The
+    observable invariant: duration_seconds (headline) ≤ window_seconds, and the
+    percent (which was already set-based) equals round(duration/window*100) within
+    rounding. A double-counting headline would push duration above the window and
+    diverge above the clamped percent.
+    """
+    print(
+        "\n=== EC42: headline duration ≤ window and consistent with percent ===",
+        flush=True,
+    )
+    eid = make_entity("dedup", "on")
+    time.sleep(2 if FAST else 3)
+    ss(eid, "off")
+    time.sleep(2 if FAST else 3)
+    ss(eid, "on")
+    time.sleep(2 if FAST else 3)
+    entry = create_tracker(
+        eid, "specific_states", states=["on"], frames={"today": True}
+    )
+    reg = wait_entities(entry, min_count=1)
+    dur = eid_for(entry, "today", M_DURATION, reg)
+    pct = eid_for(entry, "today", M_PERCENT, reg)
+    chk(
+        "EC42 duration + percent sensors exist",
+        dur is not None and pct is not None,
+        True,
+    )
+    if not dur or not pct:
+        return entry, eid
+
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
+    wait_for_gt(
+        lambda: gs(dur).get("attributes", {}).get("duration_seconds") or 0,
+        0,
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    a = gs(dur).get("attributes", {})
+    dur_s = a.get("duration_seconds") or 0.0
+    win_s = a.get("window_seconds") or 0.0
+    chk(
+        "EC42 headline duration_seconds ≤ window_seconds (no double-count)",
+        dur_s <= win_s + 1.0,  # 1s tolerance mirrors OVERFLOW_TOLERANCE_SECS
+        True,
+        f"duration={dur_s} window={win_s}",
+    )
+    # Headline and percent share the window denominator — they must agree.
+    pct_state = gs_safe(pct) or {}
+    pct_val = pct_state.get("state")
+    if win_s > 0 and pct_val not in (None, "unavailable"):
+        implied = round(dur_s / win_s * 100, 1)
+        chk(
+            "EC42 percent sensor ≈ headline duration/window (shared denominator)",
+            abs(float(pct_val) - min(100.0, implied)) <= 1.0,
+            True,
+            f"percent={pct_val} implied={min(100.0, implied)}",
+        )
+    return entry, eid
+
+
+def ec43_one_bad_frame_keeps_other_frames_live():
+    """EC43: a healthy multi-frame tracker keeps EVERY enabled frame live.
+
+    The per-frame isolation hardening guards against one frame's compute error
+    blanking the whole tracker (shared update → last_update_success=False → all
+    sensors unavailable). We can't inject a compute error live, so EC43 asserts
+    the positive invariant the fix must never break: all enabled frames publish a
+    numeric value concurrently (a regression that made the loop fail-fast would
+    drop later frames). The failure path itself is unit-covered
+    (test_one_frame_failure_* in test_coordinator.py).
+    """
+    print(
+        "\n=== EC43: all enabled frames stay live together (isolation invariant) ===",
+        flush=True,
+    )
+    eid = make_entity("isolate", "on")
+    frames = {"today": True, "yesterday": True, "24h": True, "7d": True}
+    entry = create_tracker(eid, "specific_states", states=["on"], frames=frames)
+    wait_entities(entry, min_count=len(frames))
+
+    def _all_live():
+        r = est_entities(entry)
+        for f in frames:
+            e = eid_for(entry, f, M_DURATION, r)
+            if e is None:
+                return False
+            st = (gs_safe(e) or {}).get("state")
+            if st in (None, "unavailable", "unknown"):
+                return False
+        return True
+
+    live = wait_until(_all_live, timeout=WAIT_FOR_TIMEOUT)
+    present = {
+        f: (gs_safe(eid_for(entry, f, M_DURATION)) or {}).get("state") for f in frames
+    }
+    chk(
+        "EC43 every enabled frame's duration sensor is live (none blanked)",
+        live,
+        True,
+        f"states={present}",
+    )
+    return entry, eid
+
+
+def ec44_reenabled_frame_comes_back_live():
+    """EC44: a frame toggled OFF then back ON returns, enabled and live.
+
+    Guards the re-enable branch of disable_orphaned_entities: when we disabled an
+    orphan (disabled_by=integration) and its frame is later turned back on, setup
+    must un-disable it so the sensor produces again — the user must not have to
+    hunt through the UI to re-enable an entity the integration disabled. A
+    regression that only disabled (never re-enabled) would leave the sensor dead
+    after the round-trip.
+    """
+    print(
+        "\n=== EC44: frame off→on round-trip re-enables the entity (live again) ===",
+        flush=True,
+    )
+    eid = make_entity("reenable", "on")
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on"],
+        frames={"today": True, "yesterday": True},
+    )
+    wait_entities(entry, min_count=2)
+    yday_uid = f"{entry}_yesterday_{M_DURATION}"
+
+    def _opts(yesterday_on: bool):
+        r = api("POST", "/api/config/config_entries/options/flow", {"handler": entry})
+        fid = r["flow_id"]
+        assert r.get("step_id") == "init", f"expected init step, got {r}"
+        r2 = api(
+            "POST",
+            f"/api/config/config_entries/options/flow/{fid}",
+            {
+                "today": True,
+                "yesterday": yesterday_on,
+                "24h": False,
+                "7d": False,
+                "30d": False,
+                "last_week": False,
+                "month": False,
+                "last_month": False,
+                "year": False,
+                "min_state_duration": 0,
+            },
+        )
+        return r2.get("type") == "create_entry"
+
+    # OFF → entity disabled_by=integration.
+    chk("EC44 toggle yesterday OFF", _opts(False), True)
+    off_ok = wait_until(
+        lambda: (
+            (est_entities(entry).get(yday_uid) or {}).get("disabled_by")
+            == "integration"
+        ),
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    chk("EC44 yesterday disabled after OFF", off_ok, True)
+
+    # ON again → entity re-enabled (disabled_by cleared) and producing a value.
+    chk("EC44 toggle yesterday back ON", _opts(True), True)
+    reenabled = wait_until(
+        lambda: (
+            (est_entities(entry).get(yday_uid) or {}).get("disabled_by") in (None, "")
+        ),
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    chk("EC44 yesterday re-enabled after ON (disabled_by cleared)", reenabled, True)
+    yday_eid = eid_for(entry, "yesterday", M_DURATION)
+    live = yday_eid is not None and wait_until(
+        lambda: (
+            (gs_safe(yday_eid) or {}).get("state")
+            not in (None, "unavailable", "unknown")
+        ),
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    chk(
+        "EC44 re-enabled yesterday sensor is live (numeric)",
+        live,
+        True,
+        f"state={(gs_safe(yday_eid) or {}).get('state') if yday_eid else None}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -3523,6 +3788,18 @@ def main():
 
         if ec_enabled(40):
             run_ec(ec40_card_pie_chart_overflow_guard_present)
+
+        if ec_enabled(41):
+            run_ec(ec41_disabled_frame_entity_disabled_not_removed)
+
+        if ec_enabled(42):
+            run_ec(ec42_headline_duration_matches_percent_no_doublecount)
+
+        if ec_enabled(43):
+            run_ec(ec43_one_bad_frame_keeps_other_frames_live)
+
+        if ec_enabled(44):
+            run_ec(ec44_reenabled_frame_comes_back_live)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

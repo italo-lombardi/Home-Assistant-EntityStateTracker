@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "Recorder er utilgængelig",
       "description": "Entity State Tracker er afhængig af recorder for at beregne tilstandsvarigheder. Recorder er ikke tilgængelig, så sporingen falder fra nu af tilbage til ren live-akkumulering og kan ikke udfylde tidligere historik. Aktivér recorder-integrationen for at gendanne den fulde tidsrumshistorik."
+    },
+    "frame_compute_failed": {
+      "title": "Et tidsrum holdt op med at opdatere",
+      "description": "Entity State Tracker kunne ikke beregne tidsrummet \"{frame}\" for {entity} i {count} opdateringer i træk, så den sensor fastholder sin seneste værdi. Dette peger som regel på beskadiget gemt historik for denne tracker. Tjek Home Assistant-loggene for fejlen, og genindlæs derefter integrationen."
     }
   }
 }
