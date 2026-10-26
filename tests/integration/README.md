@@ -128,6 +128,8 @@ ECs cannot run.
 | EC33 | Separator-insensitive state tracking: a config state with underscores (`city_centre`) is attributed the time of the recorded spaced state (`city centre`) — `breakdown_seconds` under the config key, `duration_seconds` and `percent` non-zero (not dumped into "other") |
 | EC34 | Served card JS carries the legend layout fix: the `legend-label` (name truncation) and `legend-value` (always-visible %) classes are present |
 | EC35 | Config heal: a stored state that drifts from the recorded name (typed before the entity reported it) is rewritten to the recorded spaced form on the next entry reload (coordinator first-refresh) |
+| EC36 | Title-cased `Unavailable` trailing shutdown marker carries the prior state (PR #36 / #7): after a steady state then a trailing `Unavailable`, the breakdown holds the steady state's time, not an `unavailable` slice eating the tail |
+| EC37 | Per-state `counts` + `avg_duration_seconds` feed the card's visit-weighted transition average (PR #36 / #5): two folded visits → `counts>=2`, `avg_duration_seconds ≈ breakdown_seconds/counts` (the card computes Σ(avg·count)/Σcount from these; card JS itself is covered by issue #39) |
 
 ## Notes on semantics that shape the tests
 

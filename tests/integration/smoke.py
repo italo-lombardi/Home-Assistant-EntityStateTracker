@@ -28,7 +28,7 @@ own config entries via the REST config-flow — no hardcoded entity IDs from the
 live HA. Every EST entity is discovered via the entity-registry websocket by its
 predictable unique_id (``<entry_id>_<frame>_<metric>``), so no entity_id guessing.
 
-Edge cases covered (EC1-EC35, plus sub-checks). See tests/integration/README.md.
+Edge cases covered (EC1-EC37, plus sub-checks). See tests/integration/README.md.
 """
 
 from __future__ import annotations
@@ -2986,6 +2986,136 @@ def ec35_config_heal_rewrites_drifted_states():
     return entry, eid
 
 
+def ec36_title_cased_unavailable_carries_prior_state():
+    """EC36: a title-cased "Unavailable" shutdown marker carries the prior state
+    (PR #36 / #7). carry_forward_states compares the trailing marker
+    case-insensitively, so an entity that goes to "Unavailable" (title case) at
+    the end of the window does NOT get the gap attributed to "unavailable" — the
+    preceding steady state carries forward across it.
+
+    Live proxy: the pytest suite owns the recorder-row regression (title-cased
+    trailing row dropped). What the live path proves is the user-visible outcome:
+    after a steady state then a trailing Unavailable, the tracked breakdown holds
+    the steady state's time, not an "unavailable" slice eating the tail.
+    """
+    print(
+        "\n=== EC36: title-cased 'Unavailable' trailing marker carries prior state ===",
+        flush=True,
+    )
+    eid = make_entity("titleunavail", "on")
+    entry = create_tracker(eid, "all_states", frames={"today": True})
+    reg = wait_entities(entry, min_count=1)
+    # all-states → BreakdownSensor for the frame.
+    bd_eid = next(
+        (
+            e["entity_id"]
+            for e in reg.values()
+            if e.get("entity_id", "").startswith("sensor.")
+            and "breakdown"
+            in (
+                gs(e["entity_id"]).get("attributes", {}).get("translation_key", "")
+                if e.get("entity_id")
+                else ""
+            )
+        ),
+        None,
+    ) or eid_for(entry, "today", "state_breakdown", reg)
+    # Dwell "on", then go to title-cased "Unavailable" (the clean-shutdown marker).
+    time.sleep(3 if FAST else 5)
+    ss(eid, "Unavailable")
+    time.sleep(2 if FAST else 3)
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": bd_eid})
+
+    def _bd():
+        return gs(bd_eid).get("attributes", {}).get("breakdown_seconds") or {}
+
+    wait_for(lambda: (_bd().get("on", 0) or 0) > 0, True, timeout=WAIT_FOR_TIMEOUT)
+    bd = _bd()
+    chk(
+        "EC36 'on' carries time across the Unavailable marker",
+        (bd.get("on", 0) or 0) > 0,
+        True,
+        f"breakdown_seconds={bd}",
+    )
+    # The real #7 guard: the trailing Unavailable marker must leave NO slice of
+    # its own — the gap carries to 'on', it is not attributed to any
+    # 'unavailable'/'Unavailable' (or other) state. `on > 0` alone can't catch a
+    # regression (it stays true even if the gap leaks elsewhere); assert the
+    # slice we claim is absent is actually absent. In all-states mode every seen
+    # state is keyed, so a leak would surface here.
+    other = {k: v for k, v in bd.items() if k != "on" and (v or 0) > 0}
+    chk(
+        "EC36 no other slice ate the tail (carry_forward held, #7)",
+        other,
+        {},
+        f"unexpected non-'on' slices={other} full={bd}",
+    )
+    return entry, eid
+
+
+def ec37_transition_avg_visit_weighted():
+    """EC37: the per-state transition metrics the card's visit-weighted avg is
+    built from are live and correct (PR #36 / #5).
+
+    The card's _transitionLine computes Σ(avg·count)/Σcount across tracked states
+    — pure card JS, unreachable from pytest (no JS harness, issue #39). This smoke
+    asserts the BACKEND attributes that formula consumes are present and sane:
+    counts and avg_duration_seconds per state, with avg == secs/count. If those
+    are right, the card's weighted mean is right (the formula is verified in the
+    3-agent review; the data feeding it is verified here).
+    """
+    print(
+        "\n=== EC37: per-state counts + avg_duration_seconds feed the card avg ===",
+        flush=True,
+    )
+    eid = make_entity("transavg", "idle")
+    entry = create_tracker(
+        eid, "specific_states", states=["active"], frames={"today": True}
+    )
+    reg = wait_entities(entry, min_count=1)
+    dur = eid_for(entry, "today", M_DURATION, reg)
+    chk("EC37 duration sensor exists", dur is not None, True)
+    if not dur:
+        return entry, eid
+    # Two visits to "active", each a measurable dwell, separated by "idle".
+    for _ in range(2):
+        time.sleep(2 if FAST else 3)
+        ss(eid, "active")
+        time.sleep(2 if FAST else 3)
+        ss(eid, "idle")
+    time.sleep(1 if FAST else 2)
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
+
+    def _counts():
+        return gs(dur).get("attributes", {}).get("counts") or {}
+
+    wait_for(
+        lambda: (_counts().get("active", 0) or 0) >= 2, True, timeout=WAIT_FOR_TIMEOUT
+    )
+    attrs = gs(dur).get("attributes", {})
+    counts = attrs.get("counts", {})
+    avg = attrs.get("avg_duration_seconds", {})
+    bd = attrs.get("breakdown_seconds", {})
+    chk(
+        "EC37 counts['active'] >= 2 (two folded visits)",
+        (counts.get("active", 0) or 0) >= 2,
+        True,
+        f"counts={counts}",
+    )
+    # avg_duration_seconds == breakdown_seconds / counts (the per-state mean the
+    # card weights by count). Allow rounding (engine rounds to 1dp).
+    c = counts.get("active", 0) or 0
+    a = avg.get("active")
+    s = bd.get("active", 0) or 0
+    chk(
+        "EC37 avg_duration_seconds['active'] ≈ secs/count (card weights this)",
+        a is not None and c > 0 and abs(a - s / c) <= 0.2,
+        True,
+        f"avg={a} secs={s} count={c}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -3076,6 +3206,12 @@ def main():
 
         if ec_enabled(35):
             ec35_config_heal_rewrites_drifted_states()
+
+        if ec_enabled(36):
+            ec36_title_cased_unavailable_carries_prior_state()
+
+        if ec_enabled(37):
+            ec37_transition_avg_visit_weighted()
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
