@@ -1150,7 +1150,7 @@ class EntityStateTrackerCard extends LitElement {
       >${friendly}</span
     >`;
     if (!st) {
-      return html`<div class="source-context">
+      return html`<div class="source-context" title="Tracking: ${friendly} · unavailable">
         Tracking: ${name} · unavailable
       </div>`;
     }
@@ -1158,7 +1158,13 @@ class EntityStateTrackerCard extends LitElement {
     // "Clear (off)" style via the shared formatter — consistent with the member
     // list and the breakdown rows.
     const stateLabel = this._formatStateDisplay(st, st.state);
-    return html`<div class="source-context">
+    // The context line is one nowrap line that ellipsizes when long — the
+    // "since …" tail is the first thing clipped on a narrow card. A native
+    // title gives the full text on hover/long-press without a custom tooltip.
+    const fullContext =
+      `Tracking: ${friendly} · now ${stateLabel}` +
+      (changed ? ` · ${changed}` : "");
+    return html`<div class="source-context" title="${fullContext}">
       Tracking: ${name} · now
       <span
         class="current source-link"
