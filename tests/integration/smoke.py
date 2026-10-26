@@ -266,6 +266,14 @@ def entity_registry_list() -> list[dict]:
     return res.get("result") or []
 
 
+def repair_issues() -> list[dict]:
+    """Return active Repair issues (websocket repairs/list_issues)."""
+    res = _ws_command({"type": "repairs/list_issues"})
+    if not res or not res.get("success"):
+        return []
+    return (res.get("result") or {}).get("issues") or []
+
+
 def entity_registry_enable(entity_id: str) -> None:
     """Enable a disabled-by-default entity via the registry websocket."""
     _ws_command(
@@ -3685,6 +3693,80 @@ def ec44_reenabled_frame_comes_back_live():
     return entry, eid
 
 
+def ec45_no_frame_fail_issue_in_healthy_operation():
+    """EC45: healthy operation + a frame toggle-off raises NO frame_fail Repair
+    issue, and none lingers.
+
+    Negative guard for the per-frame-failure escalation + its issue-registry
+    cleanup. The raise path itself can't be driven live (a compute error can't
+    be injected into a running HA — see EC43), so the raise→clear-on-drop and
+    clear-on-unload leaks are unit-covered (test_frame_fail_issue_cleared_*,
+    test_unload_clears_frame_fail_issues). This asserts the user-visible
+    invariant instead: a tracker that computes fine, and a frame you turn off,
+    must never surface a `frame_fail_<entry>_<frame>` Repair issue. Catches a
+    regression that raises the issue spuriously or strands one after a toggle.
+    """
+    print(
+        "\n=== EC45: no frame_fail Repair issue during healthy operation ===",
+        flush=True,
+    )
+    if not _WS_AVAILABLE:
+        note("EC45 SKIPPED: needs websocket for repairs/list_issues")
+        return None
+    eid = make_entity("nofail", "on")
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on"],
+        frames={"today": True, "yesterday": True},
+    )
+    wait_entities(entry, min_count=2)
+
+    def _frame_fail_issues():
+        return [
+            i
+            for i in repair_issues()
+            if i.get("domain") == DOMAIN
+            and str(i.get("issue_id", "")).startswith(f"frame_fail_{entry}_")
+        ]
+
+    chk(
+        "EC45 no frame_fail issue after healthy setup",
+        _frame_fail_issues(),
+        [],
+    )
+
+    # Toggle a frame off — must not raise/strand a frame_fail issue either.
+    r = api("POST", "/api/config/config_entries/options/flow", {"handler": entry})
+    fid = r["flow_id"]
+    assert r.get("step_id") == "init", f"expected init step, got {r}"
+    api(
+        "POST",
+        f"/api/config/config_entries/options/flow/{fid}",
+        {
+            "today": True,
+            "yesterday": False,
+            "24h": False,
+            "7d": False,
+            "30d": False,
+            "last_week": False,
+            "month": False,
+            "last_month": False,
+            "year": False,
+            "min_state_duration": 0,
+        },
+    )
+    # Give the reload a beat, then confirm still no frame_fail issue.
+    clean = wait_until(lambda: _frame_fail_issues() == [], timeout=WAIT_FOR_TIMEOUT)
+    chk(
+        "EC45 no frame_fail issue after frame toggle-off",
+        clean,
+        True,
+        f"issues={[i.get('issue_id') for i in _frame_fail_issues()]}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -3800,6 +3882,9 @@ def main():
 
         if ec_enabled(44):
             run_ec(ec44_reenabled_frame_comes_back_live)
+
+        if ec_enabled(45):
+            run_ec(ec45_no_frame_fail_issue_in_healthy_operation)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
