@@ -2987,6 +2987,49 @@ def ec34_card_legend_truncates_name_not_value():
     )
 
 
+def ec40_card_pie_chart_overflow_guard_present():
+    """EC40: the served card JS carries the .pie-chart overflow guard (#44 follow).
+
+    The prod clip (card with 6 long-named tracked states): the multi-frame pie
+    column (.pie-chart) was flex:0 0 auto — rigid — so it sized to its content
+    (donut + up to a 260px legend ≈ 390px) and overflowed a narrow ha-card,
+    clipping the pinned legend value ("· 100.0%"). The fix bounds the column:
+    flex:0 1 auto + min-width:0 + max-width:100%, so it shrinks to the card and
+    the existing wrap/ellipsis engage. A real layout render needs a browser the
+    DOM-less smoke lacks, so (like EC34) this is a served-CSS REGRESSION GUARD:
+    it asserts the guard rule is present in the shipped JS, NOT that it renders.
+    """
+    print(
+        "\n=== EC40: card .pie-chart overflow guard present in served JS ===",
+        flush=True,
+    )
+    status, body = api_status(
+        "GET", "/entity_state_tracker/entity-state-tracker-card.js"
+    )
+    chk("EC40 card JS served (200)", status, 200)
+    text = body if isinstance(body, str) else ""
+    # Isolate the .pie-chart rule block and assert the three guard properties are
+    # inside it (not merely present somewhere else in the file).
+    marker = ".pie-chart {"
+    idx = text.find(marker)
+    block = text[idx : idx + 260] if idx != -1 else ""
+    chk("EC40 served JS has a .pie-chart rule", idx != -1, True)
+    chk(
+        "EC40 .pie-chart bounds the column (flex:0 1 auto + min-width:0 + max-width:100%)",
+        ("flex: 0 1 auto" in block)
+        and ("min-width: 0" in block)
+        and ("max-width: 100%" in block),
+        True,
+        f"block={block!r}",
+    )
+    # Negative: the old rigid value must be gone (it was the bug).
+    chk(
+        "EC40 old rigid .pie-chart flex:0 0 auto removed",
+        "flex: 0 0 auto" not in block,
+        True,
+    )
+
+
 def ec35_config_heal_rewrites_drifted_states():
     """EC35: a drifted stored config state is healed to the recorded name on
     reload (coordinator first-refresh), by INJECTING a legacy-style drift.
@@ -3468,6 +3511,9 @@ def main():
 
         if ec_enabled(39):
             run_ec(ec39_zone_rename_reflects_on_next_refresh)
+
+        if ec_enabled(40):
+            run_ec(ec40_card_pie_chart_overflow_guard_present)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

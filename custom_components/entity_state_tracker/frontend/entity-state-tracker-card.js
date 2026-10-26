@@ -697,15 +697,23 @@ const cardStyles = css`
     padding-top: 16px;
   }
 
-  /* One chart column: caption, then the donut+legend group. flex:0 0 auto so it
-     hugs its content inside a .pie-frame row instead of stretching to fill the
-     row and leaving a white gap to the right of the donut/legend. */
+  /* One chart column: caption, then the donut+legend group. flex:0 1 auto +
+     max-width:100% so it never grows past the card (no white gap on a wide
+     card — the old 0 0 auto intent) but DOES shrink to the card's inner width
+     on a narrow 4-across card. Without the shrink + ceiling the column sized to
+     its content (donut ~130px + legend up to 260px ≈ 390px) and overflowed the
+     ha-card{overflow:hidden} box, clipping the pinned legend value ("· 100.0%")
+     — the wrap/ellipsis below it were dead because this column was unbounded.
+     min-width:0 lets it shrink past its content min so the legend can wrap under
+     the donut (or ellipsize beside it). */
   .pie-chart {
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
-    flex: 0 0 auto;
+    flex: 0 1 auto;
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* A solo (beside) chart left-aligns its column: when the row-legend wraps
