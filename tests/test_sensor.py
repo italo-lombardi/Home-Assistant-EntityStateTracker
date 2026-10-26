@@ -28,13 +28,11 @@ from custom_components.entity_state_tracker.sensor import (
     ComplianceSensor,
     DurationSensor,
     PercentSensor,
+    _transition_metrics,
     async_setup_entry,
 )
 from custom_components.entity_state_tracker.sensor import (
     _device_info as sensor_device_info,
-)
-from custom_components.entity_state_tracker.sensor import (
-    _transition_metrics,
 )
 
 
