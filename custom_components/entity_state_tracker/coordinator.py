@@ -747,7 +747,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
                     ledger_upper_local_day=ledger_upper_local_day,
                     open_state=ledger.last_state,
                 )
-            except (ValueError, KeyError, ArithmeticError, LookupError) as err:
+            except (ValueError, ArithmeticError, LookupError) as err:
                 # Isolate a single frame's DATA anomaly: the frames dict is shared
                 # entry-wide, so a propagating error would flip
                 # last_update_success=False and strand EVERY sensor. Keep this
@@ -770,12 +770,18 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
                     frames[frame_key] = prior[frame_key]
                 continue
             # Success: clear any failure streak + its Repair issue for this frame.
-            if self._frame_fail_streak.pop(frame_key, 0):
-                ir.async_delete_issue(
-                    self.hass, DOMAIN, f"frame_fail_{self.entry.entry_id}_{frame_key}"
-                )
+            self._clear_frame_fail(frame_key)
             self._warn_overflow(frame_key, result)
             frames[frame_key] = result
+
+        # A frame dropped from enabled_frames (toggled off / default narrowed)
+        # is never revisited by the loop above, so a Repair issue it raised while
+        # failing would strand forever. Clear frame-fail state for any frame no
+        # longer enabled.
+        for stale in [
+            f for f in self._frame_fail_streak if f not in self.enabled_frames
+        ]:
+            self._clear_frame_fail(stale)
 
         # Prune stale buckets IN-MEMORY and let the single flush persist (one
         # disk write, not prune's own save + flush — P4). Disk is best-effort:
@@ -1034,7 +1040,8 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         """Raise a Repair issue for a frame that has failed many ticks in a row.
 
         Per (entry, frame) so distinct frozen frames surface independently; the
-        issue is deleted on the frame's next success (see the update loop).
+        issue is deleted on the frame's next success, when the frame is dropped
+        from enabled_frames, or on unload (see _clear_frame_fail).
         """
         ir.async_create_issue(
             self.hass,
@@ -1049,6 +1056,30 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
                 "count": str(streak),
             },
         )
+
+    @callback
+    def _clear_frame_fail(self, frame_key: str) -> None:
+        """Drop a frame's failure streak and delete its Repair issue.
+
+        No-op when the frame has no active streak (the common success path), so
+        a healthy tick does not fire a delete per frame. Called on the frame's
+        next success, when it leaves enabled_frames, and for every frame on
+        unload so a stranded issue can't outlive the thing it describes.
+        """
+        if self._frame_fail_streak.pop(frame_key, 0):
+            ir.async_delete_issue(
+                self.hass, DOMAIN, f"frame_fail_{self.entry.entry_id}_{frame_key}"
+            )
+
+    @callback
+    def clear_all_frame_fail_issues(self) -> None:
+        """Clear every outstanding frame-fail Repair issue for this entry.
+
+        Called from async_unload_entry/async_remove_entry: an issue active at
+        teardown would otherwise linger in the UI with no backing entry.
+        """
+        for frame_key in list(self._frame_fail_streak):
+            self._clear_frame_fail(frame_key)
 
 
 def _parse_ts(iso: str | None) -> dt.datetime | None:

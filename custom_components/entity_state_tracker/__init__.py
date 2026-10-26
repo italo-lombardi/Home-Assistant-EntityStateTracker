@@ -101,6 +101,11 @@ def disable_orphaned_entities(
             )
         elif is_valid and reg_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
             # Frame re-enabled and we were the one who disabled it → restore.
+            # NOTE: clearing disabled_by on an entity of an unload-capable entry
+            # makes HA schedule a one-shot config-entry reload ~30s later
+            # (RELOAD_AFTER_UPDATE_DELAY). That's benign and converges (setup is
+            # idempotent) — the entity is back immediately; the delayed reload
+            # just re-runs setup once. The disable direction does NOT trigger it.
             registry.async_update_entity(reg_entry.entity_id, disabled_by=None)
 
 
@@ -252,6 +257,12 @@ async def _async_register_lovelace_resource(hass: HomeAssistant, version: str) -
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    # Clear any frame-fail Repair issues BEFORE dropping the coordinator — an
+    # issue active at teardown would otherwise linger with no backing entry.
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is not None:
+        coordinator.clear_all_frame_fail_issues()
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:

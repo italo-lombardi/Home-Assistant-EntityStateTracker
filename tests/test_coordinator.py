@@ -678,6 +678,78 @@ async def test_persistent_frame_failure_raises_and_clears_repair_issue(
     await c.async_shutdown()
 
 
+async def test_frame_fail_issue_cleared_when_frame_dropped(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """A frame removed from enabled_frames while its Repair issue is active gets
+    the issue cleared — the loop never revisits it, so the post-loop sweep must.
+    """
+    from homeassistant.helpers import issue_registry as ir
+
+    from custom_components.entity_state_tracker.const import DOMAIN
+
+    now = _utc(2026, 6, 10, 12, 0)
+    patch_recorder([_FakeState("heat", _utc(2026, 6, 10, 0, 0))])
+    c = await _make_coordinator(hass, specific_config_entry)
+    real_compute = coord_mod.compute_frame
+
+    def _boom(frame_key, *a, **k):
+        if frame_key == "24h":
+            raise ValueError("synthetic frame failure")
+        return real_compute(frame_key, *a, **k)
+
+    issue_id = f"frame_fail_{specific_config_entry.entry_id}_24h"
+    reg = ir.async_get(hass)
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        await _first_refresh(hass, c)
+        with patch.object(coord_mod, "compute_frame", side_effect=_boom):
+            for _ in range(coord_mod.FRAME_FAIL_ESCALATE):
+                await c._async_update_data()
+            assert reg.async_get_issue(DOMAIN, issue_id) is not None
+            # Drop the frame (as an options edit narrowing enabled_frames would),
+            # then tick — the sweep must clear the now-orphaned issue + streak.
+            c.enabled_frames = [f for f in c.enabled_frames if f != "24h"]
+            await c._async_update_data()
+
+    assert reg.async_get_issue(DOMAIN, issue_id) is None
+    assert "24h" not in c._frame_fail_streak
+    await c.async_shutdown()
+
+
+async def test_unload_clears_frame_fail_issues(
+    hass: HomeAssistant,
+    specific_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """clear_all_frame_fail_issues drops every outstanding issue on teardown."""
+    from homeassistant.helpers import issue_registry as ir
+
+    from custom_components.entity_state_tracker.const import DOMAIN
+
+    now = _utc(2026, 6, 10, 12, 0)
+    patch_recorder([_FakeState("heat", _utc(2026, 6, 10, 0, 0))])
+    c = await _make_coordinator(hass, specific_config_entry)
+
+    def _boom(frame_key, *a, **k):
+        raise ValueError("synthetic frame failure")
+
+    issue_id = f"frame_fail_{specific_config_entry.entry_id}_24h"
+    reg = ir.async_get(hass)
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        await _first_refresh(hass, c)
+        with patch.object(coord_mod, "compute_frame", side_effect=_boom):
+            for _ in range(coord_mod.FRAME_FAIL_ESCALATE):
+                await c._async_update_data()
+        assert reg.async_get_issue(DOMAIN, issue_id) is not None
+
+    c.clear_all_frame_fail_issues()
+    assert reg.async_get_issue(DOMAIN, issue_id) is None
+    assert not c._frame_fail_streak
+    await c.async_shutdown()
+
+
 # --------------------------------------------------------------------------- #
 # Live state-change fold
 # --------------------------------------------------------------------------- #
