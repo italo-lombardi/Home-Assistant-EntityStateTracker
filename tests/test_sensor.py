@@ -705,6 +705,7 @@ def test_breakdown_unrecorded_attributes_exact_set() -> None:
             "breakdown_seconds",
             "breakdown_pct",
             "breakdown_text",
+            "breakdown_labels",
             "counts",
             "avg_duration_seconds",
             "previous_state",
@@ -989,3 +990,29 @@ async def test_disabling_frame_drops_its_percent_and_compliance(hass) -> None:
     # No sensor for a disabled frame.
     assert "yesterday" not in pct_frames
     assert "yesterday" not in comp_frames
+
+
+def _stub_hass_with_zone(friendly: str) -> SimpleNamespace:
+    """Minimal hass whose states.async_all('zone') yields one zone."""
+    zone = SimpleNamespace(entity_id="zone.z", attributes={"friendly_name": friendly})
+    return SimpleNamespace(states=SimpleNamespace(async_all=lambda _dom: [zone]))
+
+
+def test_breakdown_labels_resolve_real_zone_name() -> None:
+    """breakdown_labels maps a lowercased key to the LIVE zone friendly name."""
+    coord = _breakdown_coord()
+    sensor = BreakdownSensor(coord, "today")
+    # A zone whose normalized friendly name equals the "heat" breakdown key:
+    # the label comes from hass (the real zone name), not toLabel re-casing.
+    sensor.hass = _stub_hass_with_zone("Heat")
+    attrs = sensor.extra_state_attributes
+    assert attrs["breakdown_labels"]["heat"] == "Heat"
+
+
+def test_breakdown_labels_absent_when_no_zone_match() -> None:
+    """No breakdown key names a live zone → attr omitted entirely."""
+    coord = _breakdown_coord()
+    sensor = BreakdownSensor(coord, "today")
+    sensor.hass = _stub_hass_with_zone("Somewhere Else")
+    attrs = sensor.extra_state_attributes
+    assert "breakdown_labels" not in attrs

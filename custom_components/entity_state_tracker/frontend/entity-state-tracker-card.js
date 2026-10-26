@@ -171,6 +171,23 @@ function toLabel(state) {
     .replace(/(^|[\s])\S/g, (c) => c.toUpperCase());
 }
 
+// A person/device_tracker inside a zone reports that zone's friendly name as
+// its state — but EST lowercases every state key for storage (engine.py), so
+// "Casa Maria Teresa (Parma)" becomes "casa maria teresa (parma)". toLabel()
+// only re-cases word-initial chars, so "(parma)" can never recover its "P".
+// Resolve the key back to the zone's LIVE friendly name from hass instead of
+// reconstructing it. Returns null when no zone's friendly name matches.
+function zoneFriendlyName(hass, rawValue) {
+  if (!hass || !hass.states || rawValue == null) return null;
+  const key = String(rawValue).trim().toLowerCase();
+  for (const id in hass.states) {
+    if (!id.startsWith("zone.")) continue;
+    const friendly = hass.states[id].attributes?.friendly_name;
+    if (friendly && friendly.trim().toLowerCase() === key) return friendly;
+  }
+  return null;
+}
+
 function stateHashIndex(state, mod) {
   let h = 0x811c9dc5;
   const str = String(state);
@@ -703,8 +720,8 @@ const cardStyles = css`
   }
 
   .legend {
-    flex: 0 1 auto;
-    min-width: 140px;
+    flex: 1 1 auto;
+    min-width: 0;
     max-width: 260px;
   }
 
@@ -1165,6 +1182,10 @@ class EntityStateTrackerCard extends LitElement {
   // style for plain states that have no device-class translation.
   _formatTrackedState(sourceId, rawValue) {
     if (rawValue == null) return "unknown";
+    // Ground truth for a zone state: the zone's LIVE friendly name in hass,
+    // not the lowercased key re-cased by toLabel (which mangles "(Parma)").
+    const zone = zoneFriendlyName(this.hass, rawValue);
+    if (zone) return zone;
     const existing = sourceId ? this.hass.states[sourceId] : null;
     if (!existing || !this.hass.formatEntityState) return toLabel(rawValue);
     const fakeState = {

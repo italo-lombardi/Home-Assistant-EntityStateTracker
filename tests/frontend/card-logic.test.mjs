@@ -138,3 +138,31 @@ test("_specificSlices: tracked share + synthetic 'other' remainder", () => {
   assert.ok(other, "remainder is surfaced as an 'other' slice");
   assert.equal(Math.round(other.pct), 60); // (1000-400)/1000
 });
+
+test("_formatTrackedState: zone key resolves to the zone's LIVE friendly name, not re-cased key", () => {
+  // The engine lowercases every state key, so a zone named "Casa Maria Teresa
+  // (Parma)" is stored as "casa maria teresa (parma)". toLabel() only re-cases
+  // word-initial chars → "(parma)" keeps its lowercase p. The card must instead
+  // pull the real friendly name from hass (ground truth).
+  const stub = {
+    hass: {
+      states: {
+        "zone.cmt": { attributes: { friendly_name: "Casa Maria Teresa (Parma)" } },
+        "person.x": { attributes: {} },
+      },
+      formatEntityState: () => null,
+    },
+  };
+  const out = Card.prototype._formatTrackedState.call(
+    stub,
+    "person.x",
+    "casa maria teresa (parma)"
+  );
+  assert.equal(out, "Casa Maria Teresa (Parma)");
+});
+
+test("_formatTrackedState: non-zone key still title-cases via toLabel", () => {
+  const stub = { hass: { states: {}, formatEntityState: () => null } };
+  const out = Card.prototype._formatTrackedState.call(stub, "sensor.x", "not_home");
+  assert.equal(out, "Not Home");
+});
