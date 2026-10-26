@@ -17,6 +17,7 @@ from custom_components.entity_state_tracker.config_flow import (
     _async_seen_states,
     _resolve_state,
     _resolve_states,
+    _to_label,
     _zone_state_map,
 )
 from custom_components.entity_state_tracker.const import (
@@ -975,3 +976,17 @@ async def test_get_options_flow_returns_handler() -> None:
     """The static accessor returns an options-flow instance."""
     handler = EntityStateTrackerConfigFlow.async_get_options_flow(_entry())
     assert isinstance(handler, EntityStateTrackerOptionsFlow)
+
+
+def test_to_label_uses_real_zone_name_not_recased_key() -> None:
+    """A key matching a live zone shows the zone's real friendly name."""
+    from custom_components.entity_state_tracker.helpers import zone_label_map
+
+    zones = zone_label_map(["Casa Maria Teresa (Parma)"])
+    # The stored key is lowercased; title-casing it would yield "(parma)".
+    assert _to_label("casa maria teresa (parma)", zones) == (
+        "Casa Maria Teresa (Parma)"
+    )
+    # No zone map (or no match) → the original title-case behaviour.
+    assert _to_label("not_home") == "Not Home"
+    assert _to_label("cleaning", zones) == "Cleaning"

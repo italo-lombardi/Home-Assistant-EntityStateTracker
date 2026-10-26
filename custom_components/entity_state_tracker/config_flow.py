@@ -32,7 +32,7 @@ from .const import (
     MODE_ALL,
     MODE_SPECIFIC,
 )
-from .helpers import match_state, normalize_state
+from .helpers import match_state, normalize_state, zone_label_map
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -56,36 +56,66 @@ _KEY_STATES = f"_{CONF_STATES}"
 _KEY_NAME = f"_{CONF_NAME}"
 
 
-def _to_label(state: str) -> str:
+def _to_label(state: str, zone_names: dict[str, str] | None = None) -> str:
     """Human-readable label for a raw state key — mirrors card toLabel().
 
-    Capitalises the first letter of each whitespace-separated word only,
-    so apostrophes ("st. john's") don't produce mid-word capitals.
+    A key that matches a LIVE zone's friendly name (via ``zone_names``) is shown
+    with that real name — never re-cased, so "Casa … (Parma)" keeps its inner
+    caps. Everything else capitalises the first letter of each whitespace-
+    separated word only, so apostrophes ("st. john's") don't produce mid-word
+    capitals.
     """
+    if zone_names:
+        real = zone_names.get(normalize_state(state))
+        if real is not None:
+            return real
     return " ".join(w.capitalize() for w in state.replace("_", " ").split())
 
 
-def _state_options(states: list[str]) -> list[dict[str, str]]:
+def _live_zone_names(hass: HomeAssistant, source_entity_id: str) -> dict[str, str]:
+    """Map each live zone's state key → its friendly name (see helpers).
+
+    Empty for a non-``person``/``device_tracker`` source: only those domains
+    report a zone name as state, so a climate/vacuum state that merely collides
+    with a zone's name must not be relabelled (same gate as ``_resolve_states``).
+    """
+    if source_entity_id.split(".", 1)[0] not in _ZONE_STATE_DOMAINS:
+        return {}
+    return zone_label_map(
+        [
+            z.attributes.get("friendly_name") or z.entity_id.split(".", 1)[1]
+            for z in hass.states.async_all("zone")
+        ]
+    )
+
+
+def _state_options(
+    states: list[str], zone_names: dict[str, str] | None = None
+) -> list[dict[str, str]]:
     """Convert lowercase state list to [{value, label}] selector options."""
-    return [{"value": s, "label": _to_label(s)} for s in states]
+    return [{"value": s, "label": _to_label(s, zone_names)} for s in states]
 
 
-def _seen_states_schema(seen: list[str]) -> Any:
+def _seen_states_schema(
+    seen: list[str], zone_names: dict[str, str] | None = None
+) -> Any:
     """SelectSelector for tracked states, prefilled with seen states."""
     return selector.SelectSelector(
         selector.SelectSelectorConfig(
-            options=_state_options(seen),
+            options=_state_options(seen, zone_names),
             multiple=True,
             custom_value=True,
         )
     )
 
 
-def _target_selector(options: list[str]) -> Any:
+def _target_selector(
+    options: list[str], zone_names: dict[str, str] | None = None
+) -> Any:
     """SelectSelector for the compliance target set."""
     return selector.SelectSelector(
         selector.SelectSelectorConfig(
-            options=_state_options(options),
+            options=_state_options(options, zone_names),
             multiple=True,
             custom_value=True,
         )
@@ -396,7 +426,9 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
                 {
                     vol.Optional(
                         CONF_STATES, default=(user_input or {}).get(CONF_STATES, seen)
-                    ): _seen_states_schema(seen),
+                    ): _seen_states_schema(
+                        seen, _live_zone_names(self.hass, self._data[_KEY_ENTITY])
+                    ),
                     vol.Optional(
                         CONF_ENABLE_COMPLIANCE,
                         default=(user_input or {}).get(CONF_ENABLE_COMPLIANCE, False),
@@ -444,7 +476,8 @@ class EntityStateTrackerConfigFlow(ConfigFlow, domain=DOMAIN):
             data_schema=vol.Schema(
                 {
                     vol.Optional(CONF_TARGET, default=tracked): _target_selector(
-                        options
+                        options,
+                        _live_zone_names(self.hass, self._data[_KEY_ENTITY]),
                     ),
                     vol.Optional(CONF_TARGET_THRESHOLD): _threshold_selector(),
                 }
@@ -604,7 +637,7 @@ class EntityStateTrackerOptionsFlow(OptionsFlow):
             # recomputes history retroactively (the ledger stores every state;
             # tracked_states is only a read-time filter).
             schema[vol.Optional(CONF_STATES, default=tracked)] = _seen_states_schema(
-                tracked
+                tracked, _live_zone_names(self.hass, current[CONF_ENTITY])
             )
 
         if has_compliance:
@@ -618,7 +651,9 @@ class EntityStateTrackerOptionsFlow(OptionsFlow):
             )
             schema[
                 vol.Optional(CONF_TARGET, default=current.get(CONF_TARGET, tracked))
-            ] = _target_selector(target_options)
+            ] = _target_selector(
+                target_options, _live_zone_names(self.hass, current[CONF_ENTITY])
+            )
             default_threshold = current.get(CONF_TARGET_THRESHOLD)
             threshold_key = (
                 vol.Optional(CONF_TARGET_THRESHOLD, default=default_threshold)

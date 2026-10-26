@@ -138,3 +138,86 @@ test("_specificSlices: tracked share + synthetic 'other' remainder", () => {
   assert.ok(other, "remainder is surfaced as an 'other' slice");
   assert.equal(Math.round(other.pct), 60); // (1000-400)/1000
 });
+
+test("_formatTrackedState: zone key resolves to the zone's LIVE friendly name, not re-cased key", () => {
+  // The engine lowercases every state key, so a zone named "Casa Maria Teresa
+  // (Parma)" is stored as "casa maria teresa (parma)". toLabel() only re-cases
+  // word-initial chars → "(parma)" keeps its lowercase p. The card must instead
+  // pull the real friendly name from hass (ground truth).
+  const stub = {
+    hass: {
+      states: {
+        "zone.cmt": { attributes: { friendly_name: "Casa Maria Teresa (Parma)" } },
+        "person.x": { attributes: {} },
+      },
+      formatEntityState: () => null,
+    },
+  };
+  const out = Card.prototype._formatTrackedState.call(
+    stub,
+    "person.x",
+    "casa maria teresa (parma)"
+  );
+  assert.equal(out, "Casa Maria Teresa (Parma)");
+});
+
+test("_formatTrackedState: non-zone key still title-cases via toLabel", () => {
+  const stub = { hass: { states: {}, formatEntityState: () => null } };
+  const out = Card.prototype._formatTrackedState.call(stub, "sensor.x", "not_home");
+  assert.equal(out, "Not Home");
+});
+
+test("_formatTrackedState: non-tracker domain does NOT adopt a colliding zone name", () => {
+  // A climate "away" that happens to match a zone named "Away" must stay a
+  // climate state — only person/device_tracker report a zone name as state.
+  const stub = {
+    hass: {
+      states: { "zone.away": { attributes: { friendly_name: "Away" } } },
+      formatEntityState: () => null,
+    },
+  };
+  const out = Card.prototype._formatTrackedState.call(stub, "climate.hvac", "away");
+  assert.equal(out, "Away"); // toLabel title-case, NOT the zone lookup path
+  // Prove it's the toLabel path, not the zone path: a lowercase-preserving
+  // zone name would leak through if the gate were missing.
+  const stub2 = {
+    hass: {
+      states: { "zone.x": { attributes: { friendly_name: "mixedCase Zone" } } },
+      formatEntityState: () => null,
+    },
+  };
+  const out2 = Card.prototype._formatTrackedState.call(
+    stub2,
+    "climate.hvac",
+    "mixedcase zone"
+  );
+  assert.equal(out2, "Mixedcase Zone"); // toLabel, not the zone's "mixedCase Zone"
+});
+
+test("_formatTrackedState: ambiguous zones (case-only diff) resolve to neither", () => {
+  // Two zones whose names fold to the same key → never guess; fall back to
+  // toLabel (matches helpers.zone_label_map's ambiguity drop).
+  const stub = {
+    hass: {
+      states: {
+        "zone.a": { attributes: { friendly_name: "Office" } },
+        "zone.b": { attributes: { friendly_name: "OFFICE" } },
+      },
+      formatEntityState: () => null,
+    },
+  };
+  const out = Card.prototype._formatTrackedState.call(stub, "person.x", "office");
+  assert.equal(out, "Office"); // toLabel fallback, not a silent pick of either zone
+});
+
+test("_formatTrackedState: zone key folds underscores like normalize_state", () => {
+  // A zone "Not Home" folds to "not home"; a stored "not_home" key must match.
+  const stub = {
+    hass: {
+      states: { "zone.nh": { attributes: { friendly_name: "Not Home" } } },
+      formatEntityState: () => null,
+    },
+  };
+  const out = Card.prototype._formatTrackedState.call(stub, "person.x", "not_home");
+  assert.equal(out, "Not Home");
+});

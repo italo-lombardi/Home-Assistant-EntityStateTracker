@@ -48,11 +48,49 @@ from .helpers import (
     frame_label,
     humanize_duration,
     match_state,
+    normalize_state,
     tracker_device_name,
     unique_id,
+    zone_label_map,
 )
 from .models import FrameResult
 from .write_dedup import DedupCoordinatorSensor
+
+_ZONE_STATE_DOMAINS = ("person", "device_tracker")
+
+
+def _zone_labels(
+    hass: HomeAssistant | None, source_entity: str | None, keys: list[str]
+) -> dict[str, str]:
+    """Map each breakdown key that names a LIVE zone -> its real friendly name.
+
+    Resolved fresh from ``hass`` on every attribute read, NEVER stored -- so a
+    zone rename is reflected the next refresh with no migration. Keys with no
+    live-zone match are omitted; a consumer falls back to its own title-casing
+    for those (unchanged behaviour). Lets templates / other dashboards show the
+    real "Casa ... (Parma)" instead of the lossy lowercased storage key.
+
+    ONLY person/device_tracker get zone resolution -- their state IS a zone
+    name. For any other domain a state that merely collides with a zone's name
+    (a climate "away", a vacuum state) must NOT be rewritten (mirrors the config
+    flow's ``_ZONE_STATE_DOMAINS`` gate).
+    """
+    if hass is None or source_entity is None:
+        return {}
+    if source_entity.split(".", 1)[0] not in _ZONE_STATE_DOMAINS:
+        return {}
+    zmap = zone_label_map(
+        [
+            z.attributes.get("friendly_name") or z.entity_id.split(".", 1)[1]
+            for z in hass.states.async_all("zone")
+        ]
+    )
+    out: dict[str, str] = {}
+    for k in keys:
+        real = zmap.get(normalize_state(k))
+        if real is not None:
+            out[k] = real
+    return out
 
 
 async def async_setup_entry(
@@ -61,8 +99,9 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the tracker's per-frame sensors for the config entry."""
-    coordinator: EntityStateTrackerCoordinator = hass.data[DOMAIN][entry.entry_id]
     entities: list[Entity] = []
+
+    coordinator: EntityStateTrackerCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     if coordinator.mode == MODE_SPECIFIC:
         for frame in coordinator.enabled_frames:
@@ -262,6 +301,7 @@ class DurationSensor(_FrameSensor):
             "breakdown_seconds",
             "breakdown_pct",
             "breakdown_text",
+            "breakdown_labels",
             "window_start",
             "data_start",
             "window_coverage",
@@ -348,6 +388,11 @@ class DurationSensor(_FrameSensor):
                 s: humanize_duration(result.breakdown_seconds.get(real, 0.0))
                 for s, real in matched.items()
             }
+            # Real zone friendly names for any tracked key that names a live zone
+            # (resolved fresh — honours a zone rename). Omits non-zone keys.
+            labels = _zone_labels(self.hass, self.coordinator.entity_id, list(tracked))
+            if labels:
+                attrs["breakdown_labels"] = labels
         if self.coordinator.target_states:
             attrs["compliance_percent"] = result.compliance_percent
             attrs["target_threshold"] = self.coordinator.target_threshold
@@ -441,6 +486,7 @@ class BreakdownSensor(_FrameSensor):
             "breakdown_seconds",
             "breakdown_pct",
             "breakdown_text",
+            "breakdown_labels",
             "counts",
             "avg_duration_seconds",
             "previous_state",
@@ -477,7 +523,10 @@ class BreakdownSensor(_FrameSensor):
         # it is appended last rather than picked up by ``order``).
         breakdown_pct = {s: result.breakdown_pct.get(s) for s in order}
         breakdown_pct["unaccounted"] = result.breakdown_pct.get("unaccounted")
-        return {
+        # Real zone friendly names for any breakdown key that names a live zone
+        # (resolved fresh — honours a zone rename). Omits non-zone keys.
+        labels = _zone_labels(self.hass, self.coordinator.entity_id, order)
+        attrs = {
             "source_entity": self.coordinator.entity_id,
             "frame": self._frame,
             "breakdown_seconds": {s: result.breakdown_seconds[s] for s in order},
@@ -506,3 +555,6 @@ class BreakdownSensor(_FrameSensor):
             "has_gap": result.has_gap,
             "unaccounted_seconds": result.unaccounted_seconds,
         }
+        if labels:
+            attrs["breakdown_labels"] = labels
+        return attrs

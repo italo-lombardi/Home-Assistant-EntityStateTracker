@@ -67,6 +67,7 @@ def _fake_coordinator(
     target_threshold: float | None = None,
     title: str = "Living Room — heat/auto",
     entry_id: str = "est_entry",
+    entity_id: str = "climate.living_room",
 ) -> SimpleNamespace:
     """A duck-typed coordinator carrying only what the sensors read."""
     entry = SimpleNamespace(entry_id=entry_id, title=title)
@@ -78,7 +79,7 @@ def _fake_coordinator(
         target_threshold=target_threshold,
         data=data,
         entry=entry,
-        entity_id="climate.living_room",
+        entity_id=entity_id,
         last_update_success=True,
         # CoordinatorEntity.__init__ registers a listener.
         async_add_listener=lambda cb, context=None: lambda: None,
@@ -670,7 +671,9 @@ def test_duration_unrecorded_attributes_covers_volatile_keys() -> None:
 # --------------------------------------------------------------------------
 
 
-def _breakdown_coord(result: FrameResult | None = -1) -> SimpleNamespace:
+def _breakdown_coord(
+    result: FrameResult | None = -1, entity_id: str = "climate.living_room"
+) -> SimpleNamespace:
     frames_data = None
     if result is not None:
         res = _frame_result() if result == -1 else result
@@ -681,6 +684,7 @@ def _breakdown_coord(result: FrameResult | None = -1) -> SimpleNamespace:
         tracked_states=None,
         target_states=None,
         data=frames_data,
+        entity_id=entity_id,
     )
 
 
@@ -705,6 +709,7 @@ def test_breakdown_unrecorded_attributes_exact_set() -> None:
             "breakdown_seconds",
             "breakdown_pct",
             "breakdown_text",
+            "breakdown_labels",
             "counts",
             "avg_duration_seconds",
             "previous_state",
@@ -989,3 +994,44 @@ async def test_disabling_frame_drops_its_percent_and_compliance(hass) -> None:
     # No sensor for a disabled frame.
     assert "yesterday" not in pct_frames
     assert "yesterday" not in comp_frames
+
+
+def _stub_hass_with_zone(friendly: str) -> SimpleNamespace:
+    """Minimal hass whose states.async_all('zone') yields one zone."""
+    zone = SimpleNamespace(entity_id="zone.z", attributes={"friendly_name": friendly})
+    return SimpleNamespace(states=SimpleNamespace(async_all=lambda _dom: [zone]))
+
+
+def test_breakdown_labels_resolve_real_zone_name() -> None:
+    """breakdown_labels maps a lowercased key to the LIVE zone friendly name."""
+    # person source → zone resolution applies; a zone named "Heat" resolves the
+    # "heat" breakdown key to the zone's real friendly name (from hass, not
+    # toLabel re-casing).
+    coord = _breakdown_coord(entity_id="person.alice")
+    sensor = BreakdownSensor(coord, "today")
+    sensor.hass = _stub_hass_with_zone("Heat")
+    attrs = sensor.extra_state_attributes
+    assert attrs["breakdown_labels"]["heat"] == "Heat"
+
+
+def test_breakdown_labels_absent_when_no_zone_match() -> None:
+    """No breakdown key names a live zone → attr omitted entirely."""
+    coord = _breakdown_coord(entity_id="person.alice")
+    sensor = BreakdownSensor(coord, "today")
+    sensor.hass = _stub_hass_with_zone("Somewhere Else")
+    attrs = sensor.extra_state_attributes
+    assert "breakdown_labels" not in attrs
+
+
+def test_breakdown_labels_not_applied_to_non_tracker_domain() -> None:
+    """A climate state that collides with a zone name is NOT rewritten.
+
+    Only person/device_tracker report a zone name as state. A climate "heat"
+    that happens to match a zone literally named "Heat" must stay a climate
+    state — the zone gate prevents the mislabel.
+    """
+    coord = _breakdown_coord(entity_id="climate.living_room")
+    sensor = BreakdownSensor(coord, "today")
+    sensor.hass = _stub_hass_with_zone("Heat")
+    attrs = sensor.extra_state_attributes
+    assert "breakdown_labels" not in attrs

@@ -130,6 +130,32 @@ def match_state(candidate: str, real_states: list[str]) -> str | None:
     return fold_hits[0] if len(fold_hits) == 1 else None
 
 
+def zone_label_map(zone_friendly_names: list[str]) -> dict[str, str]:
+    """Map each recorded zone state key → the zone's REAL friendly name.
+
+    A ``person``/``device_tracker`` reports its zone's friendly name as state,
+    but EST lowercases every state key for storage/matching (engine + coordinator
+    ``.lower()``). That fold is lossy — ``Casa Maria Teresa (Parma)`` becomes
+    ``casa maria teresa (parma)`` and a title-case re-derivation can never recover
+    the inner ``P``. So display code must not reconstruct the label; it looks the
+    key back up here against the zones LIVE in ``hass`` to get the real name.
+
+    Keyed by :func:`normalize_state` so the lookup survives the same case/separator
+    fold the stored key went through. An ambiguous fold (two zones folding to one
+    key) is dropped — never guess which zone a key meant.
+    """
+    out: dict[str, str] = {}
+    seen_once: set[str] = set()
+    for friendly in zone_friendly_names:
+        key = normalize_state(friendly)
+        if key in out:
+            del out[key]  # ambiguous: two zones fold to one key → drop both
+            seen_once.add(key)
+        elif key not in seen_once:
+            out[key] = friendly
+    return out
+
+
 def frame_label(frame_key: str) -> str:
     """Return a human label for a frame (§3).
 

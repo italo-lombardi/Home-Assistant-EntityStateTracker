@@ -18,6 +18,7 @@ from custom_components.entity_state_tracker.helpers import (
     normalize_state,
     tracker_device_name,
     unique_id,
+    zone_label_map,
 )
 
 
@@ -182,3 +183,20 @@ def test_entity_id_uses_name_not_entry_id() -> None:
         "Front Door", "today", TRANSLATION_KEY_DURATION
     )
     assert ulid.lower() not in binary_entity_id("Front Door", TRANSLATION_KEY_COMPLIANT)
+
+
+def test_zone_label_map_resolves_lowercased_key_to_real_name() -> None:
+    """A lowercased stored key maps back to the zone's real friendly name."""
+    zmap = zone_label_map(["Casa Maria Teresa (Parma)", "Office HQ"])
+    # Keyed by normalize_state, so the lowercased storage key resolves.
+    assert zmap[normalize_state("casa maria teresa (parma)")] == (
+        "Casa Maria Teresa (Parma)"
+    )
+    assert zmap[normalize_state("office hq")] == "Office HQ"
+
+
+def test_zone_label_map_drops_ambiguous_fold() -> None:
+    """Two+ zones folding to one key are all dropped — never guess."""
+    # All three normalize identically; the 3rd exercises the already-seen arc.
+    zmap = zone_label_map(["not home", "not_home", "NOT HOME"])
+    assert normalize_state("not home") not in zmap
