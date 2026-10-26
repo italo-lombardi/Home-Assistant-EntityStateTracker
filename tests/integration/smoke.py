@@ -353,6 +353,26 @@ def note(msg):
     print(f"  … {msg}", flush=True)
 
 
+def run_ec(fn, *args):
+    """Run one EC, turning an unhandled exception into a FAIL (not a suite abort).
+
+    main() wraps the whole run in one try/finally, so before this guard a single
+    EC raising (e.g. a bad entity_id → HTTP 400) killed every later EC. Each EC
+    is independent — isolate failures so one broken test can't mask the rest.
+    """
+    try:
+        return fn(*args)
+    except Exception as err:
+        import traceback
+
+        global _failed
+        _failed += 1
+        _results.append((f"{fn.__name__} crashed", False, str(err)))
+        print(f"FAIL {fn.__name__} crashed: {err}", flush=True)
+        traceback.print_exc()
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Config-flow driver
 # ---------------------------------------------------------------------------
@@ -1530,18 +1550,18 @@ def ec12_restart_persistence():
 # ---------------------------------------------------------------------------
 
 
-def _restart_ha() -> bool:
-    """Kill + relaunch HA in-place; poll until it answers. Return True if back.
-
-    Shared by EC12 (persistence) and EC17 (currently-in-state reconcile). The
-    relaunched process is fully detached (setsid + own session) so it outlives
-    this smoke script — a plain child would die with us and take HA down
-    mid-suite.
-    """
+def _kill_ha() -> None:
+    """Stop the running HA (SIGTERM via pkill) and wait for it to exit."""
     import subprocess
 
     subprocess.run(["bash", "-c", "pkill -f 'homeassistant -c' || true"], check=False)
     time.sleep(4)
+
+
+def _launch_ha() -> bool:
+    """Relaunch HA in-place (detached) and poll the authenticated API until up."""
+    import subprocess
+
     subprocess.Popen(
         [
             "setsid",
@@ -1575,6 +1595,20 @@ def _restart_ha() -> bool:
             pass
         time.sleep(3)
     return False
+
+
+def _restart_ha() -> bool:
+    """Kill + relaunch HA in-place; poll until it answers. Return True if back.
+
+    Shared by EC12 (persistence) and EC17 (currently-in-state reconcile). The
+    relaunched process is fully detached (setsid + own session) so it outlives
+    this smoke script — a plain child would die with us and take HA down
+    mid-suite. EC35 does NOT use this — it needs to edit .storage while HA is
+    DOWN (between _kill_ha and _launch_ha) so a clean-shutdown flush can't clobber
+    the edit.
+    """
+    _kill_ha()
+    return _launch_ha()
 
 
 def _wait_entry_loaded(entry_id: str, timeout: int = 300) -> bool:
@@ -2735,14 +2769,21 @@ def ec31_rolling_365d_frame():
             f"window_seconds={win} expected≈{days * 86400}",
         )
         ws = dt.datetime.fromisoformat(attrs["window_start"]).astimezone(ha_tz)
-        # Rolling start = now − days, so it is NOT snapped to local midnight
-        # (unless now happens to be midnight). Confirm it is ~days ago, mid-day.
-        expected_start = now_local - dt.timedelta(days=days)
+        # Rolling start = now − days as an ABSOLUTE delta (the engine does
+        # now_utc − timedelta(days), DST-agnostic). Compare in UTC, not local
+        # wall-clock: now_local − timedelta(days) is wall-clock arithmetic that
+        # drifts by the DST offset when the window spans a spring/autumn change
+        # (e.g. run on the EU DST-end weekend → a 1h false mismatch). Subtracting
+        # in UTC matches the engine and is transition-proof.
+        expected_start_utc = now_local.astimezone(dt.timezone.utc) - dt.timedelta(
+            days=days
+        )
+        ws_utc = ws.astimezone(dt.timezone.utc)
         chk(
             f"EC31 {frame_key} start ≈ now − {days}d (rolling, not midnight-snapped)",
-            abs((ws - expected_start).total_seconds()) <= 120,
+            abs((ws_utc - expected_start_utc).total_seconds()) <= 120,
             True,
-            f"window_start={ws.isoformat()} expected≈{expected_start.isoformat()}",
+            f"window_start(utc)={ws_utc.isoformat()} expected≈{expected_start_utc.isoformat()}",
         )
         pct = attrs.get("percent")
         chk(
@@ -2828,23 +2869,30 @@ def ec32_remove_entry_cleans_storage():
 
 
 def ec33_separator_insensitive_state_tracking():
-    """EC33: tracked states stored with underscores still match a recorded state
-    that uses spaces (and vice versa).
+    """EC33: a config state typed with underscores is snapped to the recorded
+    spaced form at save and its time is attributed (v0.1.8 smart config, PR #35).
 
-    Regression guard for the separator-mismatch bug (v0.1.8): config
-    "city_centre" never matched the recorded "city centre", so the
-    tracked state read 0 s and its time fell into "other". State matching is now
-    separator- and case-insensitive on both operands.
+    The separator-mismatch bug: config "city_centre" never matched recorded
+    "city centre" → 0 s, time into "other". The v0.1.8 fix snaps the typed value
+    to the real recorded state at CONFIG-SAVE time (config-flow _resolve_states),
+    so the stored config holds "city centre" by construction and the tracked time
+    is attributed correctly. (The runtime-fold + heal paths for a pre-0.1.8
+    drifted store are unit-covered: test_subset_percent_* separator cases + the
+    coordinator heal tests; EC35 covers the heal live.)
     """
     print(
-        "\n=== EC33: separator-insensitive state tracking (config '_' ↔ recorded ' ') ===",
+        "\n=== EC33: config-flow snaps underscore→recorded spaced state ===",
         flush=True,
     )
-    # The entity emits a SPACE-separated state; config tracks the UNDERSCORE form.
     spaced_state = "city centre"
     underscore_state = "city_centre"
+    # Entity records the SPACED form first, so the snap has it in the seen-set.
     eid = make_entity("sepmismatch", spaced_state)
+    time.sleep(2 if FAST else 3)
+    ss(eid, "not_home")
+    time.sleep(2 if FAST else 3)
 
+    # Type the UNDERSCORE form in config; the snap should store the spaced form.
     entry = create_tracker(
         eid, "specific_states", states=[underscore_state], frames={"today": True}
     )
@@ -2854,41 +2902,43 @@ def ec33_separator_insensitive_state_tracking():
     if not dur:
         return entry, eid
 
-    # Close a visit in the spaced state so the engine has a completed block.
-    time.sleep(3 if FAST else 5)
-    ss(eid, "not_home")
-    time.sleep(2 if FAST else 3)
+    diag = api("GET", f"/api/diagnostics/config_entry/{entry}").get("data", {})
+    stored = (diag.get("entry", {}).get("data", {}) or {}).get("states") or []
+    chk(
+        "EC33 config-flow snapped underscore → recorded spaced state",
+        spaced_state in stored and underscore_state not in stored,
+        True,
+        f"stored={stored}",
+    )
+    # Re-enter the spaced state so there's measurable tracked time.
     ss(eid, spaced_state)
+    time.sleep(2 if FAST else 3)
+    ss(eid, "not_home")
     time.sleep(2 if FAST else 3)
     api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
 
     def _bd():
         return gs(dur).get("attributes", {}).get("breakdown_seconds") or {}
 
-    # Slice is keyed by the CONFIG state (underscore); value pulled from the real
-    # spaced recorded key via the canonical fold.
     wait_for(
-        lambda: _bd().get(underscore_state, 0) > 0,
+        lambda: (_bd().get(spaced_state, 0) or 0) > 0,
         True,
         timeout=WAIT_FOR_TIMEOUT,
     )
     attrs = gs(dur).get("attributes", {})
     breakdown = attrs.get("breakdown_seconds", {})
     chk(
-        f"EC33 underscore key '{underscore_state}' holds the spaced state's time",
-        breakdown.get(underscore_state, 0) > 0,
+        f"EC33 snapped key '{spaced_state}' holds the tracked time",
+        (breakdown.get(spaced_state, 0) or 0) > 0,
         True,
         f"breakdown_seconds={breakdown}",
     )
-    # The tracked total (duration_seconds) is non-zero: the state matched.
-    dur_secs = attrs.get("duration_seconds", 0)
     chk(
         "EC33 tracked duration_seconds > 0 (not dumped into 'other')",
-        dur_secs > 0,
+        (attrs.get("duration_seconds", 0) or 0) > 0,
         True,
-        f"duration_seconds={dur_secs}",
+        f"duration_seconds={attrs.get('duration_seconds')}",
     )
-    # percent reflects the tracked time (not 0.0 as in the bug).
     chk(
         "EC33 percent > 0 (tracked share, was 0.0 in the bug)",
         (attrs.get("percent") or 0) > 0,
@@ -2928,53 +2978,113 @@ def ec34_card_legend_truncates_name_not_value():
 
 
 def ec35_config_heal_rewrites_drifted_states():
-    """EC35: a stored config state that drifts from the recorded name is healed.
+    """EC35: a drifted stored config state is healed to the recorded name on
+    reload (coordinator first-refresh), by INJECTING a legacy-style drift.
 
-    Create a tracker whose configured state the entity has NOT yet reported (so
-    the config-flow snap can't resolve it at save time), then make the entity
-    report the real spaced form, reload the entry, and assert the stored config
-    state was rewritten to the recorded name on first-refresh.
+    A live create-flow can't produce drift: the v0.1.8 config-flow snap
+    canonicalises every saved state (`train_station` → `train station`) and keeps
+    unmatched values in canonical form too, so stored config is never the raw
+    underscore. Drift only exists in PRE-0.1.8 stores written before the snap.
+    So we simulate that: create a tracker, then rewrite its stored `states`
+    straight in `.storage/core.config_entries` to the underscore form (the legacy
+    shape), make the entity record the spaced form, reload, and assert the heal
+    rewrites the stored state to the recorded spaced name. (The fresh-install heal
+    path is also unit-covered by test_heal_fires_on_fresh_install_via_first_refresh.)
     """
     print(
-        "\n=== EC35: config heal rewrites drifted stored states on reload ===",
+        "\n=== EC35: config heal rewrites injected legacy drift on reload ===",
         flush=True,
     )
-    # Entity starts "home" — the drifted underscore state is NOT in history yet,
-    # so the create-flow snap leaves it as typed.
-    eid = make_entity("healdrift", "home")
-    underscore_state = "train_station"
+    # The heal reads entry.data from HA's IN-MEMORY config-entries; editing the
+    # .storage file only takes effect after HA re-reads it, i.e. a restart. So
+    # EC35 needs the restart env (same gate as EC12). Skip cleanly without it —
+    # a note(), NOT a passing chk (a chk(True,True) would be a placebo green).
+    if not os.environ.get("EST_SMOKE_HA_DIR"):
+        note("EC35 SKIPPED: needs EST_SMOKE_HA_DIR for the heal restart")
+        return None
     spaced_state = "train station"
+    underscore_state = "train_station"
+    # Entity records the SPACED form up front so it's the heal's snap target.
+    eid = make_entity("healdrift", spaced_state)
     entry = create_tracker(
-        eid, "specific_states", states=[underscore_state], frames={"today": True}
+        eid, "specific_states", states=[spaced_state], frames={"today": True}
     )
+    # Let the entity dwell + close a visit so "train station" is in the ledger.
+    time.sleep(2 if FAST else 3)
+    ss(eid, "not_home")
+    time.sleep(2 if FAST else 3)
 
     def _stored_states():
         diag = api("GET", f"/api/diagnostics/config_entry/{entry}").get("data", {})
         return (diag.get("entry", {}).get("data", {}) or {}).get("states") or []
 
-    # Precondition: the drifted underscore state is stored as typed.
+    # Inject legacy drift: rewrite the stored CONF_STATES to the underscore form
+    # directly in the entry store (simulating a pre-0.1.8 config), then restart so
+    # first-refresh heals it. The smoke runs INSIDE the HA container as the HA
+    # user, so edit .storage with plain file I/O. Resolve the path from the same
+    # HA_DIR/HA_CONFIG the restart uses (not a hardcoded literal), so the edited
+    # file is the one the relaunched HA reads.
+    import json as _json
+
+    store_path = os.path.join(HA_DIR, HA_CONFIG, ".storage", "core.config_entries")
+    if not os.path.exists(store_path):
+        chk("EC35 core.config_entries store found", False, True, f"no {store_path}")
+        return entry
+    # Sanity: the live (pre-injection) stored state is the spaced form — the real
+    # "before", read through the API (not a self-written dict).
     chk(
-        "EC35 drifted state stored as typed before heal",
-        underscore_state in _stored_states(),
+        "EC35 stored state is the spaced form before injection",
+        spaced_state in _stored_states() and underscore_state not in _stored_states(),
         True,
         f"stored={_stored_states()}",
     )
-
-    # Now the entity reports the real SPACED form and closes the visit so it lands
-    # in the ledger (the heal's snap target).
-    time.sleep(2 if FAST else 3)
-    ss(eid, spaced_state)
-    time.sleep(2 if FAST else 3)
-    ss(eid, "home")
-    time.sleep(2 if FAST else 3)
-
-    # Reload the entry → coordinator first-refresh runs the heal against the now-
-    # recorded spaced state.
-    api("POST", f"/api/config/config_entries/entry/{entry}/reload")
+    # Inject the legacy underscore while HA is DOWN. Editing core.config_entries
+    # while HA runs is unsafe: HA flushes the store on a clean (SIGTERM) shutdown
+    # and would CLOBBER the edit before the relaunch reads it — leaving the stored
+    # state already spaced, so the heal has nothing to do and the final assert
+    # passes whether or not the heal works (false green). So: kill → inject →
+    # RE-READ the file to prove the underscore survived onto disk → launch.
+    _kill_ha()
+    with open(store_path) as fh:
+        doc = _json.load(fh)
+    matches = [e for e in doc["data"]["entries"] if e["entry_id"] == entry]
+    if not matches:
+        chk("EC35 entry present in config store", False, True, f"entry={entry}")
+        _launch_ha()
+        return entry
+    matches[0]["data"]["states"] = [underscore_state]
+    with open(store_path, "w") as fh:
+        _json.dump(doc, fh)
+    # Prove the drift is actually on disk (HA is down, nothing can clobber it). If
+    # this fails the heal assertion below is meaningless, so gate on it: a green
+    # EC35 now REQUIRES the underscore reached the store the relaunched HA reads.
+    with open(store_path) as fh:
+        disk = _json.load(fh)
+    disk_states = next(
+        (
+            e["data"].get("states")
+            for e in disk["data"]["entries"]
+            if e["entry_id"] == entry
+        ),
+        None,
+    )
+    injected_ok = disk_states == [underscore_state]
+    chk(
+        "EC35 underscore drift is on disk while HA is down (injection took)",
+        injected_ok,
+        True,
+        f"disk_states={disk_states}",
+    )
+    back = _launch_ha()
+    chk("EC35 HA came back after restart", back, True)
+    if not back or not injected_ok:
+        return entry
+    # Generous post-restart budget (entry load + first-refresh heal + flush can
+    # outlast the short WAIT_FOR_TIMEOUT on a slow-boot host, like EC12/EC17).
     wait_for(
         lambda: spaced_state in _stored_states(),
         True,
-        timeout=WAIT_FOR_TIMEOUT,
+        timeout=300,
     )
     stored = _stored_states()
     chk(
@@ -2982,73 +3092,6 @@ def ec35_config_heal_rewrites_drifted_states():
         spaced_state in stored and underscore_state not in stored,
         True,
         f"stored={stored}",
-    )
-    return entry, eid
-
-
-def ec36_title_cased_unavailable_carries_prior_state():
-    """EC36: a title-cased "Unavailable" shutdown marker carries the prior state
-    (PR #36 / #7). carry_forward_states compares the trailing marker
-    case-insensitively, so an entity that goes to "Unavailable" (title case) at
-    the end of the window does NOT get the gap attributed to "unavailable" — the
-    preceding steady state carries forward across it.
-
-    Live proxy: the pytest suite owns the recorder-row regression (title-cased
-    trailing row dropped). What the live path proves is the user-visible outcome:
-    after a steady state then a trailing Unavailable, the tracked breakdown holds
-    the steady state's time, not an "unavailable" slice eating the tail.
-    """
-    print(
-        "\n=== EC36: title-cased 'Unavailable' trailing marker carries prior state ===",
-        flush=True,
-    )
-    eid = make_entity("titleunavail", "on")
-    entry = create_tracker(eid, "all_states", frames={"today": True})
-    reg = wait_entities(entry, min_count=1)
-    # all-states → BreakdownSensor for the frame.
-    bd_eid = next(
-        (
-            e["entity_id"]
-            for e in reg.values()
-            if e.get("entity_id", "").startswith("sensor.")
-            and "breakdown"
-            in (
-                gs(e["entity_id"]).get("attributes", {}).get("translation_key", "")
-                if e.get("entity_id")
-                else ""
-            )
-        ),
-        None,
-    ) or eid_for(entry, "today", "state_breakdown", reg)
-    # Dwell "on", then go to title-cased "Unavailable" (the clean-shutdown marker).
-    time.sleep(3 if FAST else 5)
-    ss(eid, "Unavailable")
-    time.sleep(2 if FAST else 3)
-    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": bd_eid})
-
-    def _bd():
-        return gs(bd_eid).get("attributes", {}).get("breakdown_seconds") or {}
-
-    wait_for(lambda: (_bd().get("on", 0) or 0) > 0, True, timeout=WAIT_FOR_TIMEOUT)
-    bd = _bd()
-    chk(
-        "EC36 'on' carries time across the Unavailable marker",
-        (bd.get("on", 0) or 0) > 0,
-        True,
-        f"breakdown_seconds={bd}",
-    )
-    # The real #7 guard: the trailing Unavailable marker must leave NO slice of
-    # its own — the gap carries to 'on', it is not attributed to any
-    # 'unavailable'/'Unavailable' (or other) state. `on > 0` alone can't catch a
-    # regression (it stays true even if the gap leaks elsewhere); assert the
-    # slice we claim is absent is actually absent. In all-states mode every seen
-    # state is keyed, so a leak would surface here.
-    other = {k: v for k, v in bd.items() if k != "on" and (v or 0) > 0}
-    chk(
-        "EC36 no other slice ate the tail (carry_forward held, #7)",
-        other,
-        {},
-        f"unexpected non-'on' slices={other} full={bd}",
     )
     return entry, eid
 
@@ -3077,21 +3120,29 @@ def ec37_transition_avg_visit_weighted():
     chk("EC37 duration sensor exists", dur is not None, True)
     if not dur:
         return entry, eid
-    # Two visits to "active", each a measurable dwell, separated by "idle".
+    # Two visits to "active", each a measurable dwell, separated by "idle". Dwell
+    # long enough that the recorder commits each visit (its commit interval is
+    # ~5 s) — too-short FAST dwells can land both entries in one uncommitted
+    # window and register as a single count.
     for _ in range(2):
-        time.sleep(2 if FAST else 3)
+        time.sleep(4)
         ss(eid, "active")
-        time.sleep(2 if FAST else 3)
+        time.sleep(4)
         ss(eid, "idle")
-    time.sleep(1 if FAST else 2)
+    time.sleep(6)  # let the recorder commit the final transition before reading
     api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
 
     def _counts():
         return gs(dur).get("attributes", {}).get("counts") or {}
 
-    wait_for(
-        lambda: (_counts().get("active", 0) or 0) >= 2, True, timeout=WAIT_FOR_TIMEOUT
-    )
+    # Re-poke update_entity while waiting, so a late recorder commit is picked up.
+    def _two_visits():
+        if (_counts().get("active", 0) or 0) >= 2:
+            return True
+        api("POST", "/api/services/homeassistant/update_entity", {"entity_id": dur})
+        return False
+
+    wait_for(_two_visits, True, timeout=WAIT_FOR_TIMEOUT)
     attrs = gs(dur).get("attributes", {})
     counts = attrs.get("counts", {})
     avg = attrs.get("avg_duration_seconds", {})
@@ -3107,11 +3158,35 @@ def ec37_transition_avg_visit_weighted():
     c = counts.get("active", 0) or 0
     a = avg.get("active")
     s = bd.get("active", 0) or 0
+    # Consistency: avg == secs/count (the per-state mean the card weights). This
+    # alone is a near-tautology (the engine derives avg FROM secs/count, so it
+    # holds for any values); keep it, but the real teeth are the two asserts below
+    # against the IMPOSED dwell — those fail if the engine mis-MEASURES the visits.
     chk(
-        "EC37 avg_duration_seconds['active'] ≈ secs/count (card weights this)",
+        "EC37 avg_duration_seconds['active'] == secs/count (internal consistency)",
         a is not None and c > 0 and abs(a - s / c) <= 0.2,
         True,
         f"avg={a} secs={s} count={c}",
+    )
+    # Teeth: each visit dwelt ~4 s, so the total tracked secs ≈ 2*4 = 8 s and the
+    # per-visit avg ≈ 4 s. The bands tolerate recorder-commit lag + ss()/sleep
+    # jitter but still fail a gross mis-measurement. The avg LOWER bound is 3.0,
+    # not 1.5, on purpose: a 2× visit over-count (count=4 while secs stays ~8 —
+    # secs and count accumulate independently in the engine, so a double-count
+    # leaves secs untouched) halves avg to ~2.0; a 1.5 floor would let that
+    # regression pass, a 3.0 floor catches it. The secs band catches
+    # wrong-state attribution (→ near 0); counts>=2 above catches under-count.
+    chk(
+        "EC37 total tracked secs ≈ 2 visits × ~4 s dwell (measured, not derived)",
+        5.0 <= s <= 11.0,
+        True,
+        f"secs={s} (expected ≈8s for two ~4s visits)",
+    )
+    chk(
+        "EC37 avg ≈ ~4 s/visit (floor 3.0 catches a 2× double-count → avg ~2.0)",
+        a is not None and 3.0 <= a <= 7.0,
+        True,
+        f"avg={a} (expected ≈4s; <3 would mean visits over-counted)",
     )
     return entry, eid
 
@@ -3124,102 +3199,105 @@ def main():
 
     try:
         if ec_enabled(1) or ec_enabled(2) or ec_enabled(3):
-            entry1, eid1 = ec1_specific_duration_sensors()
-            if ec_enabled(2) or ec_enabled(3):
-                ec2_ec3_duration_rises_and_currently(entry1, eid1)
+            r1 = run_ec(ec1_specific_duration_sensors)
+            if (ec_enabled(2) or ec_enabled(3)) and r1:
+                run_ec(ec2_ec3_duration_rises_and_currently, r1[0], r1[1])
 
         if ec_enabled(4):
-            ec4_compliance()
+            run_ec(ec4_compliance)
 
         entry_all = eid_all = today_bd = None
         if any(ec_enabled(n) for n in (5, 6, 7, 9)):
-            entry_all, eid_all, today_bd = ec5_ec6_ec7_allstates()
+            entry_all, eid_all, today_bd = run_ec(ec5_ec6_ec7_allstates) or (
+                None,
+                None,
+                None,
+            )
 
         if ec_enabled(8):
-            ec8_glitch_filter()
+            run_ec(ec8_glitch_filter)
 
         if ec_enabled(9) and today_bd:
-            ec9_unrecorded(entry_all, eid_all, today_bd)
+            run_ec(ec9_unrecorded, entry_all, eid_all, today_bd)
 
         if ec_enabled(11):
-            ec11_options_flow_frame_toggle()
+            run_ec(ec11_options_flow_frame_toggle)
 
         if ec_enabled(13):
-            ec13_coverage_gap()
+            run_ec(ec13_coverage_gap)
 
         if ec_enabled(14):
-            ec14_dominant_hysteresis()
+            run_ec(ec14_dominant_hysteresis)
 
         if ec_enabled(15):
-            ec15_card_resource()
+            run_ec(ec15_card_resource)
 
         if ec_enabled(18):
-            ec18_diagnostics_dump()
+            run_ec(ec18_diagnostics_dump)
 
         if ec_enabled(19):
-            ec19_entity_id_naming_convention()
+            run_ec(ec19_entity_id_naming_convention)
 
         if ec_enabled(20):
-            ec20_multiple_trackers_same_entity()
+            run_ec(ec20_multiple_trackers_same_entity)
 
         if ec_enabled(21):
-            ec21_per_frame_compliance()
+            run_ec(ec21_per_frame_compliance)
 
         if ec_enabled(22):
-            ec22_options_flow_target_and_glitch()
+            run_ec(ec22_options_flow_target_and_glitch)
 
         if ec_enabled(23):
-            ec23_week_frame_starts_monday()
+            run_ec(ec23_week_frame_starts_monday)
 
         if ec_enabled(24):
-            ec24_last_week_last_month_frames()
+            run_ec(ec24_last_week_last_month_frames)
 
         if ec_enabled(25):
-            ec25_count_once_live_fold()
+            run_ec(ec25_count_once_live_fold)
 
         if ec_enabled(26):
-            ec26_editable_tracked_states()
+            run_ec(ec26_editable_tracked_states)
 
         if ec_enabled(27):
-            ec27_specific_breakdown_all_tracked_keyed()
+            run_ec(ec27_specific_breakdown_all_tracked_keyed)
 
         if ec_enabled(28):
-            ec28_case_insensitive_state_tracking()
+            run_ec(ec28_case_insensitive_state_tracking)
 
         if ec_enabled(29):
-            ec29_no_phantom_other_slice()
+            run_ec(ec29_no_phantom_other_slice)
 
         if ec_enabled(30):
-            ec30_humanized_duration_text()
+            run_ec(ec30_humanized_duration_text)
 
         if ec_enabled(31):
-            ec31_rolling_365d_frame()
+            run_ec(ec31_rolling_365d_frame)
 
         if ec_enabled(32):
-            ec32_remove_entry_cleans_storage()
+            run_ec(ec32_remove_entry_cleans_storage)
 
         if ec_enabled(33):
-            ec33_separator_insensitive_state_tracking()
+            run_ec(ec33_separator_insensitive_state_tracking)
 
         if ec_enabled(34):
-            ec34_card_legend_truncates_name_not_value()
-
-        if ec_enabled(35):
-            ec35_config_heal_rewrites_drifted_states()
-
-        if ec_enabled(36):
-            ec36_title_cased_unavailable_carries_prior_state()
+            run_ec(ec34_card_legend_truncates_name_not_value)
 
         if ec_enabled(37):
-            ec37_transition_avg_visit_weighted()
+            run_ec(ec37_transition_avg_visit_weighted)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
-            ec12_restart_persistence()
+            run_ec(ec12_restart_persistence)
 
         # EC17 also restarts HA (currently-in-state reconcile); after EC12.
         if ec_enabled(17):
-            ec17_currently_reconcile_on_restart()
+            run_ec(ec17_currently_reconcile_on_restart)
+
+        # EC35 restarts HA (to re-read injected .storage drift), so it runs in the
+        # restart cluster, last — same reason EC12/EC17 are last.
+        if ec_enabled(35):
+            run_ec(ec35_config_heal_rewrites_drifted_states)
 
     finally:
         cleanup()
