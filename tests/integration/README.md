@@ -120,7 +120,7 @@ ECs cannot run.
 | EC25 | N folded visits == N counts — a state visited across day-fold seams is counted once, not double-counted (PR #16 proxy) |
 | EC26 | Options flow edits the tracked-state **set** → retroactive recompute picks up the newly-tracked state's past time |
 | EC27 | Specific `breakdown_seconds` is keyed for **all** tracked states, unvisited ones zero-seeded (never missing keys) |
-| EC28 | Case-insensitive state tracking: a title-case HA state (e.g. `"Casa Buonabitacolo"`) is attributed under its lowercase breakdown key |
+| EC28 | Case-insensitive state tracking: a title-case HA state (e.g. `"City Centre"`) is attributed under its lowercase breakdown key |
 | EC29 | No phantom "other" slice: on a fully-covered specific tracker (gap=0) the card's `other = window − Σ(tracked) − gap` stays <1 s, and `breakdown_seconds` values are numeric floats (regression for the `int()`-truncation residue) |
 | EC30 | Humanized `duration_text` (specific total) + `breakdown_text` (per state, both modes): nested `{ms,hm,dh,wd}` dicts, ordered min→max, `hm` matches floored `duration_seconds`, no `unaccounted` key in the per-state text |
 | EC31 | `365d` (and `30d`) are true-rolling frames (`now − N days → now`, include now, NOT midnight-snapped): sensor exists, window spans exactly `N*86400s`, `window_start ≈ now − N days`, `percent <= 100` and tracked seconds `<= window` (far-edge whole-day over-count guard) |
