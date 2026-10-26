@@ -3028,6 +3028,15 @@ def ec40_card_pie_chart_overflow_guard_present():
         "flex: 0 0 auto" not in block,
         True,
     )
+    # The legend is a 2-line stack (name over value) so name and value never
+    # compete for horizontal width → the value can't be shoved off the card.
+    # Guard the structural markers: the .legend-text wrapper (column stack) and
+    # its render (a <div class="legend-text"> wrapping label + value).
+    chk(
+        "EC40 served JS has the 2-line .legend-text stack (name over value)",
+        (".legend-text" in text) and ('class="legend-text"' in text),
+        True,
+    )
 
 
 def ec35_config_heal_rewrites_drifted_states():

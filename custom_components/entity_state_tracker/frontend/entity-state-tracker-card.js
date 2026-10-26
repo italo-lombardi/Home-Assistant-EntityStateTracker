@@ -702,10 +702,9 @@ const cardStyles = css`
      card — the old 0 0 auto intent) but DOES shrink to the card's inner width
      on a narrow 4-across card. Without the shrink + ceiling the column sized to
      its content (donut ~130px + legend up to 260px ≈ 390px) and overflowed the
-     ha-card{overflow:hidden} box, clipping the pinned legend value ("· 100.0%")
-     — the wrap/ellipsis below it were dead because this column was unbounded.
-     min-width:0 lets it shrink past its content min so the legend can wrap under
-     the donut (or ellipsize beside it). */
+     ha-card{overflow:hidden} box, clipping the pinned legend value ("· 100.0%").
+     min-width:0 lets it shrink past its content min; the legend then shrinks in
+     place beside the donut (see .pie-body.beside / .legend below). */
   .pie-chart {
     display: flex;
     flex-direction: column;
@@ -716,9 +715,9 @@ const cardStyles = css`
     max-width: 100%;
   }
 
-  /* A solo (beside) chart left-aligns its column: when the row-legend wraps
-     under the donut on a narrow viewport it hugs the left edge instead of
-     centering awkwardly beneath. Stacked (two-chart) columns stay centered. */
+  /* A solo (beside) chart left-aligns its column so the donut+legend row hugs
+     the left edge instead of centering awkwardly. Stacked (two-chart) columns
+     stay centered. */
   .pie-chart:has(.pie-body.beside) {
     align-items: flex-start;
   }
@@ -736,7 +735,14 @@ const cardStyles = css`
     flex-direction: row;
     align-items: center;
     gap: 16px;
-    flex-wrap: wrap;
+    /* nowrap: the legend stays BESIDE the donut and SHRINKS in place (label
+       ellipsizes, value stays) instead of wrapping under it on a narrow card.
+       Pairs with .legend flex:1 1 0 below — the legend sizes from the row's
+       leftover width after the fixed donut, not from its own content, so it
+       fits beside at any card width. (Earlier flex-wrap:wrap moved the legend
+       under the donut once .pie-chart became shrinkable — a behaviour change;
+       keep it beside.) */
+    flex-wrap: nowrap;
     justify-content: flex-start;
   }
 
@@ -745,29 +751,38 @@ const cardStyles = css`
   }
 
   .legend {
-    flex: 1 1 auto;
+    /* basis 0: take the row's leftover width (after the fixed donut) rather
+       than sizing to content, so the legend shrinks to fit beside the donut and
+       the label ellipsis engages instead of the value clipping or wrapping. */
+    flex: 1 1 0;
     min-width: 0;
     max-width: 260px;
   }
 
+  /* Each legend row: swatch in a left column, then the text stacked in two
+     lines (name on top, value below). Stacking the value under the name means
+     the two never compete for horizontal width, so a long name can never shove
+     the value off the card — the clip class of bug is gone by construction, not
+     by shrink/ellipsis tuning. */
   .legend-item {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     gap: 8px;
     font-size: 13px;
-    margin: 3px 0;
+    margin: 6px 0;
     color: var(--est-text-primary);
-    /* Allow the row to shrink so the label can ellipsize instead of pushing the
-       value past the legend's max-width (where ha-card{overflow:hidden} clips
-       it — the hidden-percentage bug). */
     min-width: 0;
   }
 
-  /* The state name: takes the slack and truncates with an ellipsis when long
-     ("Shopping Centre (Nor…"), so the value beside it is never shoved out of
-     view. */
+  .legend-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  /* The state name on its own line; still ellipsizes if absurdly long so the
+     row never forces the column wider than the card. */
   .legend-label {
-    flex: 1 1 auto;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -781,12 +796,17 @@ const cardStyles = css`
     flex-shrink: 0;
   }
 
+  /* In the stacked pie legend only, nudge the swatch down to sit centered on
+     the first (name) text line. Scoped to .legend-item so the table/bars view
+     that also uses .legend-swatch inline is unaffected. */
+  .legend-item .legend-swatch {
+    margin-top: 3px;
+  }
+
+  /* The duration·% on its own line under the name — always fully visible. */
   .legend-value {
-    margin-left: 12px;
     color: var(--est-text-secondary);
     white-space: nowrap;
-    /* Pin the duration·% so it always renders in full; only the name truncates. */
-    flex: 0 0 auto;
   }
 
   .frame-picker {
@@ -1568,10 +1588,12 @@ class EntityStateTrackerCard extends LitElement {
             ${legendItems.map(
               (i) => html`<div class="legend-item">
                 <span class="legend-swatch" style="background:${i.color}"></span>
-                <span class="legend-label" title="${i.label}">${i.label}</span>
-                ${i.value != null
-                  ? html`<span class="legend-value">${i.value}</span>`
-                  : nothing}
+                <div class="legend-text">
+                  <span class="legend-label" title="${i.label}">${i.label}</span>
+                  ${i.value != null
+                    ? html`<span class="legend-value">${i.value}</span>`
+                    : nothing}
+                </div>
               </div>`
             )}
           </div>
