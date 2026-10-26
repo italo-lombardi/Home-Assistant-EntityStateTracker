@@ -193,3 +193,31 @@ test("_formatTrackedState: non-tracker domain does NOT adopt a colliding zone na
   );
   assert.equal(out2, "Mixedcase Zone"); // toLabel, not the zone's "mixedCase Zone"
 });
+
+test("_formatTrackedState: ambiguous zones (case-only diff) resolve to neither", () => {
+  // Two zones whose names fold to the same key → never guess; fall back to
+  // toLabel (matches helpers.zone_label_map's ambiguity drop).
+  const stub = {
+    hass: {
+      states: {
+        "zone.a": { attributes: { friendly_name: "Office" } },
+        "zone.b": { attributes: { friendly_name: "OFFICE" } },
+      },
+      formatEntityState: () => null,
+    },
+  };
+  const out = Card.prototype._formatTrackedState.call(stub, "person.x", "office");
+  assert.equal(out, "Office"); // toLabel fallback, not a silent pick of either zone
+});
+
+test("_formatTrackedState: zone key folds underscores like normalize_state", () => {
+  // A zone "Not Home" folds to "not home"; a stored "not_home" key must match.
+  const stub = {
+    hass: {
+      states: { "zone.nh": { attributes: { friendly_name: "Not Home" } } },
+      formatEntityState: () => null,
+    },
+  };
+  const out = Card.prototype._formatTrackedState.call(stub, "person.x", "not_home");
+  assert.equal(out, "Not Home");
+});

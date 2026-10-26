@@ -177,15 +177,32 @@ function toLabel(state) {
 // only re-cases word-initial chars, so "(parma)" can never recover its "P".
 // Resolve the key back to the zone's LIVE friendly name from hass instead of
 // reconstructing it. Returns null when no zone's friendly name matches.
+//
+// Gated to person/device_tracker by the CALLER: only those domains report a
+// zone name as state, so a climate "away" or vacuum state that happens to
+// match a zone's name must NOT be rewritten (mirrors config_flow's
+// _ZONE_STATE_DOMAINS gate).
+//
+// Match key folds exactly like Python normalize_state (lowercase, `_`→space,
+// collapse whitespace) so card and backend agree even if engine storage ever
+// changes its separators. Ambiguous (two zones fold to one key) → null, never
+// guess — same contract as helpers.zone_label_map.
+function normalizeStateKey(s) {
+  return String(s).trim().toLowerCase().replace(/_/g, " ").replace(/\s+/g, " ");
+}
 function zoneFriendlyName(hass, rawValue) {
   if (!hass || !hass.states || rawValue == null) return null;
-  const key = String(rawValue).trim().toLowerCase();
+  const key = normalizeStateKey(rawValue);
+  let hit = null;
   for (const id in hass.states) {
     if (!id.startsWith("zone.")) continue;
     const friendly = hass.states[id].attributes?.friendly_name;
-    if (friendly && friendly.trim().toLowerCase() === key) return friendly;
+    if (friendly && normalizeStateKey(friendly) === key) {
+      if (hit !== null && hit !== friendly) return null; // ambiguous → no guess
+      hit = friendly;
+    }
   }
-  return null;
+  return hit;
 }
 
 function stateHashIndex(state, mod) {
@@ -1184,8 +1201,13 @@ class EntityStateTrackerCard extends LitElement {
     if (rawValue == null) return "unknown";
     // Ground truth for a zone state: the zone's LIVE friendly name in hass,
     // not the lowercased key re-cased by toLabel (which mangles "(Parma)").
-    const zone = zoneFriendlyName(this.hass, rawValue);
-    if (zone) return zone;
+    // ONLY for person/device_tracker — the domains whose state IS a zone name;
+    // any other domain's state that collides with a zone name is NOT a zone.
+    const domain = typeof sourceId === "string" ? sourceId.split(".", 1)[0] : "";
+    if (domain === "person" || domain === "device_tracker") {
+      const zone = zoneFriendlyName(this.hass, rawValue);
+      if (zone) return zone;
+    }
     const existing = sourceId ? this.hass.states[sourceId] : null;
     if (!existing || !this.hass.formatEntityState) return toLabel(rawValue);
     const fakeState = {
