@@ -2939,11 +2939,21 @@ def ec33_separator_insensitive_state_tracking():
         True,
         f"duration_seconds={attrs.get('duration_seconds')}",
     )
+    # percent is the tracked share: engine percent = 100*duration/window (1dp).
+    # NOT asserted > 0 — a short FAST dwell over a multi-hour frame window rounds
+    # to 0.0 legitimately (the real "was-0.0-bug" signal is duration_seconds>0 +
+    # the key holding time above, both checked). Instead assert percent stays
+    # CONSISTENT with the attributed duration, so a regression that decouples
+    # percent from duration (the actual bug class) is still caught.
+    dur_secs = attrs.get("duration_seconds") or 0
+    win_secs = attrs.get("window_seconds") or 0
+    pct = attrs.get("percent")
+    expected_pct = round(100 * dur_secs / win_secs, 1) if win_secs > 0 else None
     chk(
-        "EC33 percent > 0 (tracked share, was 0.0 in the bug)",
-        (attrs.get("percent") or 0) > 0,
+        "EC33 percent == 100*duration/window (tracked share, not decoupled)",
+        pct is not None and expected_pct is not None and abs(pct - expected_pct) <= 0.1,
         True,
-        f"percent={attrs.get('percent')}",
+        f"percent={pct} expected≈{expected_pct} (dur={dur_secs} window={win_secs})",
     )
     return entry, eid
 
@@ -3191,6 +3201,173 @@ def ec37_transition_avg_visit_weighted():
     return entry, eid
 
 
+# Shared setup for the zone-label ECs (EC38/EC39): a live zone + a
+# device_tracker reporting that zone's friendly name as its state. The inner
+# cap after "(" is the whole point — toLabel/capitalize can never recover it,
+# so a correct label PROVES the real friendly name was read from hass, not
+# reconstructed from the lowercased key. Neutral placeholder names only (no
+# real customer zones — see the no-personal-data rule).
+_ZONE_EID = f"zone.est_smoke_{RUN}"
+_ZONE_NAME = f"Field House (North) {RUN}"  # inner cap after "(" is the teeth
+_ZONE_KEY = _ZONE_NAME.lower()  # engine stores state.state.lower() verbatim
+
+
+def _seed_zone_tracker():
+    """Create the zone + a device_tracker in it, an all-states tracker on that
+    tracker, accrue some time, and return (entry, dur_breakdown_eid, tracker_eid).
+
+    Returns (None, None, None) if the breakdown sensor never appears.
+    """
+    ss(_ZONE_EID, "zoning", {"friendly_name": _ZONE_NAME})
+    # A device_tracker's state IS the zone friendly name (what HA reports in-zone).
+    tracker_eid = f"device_tracker.est_smoke_zone_{RUN}"
+    ss(tracker_eid, _ZONE_NAME, {"friendly_name": f"EST Smoke Zone Tracker {RUN}"})
+    time.sleep(2 if FAST else 3)
+    ss(tracker_eid, "not_home")
+    time.sleep(2 if FAST else 3)
+    ss(tracker_eid, _ZONE_NAME)  # back in-zone so there's accrued in-zone time
+    time.sleep(2 if FAST else 3)
+
+    entry = create_tracker(tracker_eid, "all_states", frames={"today": True})
+    reg = wait_entities(entry, min_count=1)
+    bd = eid_for(entry, "today", M_BREAKDOWN, reg)
+    if not bd:
+        return None, None, None
+    # Nudge a read + wait until the zone key lands in the breakdown.
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": bd})
+
+    def _has_zone_key():
+        keys = gs(bd).get("attributes", {}).get("breakdown_seconds") or {}
+        if _ZONE_KEY in keys:
+            return True
+        api("POST", "/api/services/homeassistant/update_entity", {"entity_id": bd})
+        return False
+
+    wait_for(_has_zone_key, True, timeout=WAIT_FOR_TIMEOUT)
+    return entry, bd, tracker_eid
+
+
+def ec38_breakdown_labels_resolve_real_zone_name():
+    """EC38: breakdown_labels resolves a zone's REAL friendly name (not the
+    lossy re-cased key), and omits non-zone keys (#44 regression guard).
+
+    The engine stores every state key lowercased, so the zone "Field House
+    (North)" is recorded as "field house (north)". toLabel/capitalize can only
+    re-case word-initial chars → "(north)" keeps its lowercase n; the inner cap
+    is unrecoverable by reconstruction. The breakdown_labels attribute must map
+    the lowercased key back to the LIVE zone friendly name read from hass —
+    inner cap and paren intact. The negative half guards the domain gate +
+    omit-non-zone behaviour (a non-zone key like "not_home" must be ABSENT).
+    """
+    print(
+        "\n=== EC38: breakdown_labels resolves real zone friendly name (#44) ===",
+        flush=True,
+    )
+    entry, bd, _tracker = _seed_zone_tracker()
+    chk("EC38 breakdown sensor exists + zone key accrued", bd is not None, True)
+    if not bd:
+        return entry, None
+    attrs = gs(bd).get("attributes", {})
+    labels = attrs.get("breakdown_labels") or {}
+    chk(
+        "EC38 breakdown_labels present (zone source → resolved)",
+        isinstance(labels, dict) and len(labels) > 0,
+        True,
+        f"breakdown_labels={labels}",
+    )
+    chk(
+        "EC38 zone key resolves to the REAL friendly name (inner cap survives)",
+        labels.get(_ZONE_KEY),
+        _ZONE_NAME,
+        f"key={_ZONE_KEY!r} labels={labels}",
+    )
+    # Negative: a non-zone recorded key ("not_home") must NOT be in the map.
+    bd_keys = attrs.get("breakdown_seconds") or {}
+    non_zone = next((k for k in bd_keys if k not in (_ZONE_KEY,)), None)
+    chk(
+        "EC38 non-zone breakdown key is omitted from breakdown_labels",
+        non_zone is not None and non_zone not in labels,
+        True,
+        f"non_zone_key={non_zone!r} labels={labels}",
+    )
+    return entry, bd
+
+
+def ec39_zone_rename_reflects_on_next_refresh():
+    """EC39: a renamed zone resolves to its NEW friendly name on next refresh —
+    live from hass, never stored (#44 intent).
+
+    The label is resolved by identity: a breakdown key resolves only while a
+    LIVE zone's friendly name folds to that key. A key frozen at the OLD name
+    therefore correctly stops resolving after a rename (the old name no longer
+    exists — same drift the config_flow docstring documents). What "honor the
+    rename" means for a breakdown slice is: once the tracker reports the RENAMED
+    zone, the resulting NEW key resolves to the NEW friendly name, read fresh
+    from hass with no migration. This EC proves that — and asserts the stale old
+    key is dropped (not silently showing a dead name).
+    """
+    print(
+        "\n=== EC39: renamed zone resolves to new name on next refresh (#44) ===",
+        flush=True,
+    )
+    entry, bd, tracker = _seed_zone_tracker()
+    chk("EC39 breakdown sensor exists + zone key accrued", bd is not None, True)
+    if not bd:
+        return entry, None
+    # Baseline: the original key resolves to the original friendly name.
+    pre = (gs(bd).get("attributes", {}).get("breakdown_labels") or {}).get(_ZONE_KEY)
+    chk(
+        "EC39 pre-rename: original key resolves to original friendly name",
+        pre,
+        _ZONE_NAME,
+        f"labels={gs(bd).get('attributes', {}).get('breakdown_labels')}",
+    )
+    # Rename the SAME zone entity (entity_id unchanged, friendly_name changed),
+    # then drive the tracker INTO the renamed zone so a new key is recorded.
+    renamed = f"Renamed Zone {RUN}"
+    renamed_key = renamed.lower()
+    ss(_ZONE_EID, "zoning", {"friendly_name": renamed})
+    ss(tracker, "not_home")
+    time.sleep(2 if FAST else 3)
+    ss(tracker, renamed)  # tracker now reports the renamed zone's name
+    time.sleep(2 if FAST else 3)
+    api("POST", "/api/services/homeassistant/update_entity", {"entity_id": bd})
+
+    def _new_label():
+        return (gs(bd).get("attributes", {}).get("breakdown_labels") or {}).get(
+            renamed_key
+        )
+
+    def _resolved():
+        if _new_label() == renamed:
+            return True
+        api("POST", "/api/services/homeassistant/update_entity", {"entity_id": bd})
+        return False
+
+    wait_for(_resolved, True, timeout=WAIT_FOR_TIMEOUT)
+    chk(
+        "EC39 new key resolves to the RENAMED friendly name (fresh hass read)",
+        _new_label(),
+        renamed,
+        f"new_key={renamed_key!r} labels={gs(bd).get('attributes', {}).get('breakdown_labels')}",
+    )
+    # The stale OLD key no longer resolves — no live zone folds to it after the
+    # rename. If the old key is still a breakdown_seconds key (its historical
+    # time is retained), assert it is ABSENT from breakdown_labels — a positive
+    # "the drop is intentional, we don't fabricate a dead name" assertion, not
+    # just an omission.
+    post = gs(bd).get("attributes", {})
+    old_key_present = _ZONE_KEY in (post.get("breakdown_seconds") or {})
+    stale_label = (post.get("breakdown_labels") or {}).get(_ZONE_KEY)
+    chk(
+        "EC39 stale old key retained in breakdown but dropped from labels",
+        (not old_key_present) or (stale_label is None),
+        True,
+        f"old_key_present={old_key_present} stale_label={stale_label!r}",
+    )
+    return entry, bd
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -3285,6 +3462,12 @@ def main():
 
         if ec_enabled(37):
             run_ec(ec37_transition_avg_visit_weighted)
+
+        if ec_enabled(38):
+            run_ec(ec38_breakdown_labels_resolve_real_zone_name)
+
+        if ec_enabled(39):
+            run_ec(ec39_zone_rename_reflects_on_next_refresh)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
