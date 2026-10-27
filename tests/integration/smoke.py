@@ -3793,7 +3793,11 @@ def ec46_cumulative_frame_not_below_today():
     reg = wait_entities(entry, min_count=2)
     today_e = eid_for(entry, "today", M_DURATION, reg)
     month_e = eid_for(entry, "month", M_DURATION, reg)
-    chk("EC46 today + month sensors exist", today_e and month_e, True)
+    chk(
+        "EC46 today + month sensors exist",
+        today_e is not None and month_e is not None,
+        True,
+    )
     if not today_e or not month_e:
         return entry, eid
 
