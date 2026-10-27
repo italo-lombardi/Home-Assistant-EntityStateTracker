@@ -1063,8 +1063,11 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
 
         No-op when the frame has no active streak (the common success path), so
         a healthy tick does not fire a delete per frame. Called on the frame's
-        next success, when it leaves enabled_frames, and for every frame on
-        unload so a stranded issue can't outlive the thing it describes.
+        next success, when it leaves enabled_frames, and (via
+        clear_all_frame_fail_issues) on unload so a stranded issue can't outlive
+        the thing it describes. Relies on a stored streak always being >= 1
+        (seeded as get(...)+1): a 0 would be falsy and skip the delete, so never
+        store 0 — clear instead.
         """
         if self._frame_fail_streak.pop(frame_key, 0):
             ir.async_delete_issue(
@@ -1075,8 +1078,9 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
     def clear_all_frame_fail_issues(self) -> None:
         """Clear every outstanding frame-fail Repair issue for this entry.
 
-        Called from async_unload_entry/async_remove_entry: an issue active at
-        teardown would otherwise linger in the UI with no backing entry.
+        Called from async_unload_entry (which HA runs before async_remove_entry
+        on deletion) — an issue active at teardown would otherwise linger in the
+        UI with no backing entry.
         """
         for frame_key in list(self._frame_fail_streak):
             self._clear_frame_fail(frame_key)

@@ -125,6 +125,48 @@ async def test_unload_last_entry_removes_card_key(
     assert _CARD_INSTALLED_KEY not in hass.data[DOMAIN]
 
 
+async def test_unload_entry_clears_frame_fail_issue(
+    hass: HomeAssistant, specific_config_entry: MockConfigEntry
+) -> None:
+    """async_unload_entry actually clears a live frame-fail Repair issue.
+
+    Guards the WIRING (not just the coordinator method): a regression dropping
+    the clear_all_frame_fail_issues() call from async_unload_entry would leave
+    the issue stranded. We seed a real issue + streak on the live coordinator,
+    then unload and assert it's gone.
+    """
+    from homeassistant.helpers import issue_registry as ir
+
+    specific_config_entry.add_to_hass(hass)
+    with (
+        patch(
+            "custom_components.entity_state_tracker._async_install_card",
+            new=AsyncMock(),
+        ),
+        patch.object(
+            hass.config_entries, "async_forward_entry_setups", new=AsyncMock()
+        ),
+    ):
+        await hass.config_entries.async_setup(specific_config_entry.entry_id)
+        await hass.async_block_till_done()
+
+    coordinator = hass.data[DOMAIN][specific_config_entry.entry_id]
+    coordinator._frame_fail_streak["24h"] = 10
+    coordinator._raise_frame_fail_issue("24h", 10)
+    issue_id = f"frame_fail_{specific_config_entry.entry_id}_24h"
+    reg = ir.async_get(hass)
+    assert reg.async_get_issue(DOMAIN, issue_id) is not None
+
+    with patch.object(
+        hass.config_entries,
+        "async_unload_platforms",
+        new=AsyncMock(return_value=True),
+    ):
+        await async_unload_entry(hass, specific_config_entry)
+
+    assert reg.async_get_issue(DOMAIN, issue_id) is None
+
+
 async def test_unload_with_second_loaded_entry_keeps_card_key(
     hass: HomeAssistant,
     specific_config_entry: MockConfigEntry,
