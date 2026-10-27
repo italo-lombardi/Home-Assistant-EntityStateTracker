@@ -938,6 +938,17 @@ class EntityStateTrackerCard extends LitElement {
     };
   }
 
+  // Slices visible in the legend / donut / bar / table: drop anything under a
+  // second. That covers both DERIVED filler (other / No-data float residue) and
+  // REAL tracked states that recorded no time in the window — both render as
+  // "0 s · 0.0%" clutter with nothing to see. The slice builders emit the full
+  // set (they don't dust-filter); every render path routes through here so the
+  // threshold lives in one place. Exposed as a static so it is unit-testable
+  // without a DOM (the render methods that call it are not).
+  static _visibleSlices(slices) {
+    return slices.filter((s) => s.secs >= 1);
+  }
+
   constructor() {
     super();
     this._config = {};
@@ -1430,8 +1441,9 @@ class EntityStateTrackerCard extends LitElement {
           >
         </div>
         <div class="bar-track bar-track-stacked">
-          ${(this._isBreakdown(s) ? this._breakdownSlices(a) : this._specificSlices(a, s))
-            .filter((seg) => seg.secs >= 1)
+          ${EntityStateTrackerCard._visibleSlices(
+              this._isBreakdown(s) ? this._breakdownSlices(a) : this._specificSlices(a, s)
+            )
             .map((seg) => {
               // Stacked segment per state (+ other / no-data), width = its share
               // of the window, same colors as pie/table. Real states carry
@@ -1799,11 +1811,9 @@ class EntityStateTrackerCard extends LitElement {
     let slices = this._isBreakdown(pick)
       ? this._breakdownSlices(a)
       : this._specificSlices(a, pick);
-    // Drop sub-second slices: DERIVED ones (other / no-data) are float residue
-    // from counting the open state up to `now`; REAL state slices at <1s render
-    // as "0 s · 0.0%" and just clutter the legend. Either way, nothing visible
-    // on the donut, so drop both.
-    slices = slices.filter((s) => s.secs >= 1);
+    // Drop sub-second slices (derived filler + real 0-time states) — see
+    // EntityStateTrackerCard._visibleSlices.
+    slices = EntityStateTrackerCard._visibleSlices(slices);
     const total = slices.reduce((n, s) => n + s.secs, 0) || 1;
 
     // Build a donut with stacked conic-gradient-free SVG arcs.
@@ -2018,10 +2028,11 @@ class EntityStateTrackerCard extends LitElement {
           ${sensors.map((s) => {
             const stateRows = showStates
               ? this._capSlices(
-                  (isBreakdown
-                    ? this._breakdownSlices(s.attrs || {})
-                    : this._specificSlices(s.attrs || {}, s)
-                  ).filter((x) => x.secs >= 1 || !x.derived)
+                  EntityStateTrackerCard._visibleSlices(
+                    isBreakdown
+                      ? this._breakdownSlices(s.attrs || {})
+                      : this._specificSlices(s.attrs || {}, s)
+                  )
                 )
               : [];
             return html`${this._frameRow(s, hasCompliance)}${this._stateSubRows(

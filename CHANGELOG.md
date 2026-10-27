@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.1.9]
 
 ### Fixed
-- **Card: states never seen in the window cluttered the legend as `0 s · 0.0%`** — a tracked state that recorded no time in a frame still appeared as its own legend row (and a zero-width donut/bar segment), e.g. `0 s · 0.0%` entries sitting below the states that actually accrued time. The card already dropped sub-second *derived* filler slices (`other`/`No data`); it now applies the same `secs >= 1` threshold to **real** state slices too, so a state with no time in the window is simply not shown in the pie legend or the stacked bar. States that accrue at least a second are unaffected.
+- **Card: states never seen in the window cluttered the legend as `0 s · 0.0%`** — a tracked state that recorded no time in a frame still appeared as its own legend row (and a zero-width donut/bar segment), e.g. `0 s · 0.0%` entries sitting below the states that actually accrued time. The card already dropped sub-second *derived* filler slices (`other`/`No data`); it now applies the same `secs >= 1` threshold to **real** state slices too, across every render path — pie legend, stacked bar, and the `show_states` table drill-down — so a state with no time in the window is simply not shown. States that accrue at least a second are unaffected.
 
 ## [0.1.8]
 
