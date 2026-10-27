@@ -7,7 +7,7 @@
  * self-contained file, vanilla LitElement via the home-assistant-main prototype.
  */
 
-const CARD_VERSION = "0.1.8";
+const CARD_VERSION = "0.1.9";
 
 console.info(
   `%c ENTITY-STATE-TRACKER-CARD %c v${CARD_VERSION} %c — github.com/italo-lombardi `,
@@ -1431,7 +1431,7 @@ class EntityStateTrackerCard extends LitElement {
         </div>
         <div class="bar-track bar-track-stacked">
           ${(this._isBreakdown(s) ? this._breakdownSlices(a) : this._specificSlices(a, s))
-            .filter((seg) => seg.secs >= 1 || !seg.derived)
+            .filter((seg) => seg.secs >= 1)
             .map((seg) => {
               // Stacked segment per state (+ other / no-data), width = its share
               // of the window, same colors as pie/table. Real states carry
@@ -1799,11 +1799,11 @@ class EntityStateTrackerCard extends LitElement {
     let slices = this._isBreakdown(pick)
       ? this._breakdownSlices(a)
       : this._specificSlices(a, pick);
-    // Drop sub-second DERIVED slices (other / no-data): the engine counts the
-    // current open state up to `now`, so a fully-covered window leaves only
-    // floating-point residue there (e.g. 0.4s) — a dust slice that rounds to
-    // "0 s" and clutters the legend. Real state slices are never dropped.
-    slices = slices.filter((s) => s.secs >= 1 || !s.derived);
+    // Drop sub-second slices: DERIVED ones (other / no-data) are float residue
+    // from counting the open state up to `now`; REAL state slices at <1s render
+    // as "0 s · 0.0%" and just clutter the legend. Either way, nothing visible
+    // on the donut, so drop both.
+    slices = slices.filter((s) => s.secs >= 1);
     const total = slices.reduce((n, s) => n + s.secs, 0) || 1;
 
     // Build a donut with stacked conic-gradient-free SVG arcs.
