@@ -425,6 +425,7 @@ def compute_frame(
     prior_dominant: str | None = None,
     ledger_upper_local_day: str | None = None,
     open_state: str | None = None,
+    open_ts: dt.datetime | None = None,
 ) -> FrameResult:
     """Combine recorder (recent) + ledger (long) into one :class:`FrameResult`.
 
@@ -518,6 +519,32 @@ def compute_frame(
         ),
     )
     _merge_block_maps(combined, {k: dict(v) for k, v in recent_blocks.items()})
+
+    # Carry the OPEN visit's pre-boundary tail into the closed days it spans.
+    # An entity held in one state across local midnight (no transition yet) has
+    # that visit's tail for each already-closed day neither in recent_blocks (the
+    # recorder slice starts at today's midnight) nor in ledger.daily (``_fold_visit``
+    # writes a day's bucket only on the NEXT transition). So between midnight and
+    # that transition the closed day is missing the tail and a cumulative frame
+    # dips (the midnight shed). Backfill already carries a held state across such a
+    # gap (``_async_backfill`` → whole-day bucket); this makes the LIVE path agree:
+    # attribute the open visit's real per-day seconds to each day it covered that
+    # is inside the window, below the seam, and NOT already in the ledger. Computed
+    # at READ time only — never written to ledger.daily, so the eventual real fold
+    # (which owns days > last_updated_day) can't double-count, and the seam day
+    # stays owned by exactly one side. Idempotent: the same open_ts/now yield the
+    # same split every tick until the visit folds.
+    if open_state is not None and open_ts is not None and open_ts < end_utc:
+        open_key = open_state.lower()
+        for day_iso, secs in split_visit_across_days(
+            max(open_ts, start_utc), end_utc, tz
+        ):
+            if day_iso < window_start_local_day or day_iso >= upper_local_day:
+                continue  # outside window, or recorder/seam owns it (not a closed ledger day)
+            if open_key in ledger_daily.get(day_iso, {}):
+                continue  # this state already folded for the day — ledger owns it, don't double-count
+            row = combined.setdefault(open_key, {"secs": 0.0, "count": 0})
+            row["secs"] += secs
 
     # Seed the live open state at zero seconds so a JUST-discovered state renders
     # a (0s) slice the instant it appears, instead of vanishing until it accrues

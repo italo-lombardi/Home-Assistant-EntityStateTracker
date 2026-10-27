@@ -3767,6 +3767,56 @@ def ec45_no_frame_fail_issue_in_healthy_operation():
     return entry, eid
 
 
+def ec46_cumulative_frame_not_below_today():
+    """EC46: a cumulative frame is never SHORTER than today for the same state.
+
+    Invariant guard for the midnight-straddle dip (the ~0.7h beta4 bug, where a
+    held-across-midnight visit's pre-midnight tail vanished from the closed-day
+    bucket until the next transition, so this_month/this_year briefly dropped
+    BELOW today). The window relation is unconditional: this_month ⊇ today, so
+    tracked seconds in month MUST be >= tracked seconds in today. The dip broke
+    exactly this (cumulative < today). The exact midnight-cross can't be forced
+    live (no clock control, API won't backdate last_changed — EC43/EC45 class),
+    so the fail-on-main proof lives in the unit test
+    (test_cumulative_frame_monotonic_across_midnight_straddle); EC46 guards the
+    user-visible symptom end to end.
+    """
+    print(
+        "\n=== EC46: cumulative frame >= today for the same tracked state ===",
+        flush=True,
+    )
+    eid = make_entity("cumul", "on")
+    # today + month both enabled on one tracker so the window-containment holds.
+    entry = create_tracker(
+        eid, "specific_states", states=["on"], frames={"today": True, "month": True}
+    )
+    reg = wait_entities(entry, min_count=2)
+    today_e = eid_for(entry, "today", M_DURATION, reg)
+    month_e = eid_for(entry, "month", M_DURATION, reg)
+    chk("EC46 today + month sensors exist", today_e and month_e, True)
+    if not today_e or not month_e:
+        return entry, eid
+
+    # Accrue a little tracked time, then force a refresh of both.
+    time.sleep(3 if FAST else 5)
+    for e in (today_e, month_e):
+        api("POST", "/api/services/homeassistant/update_entity", {"entity_id": e})
+    wait_for_gt(
+        lambda: gs(today_e).get("attributes", {}).get("duration_seconds") or 0,
+        0,
+        timeout=WAIT_FOR_TIMEOUT,
+    )
+    today_s = gs(today_e).get("attributes", {}).get("duration_seconds") or 0.0
+    month_s = gs(month_e).get("attributes", {}).get("duration_seconds") or 0.0
+    chk(
+        "EC46 this_month tracked seconds >= today (no midnight-straddle shed)",
+        month_s >= today_s - 1.0,  # 1s seam-rounding tolerance
+        True,
+        f"month={month_s} today={today_s}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -3885,6 +3935,9 @@ def main():
 
         if ec_enabled(45):
             run_ec(ec45_no_frame_fail_issue_in_healthy_operation)
+
+        if ec_enabled(46):
+            run_ec(ec46_cumulative_frame_not_below_today)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

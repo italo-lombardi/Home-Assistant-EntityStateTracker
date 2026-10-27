@@ -746,6 +746,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
                     prior_dominant=prior_dominant,
                     ledger_upper_local_day=ledger_upper_local_day,
                     open_state=ledger.last_state,
+                    open_ts=_parse_ts(ledger.last_changed_ts),
                 )
             except (ValueError, ArithmeticError, LookupError) as err:
                 # Isolate a single frame's DATA anomaly: the frames dict is shared

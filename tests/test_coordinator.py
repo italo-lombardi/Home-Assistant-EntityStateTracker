@@ -854,6 +854,188 @@ async def test_live_fold_skips_already_backfilled_days(
     await c.async_shutdown()
 
 
+async def test_cumulative_frame_monotonic_across_midnight_straddle(
+    hass: HomeAssistant,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """A visit held across local midnight with NO transition must not shed its
+    pre-midnight tail from the closed-day frames (the beta4 ~0.7h midnight dip).
+
+    Before midnight the open day is computed from the recorder today-slice
+    (tail included via _overlay_open_visit); the instant the day closes, a
+    cumulative/closed frame switches to the ledger bucket for that day — which
+    _fold_visit has NOT written yet (the visit is still open, folded only on its
+    next transition). So month/yesterday collapse. This asserts the invariant:
+    the just-closed day's tracked seconds survive the midnight tick.
+    """
+    from custom_components.entity_state_tracker.const import (
+        CONF_ENABLE_COMPLIANCE,
+        CONF_ENTITY,
+        CONF_FRAMES,
+        CONF_MIN_STATE_DURATION,
+        CONF_MODE,
+        CONF_STATES,
+        FRAMES,
+        MODE_SPECIFIC,
+    )
+
+    # Enable the calendar frames that sum closed days (default fixture enables
+    # only today/yesterday/24h/7d — none expose the closed-day seam on their own).
+    flags = {f: f in ("today", "yesterday", "month") for f in FRAMES}
+    entry = MockConfigEntry(
+        version=1,
+        domain=DOMAIN,
+        title="Living Room — heat/auto",
+        entry_id="est_midnight_straddle",
+        data={
+            CONF_ENTITY: "climate.living_room",
+            CONF_MODE: MODE_SPECIFIC,
+            CONF_STATES: ["heat", "auto"],
+            CONF_ENABLE_COMPLIANCE: False,
+            CONF_FRAMES: flags,
+            CONF_MIN_STATE_DURATION: 0,
+        },
+    )
+
+    # US/Pacific test tz: local midnight 06-10 = 07:00Z. Visit 'heat' opened
+    # 06-09 13:00 PDT (20:00Z) and is HELD with no transition. Tick once before
+    # midnight, once just after, with the recorder returning only that held row.
+    open_start = _utc(2026, 6, 9, 20, 0)
+    pre = _utc(2026, 6, 10, 6, 50)  # 23:50 PDT 06-09 — day still open
+    post = _utc(2026, 6, 10, 7, 10)  # 00:10 PDT 06-10 — 06-09 just closed
+    patch_recorder.mock.side_effect = lambda *a, **k: [_FakeState("heat", open_start)]
+
+    def _tracked(data: TrackerData, frame: str) -> float:
+        bs = data.frames[frame].breakdown_seconds
+        return sum(bs.get(k, 0.0) for k in ("heat", "auto"))
+
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=pre):
+        c = await _make_coordinator(hass, entry)
+        await _first_refresh(hass, c)
+        c._ledger.last_state = "heat"
+        c._ledger.last_changed_ts = open_start.isoformat()
+        data_pre = await c._async_update_data()
+    month_pre = _tracked(data_pre, "month")
+
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=post):
+        data_post = await c._async_update_data()
+    month_post = _tracked(data_post, "month")
+    yesterday_post = _tracked(data_post, "yesterday")
+
+    await c.async_shutdown()
+
+    # Invariant: the cumulative month frame is monotonic non-decreasing across the
+    # midnight tick — the just-closed day's tracked time must not vanish. (modulo
+    # <=1s seam rounding.) FAILS on 1318cfa: month collapses from the pre value to
+    # ~the post-midnight slice only.
+    assert month_post >= month_pre - 1.0, (
+        f"month dropped across midnight: {month_pre:.0f}s -> {month_post:.0f}s"
+    )
+    # And the closed day lands in 'yesterday' rather than evaporating: the held
+    # visit covered all of 06-09's open portion, so yesterday must be > 0.
+    assert yesterday_post > 0.0, (
+        f"yesterday collapsed to {yesterday_post:.0f}s after the day closed"
+    )
+
+
+def _midnight_straddle_entry(entry_id: str) -> MockConfigEntry:
+    """A today+yesterday+month specific tracker for the straddle guard tests."""
+    from custom_components.entity_state_tracker.const import (
+        CONF_ENABLE_COMPLIANCE,
+        CONF_ENTITY,
+        CONF_FRAMES,
+        CONF_MIN_STATE_DURATION,
+        CONF_MODE,
+        CONF_STATES,
+        FRAMES,
+        MODE_SPECIFIC,
+    )
+
+    flags = {f: f in ("today", "yesterday", "month") for f in FRAMES}
+    return MockConfigEntry(
+        version=1,
+        domain=DOMAIN,
+        title="Living Room — heat/auto",
+        entry_id=entry_id,
+        data={
+            CONF_ENTITY: "climate.living_room",
+            CONF_MODE: MODE_SPECIFIC,
+            CONF_STATES: ["heat", "auto"],
+            CONF_ENABLE_COMPLIANCE: False,
+            CONF_FRAMES: flags,
+            CONF_MIN_STATE_DURATION: 0,
+        },
+    )
+
+
+async def test_straddle_carry_forward_partial_day_other_state_already_folded(
+    hass: HomeAssistant,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """The open visit's tail is carried into a closed day that already holds a
+    DIFFERENT folded state (the prod partial-day case).
+
+    06-09 already has an 'auto' bucket (earlier transitions that day), THEN the
+    entity holds 'heat' open across midnight. The state-level guard
+    (``open_key in ledger_daily[day]``) must still add the 'heat' tail for 06-09
+    because 'heat' is NOT yet folded there — a day-level guard would wrongly skip
+    it and lose the tail (the exact partial-day drop).
+    """
+    open_start = _utc(2026, 6, 9, 20, 0)  # 13:00 PDT 06-09
+    post = _utc(2026, 6, 10, 7, 10)  # 00:10 PDT 06-10 — 06-09 closed
+    patch_recorder.mock.side_effect = lambda *a, **k: [_FakeState("heat", open_start)]
+
+    entry = _midnight_straddle_entry("est_straddle_partial")
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=post):
+        c = await _make_coordinator(hass, entry)
+        await _first_refresh(hass, c)
+        # 06-09 already holds an unrelated folded state; 'heat' is NOT folded there.
+        c._ledger.daily["2026-06-09"] = {"auto": {"secs": 3600.0, "count": 1}}
+        c._ledger.last_state = "heat"
+        c._ledger.last_changed_ts = open_start.isoformat()
+        data = await c._async_update_data()
+
+    month_heat = data.frames["month"].breakdown_seconds.get("heat", 0.0)
+    await c.async_shutdown()
+    # 06-09 heat tail (20:00Z→07:00Z = 11h = 39600s) + today's slice must be present,
+    # NOT lost because 'auto' already occupied the 06-09 bucket.
+    assert month_heat > 39000.0, f"heat tail lost on partial day: {month_heat:.0f}s"
+
+
+async def test_straddle_no_double_count_when_state_already_folded(
+    hass: HomeAssistant,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """When the open state is ALREADY folded for a closed day, the carry-forward
+    must SKIP it (no double-count).
+
+    06-09 already holds a 'heat' bucket (the visit's 06-09 portion was folded,
+    e.g. by a prior backfill), and 'heat' is still the open state. The guard must
+    not add the tail again for 06-09.
+    """
+    open_start = _utc(2026, 6, 9, 20, 0)
+    post = _utc(2026, 6, 10, 7, 10)
+    patch_recorder.mock.side_effect = lambda *a, **k: [_FakeState("heat", open_start)]
+
+    entry = _midnight_straddle_entry("est_straddle_double")
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=post):
+        c = await _make_coordinator(hass, entry)
+        await _first_refresh(hass, c)
+        # 'heat' ALREADY folded for 06-09 (whole open portion = 39600s).
+        c._ledger.daily["2026-06-09"] = {"heat": {"secs": 39600.0, "count": 1}}
+        c._ledger.last_state = "heat"
+        c._ledger.last_changed_ts = open_start.isoformat()
+        data = await c._async_update_data()
+
+    month_heat = data.frames["month"].breakdown_seconds.get("heat", 0.0)
+    await c.async_shutdown()
+    # 06-09 heat (39600 from ledger) + 06-10 today slice (~600s), NOT 39600 twice.
+    assert month_heat < 41000.0, (
+        f"heat double-counted across the seam: {month_heat:.0f}s"
+    )
+    assert month_heat > 39000.0, f"heat under-counted: {month_heat:.0f}s"
+
+
 async def test_live_fold_no_prior_state_is_noop_fold(
     hass: HomeAssistant,
     all_states_config_entry: MockConfigEntry,
