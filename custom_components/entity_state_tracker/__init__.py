@@ -11,6 +11,7 @@ from homeassistant.components.lovelace.resources import ResourceStorageCollectio
 from homeassistant.config_entries import ConfigEntry, ConfigEntryState
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers import entity_registry as er
 
 from .const import DOMAIN, PLATFORMS
 from .coordinator import EntityStateTrackerCoordinator
@@ -50,6 +51,62 @@ async def async_setup(hass: HomeAssistant, config: dict) -> bool:
     """Set up the Entity State Tracker integration."""
     await _async_purge_orphaned_storage(hass)
     return True
+
+
+def disable_orphaned_entities(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    platform: str,
+    valid_unique_ids: set[str],
+) -> None:
+    """Disable this entry's registry entities no longer backed by a live entity.
+
+    Platforms only ever ADD entities; when ``enabled_frames`` shrinks (a frame
+    toggled off, compliance/threshold removed, or an upgrade narrowing the
+    default set), the dropped frame's per-frame sensors keep their entity
+    registry entries and HA strands them as ``restored``/``unavailable`` forever.
+    Each platform's ``async_setup_entry`` passes the unique_ids it is about to
+    add (so this stays in lockstep with setup — no re-derived config predicate).
+    MUST be called AFTER ``async_add_entities`` so the just-added entities are
+    the valid set. This relies on HA instantiating the entities synchronously
+    before control returns here: ``async_add_entities`` schedules an eager task
+    that runs sync up to its first real suspension, and with
+    ``update_before_add=False`` (the default) the registry write happens before
+    any such suspension — so the just-added unique_ids are already registered
+    when this runs. If a future HA defers the registry write past a suspension,
+    or a platform switches to ``update_before_add=True``, this ordering breaks;
+    the live smoke tests (EC41/EC44, asserting ``disabled_by`` against a running
+    HA) are the backstop that would catch it.
+
+    We DISABLE the orphan (``disabled_by = INTEGRATION``), never ``async_remove``
+    it: removal fires ``entity_registry_updated`` → the recorder purges the
+    entity's states AND long-term statistics, so a reversible frame toggle would
+    irreversibly destroy the user's history. Disabling clears the stranded
+    ``unavailable`` state from the dashboard while preserving history, and the
+    entity comes back intact when the frame is re-enabled (setup re-adds it →
+    its unique_id is valid again → re-enabled below). An entry already disabled
+    BY THE USER is left untouched — that is their explicit choice, not an orphan.
+    Conversely, an entity we previously disabled whose frame is enabled again is
+    re-enabled so it starts producing without the user hunting through the UI.
+    """
+    registry = er.async_get(hass)
+    for reg_entry in er.async_entries_for_config_entry(registry, entry.entry_id):
+        if reg_entry.domain != platform:
+            continue
+        is_valid = reg_entry.unique_id in valid_unique_ids
+        if not is_valid and reg_entry.disabled_by is None:
+            # Newly orphaned → disable (non-destructive; history kept).
+            registry.async_update_entity(
+                reg_entry.entity_id, disabled_by=er.RegistryEntryDisabler.INTEGRATION
+            )
+        elif is_valid and reg_entry.disabled_by == er.RegistryEntryDisabler.INTEGRATION:
+            # Frame re-enabled and we were the one who disabled it → restore.
+            # NOTE: clearing disabled_by on an entity of an unload-capable entry
+            # makes HA schedule a one-shot config-entry reload ~30s later
+            # (RELOAD_AFTER_UPDATE_DELAY). That's benign and converges (setup is
+            # idempotent) — the entity is back immediately; the delayed reload
+            # just re-runs setup once. The disable direction does NOT trigger it.
+            registry.async_update_entity(reg_entry.entity_id, disabled_by=None)
 
 
 async def _async_purge_orphaned_storage(hass: HomeAssistant) -> None:
@@ -200,6 +257,12 @@ async def _async_register_lovelace_resource(hass: HomeAssistant, version: str) -
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    # Clear any frame-fail Repair issues BEFORE dropping the coordinator — an
+    # issue active at teardown would otherwise linger with no backing entry.
+    coordinator = hass.data.get(DOMAIN, {}).get(entry.entry_id)
+    if coordinator is not None:
+        coordinator.clear_all_frame_fail_issues()
+
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
 
     if unload_ok:

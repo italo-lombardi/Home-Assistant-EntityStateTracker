@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "Rekordér nie je dostupný",
       "description": "Entity State Tracker sa pri výpočte dôb trvania stavov spolieha na rekordér. Rekordér nie je dostupný, takže sledovanie sa odteraz vracia iba k akumulácii naživo a nemôže doplniť minulú históriu. Povoľte integráciu rekordéra na obnovenie úplnej histórie časových období."
+    },
+    "frame_compute_failed": {
+      "title": "Časové obdobie sa prestalo aktualizovať",
+      "description": "Entity State Tracker nedokázal vypočítať časové obdobie „{frame}“ pre {entity} počas {count} aktualizácií za sebou, takže tento senzor si ponecháva svoju poslednú hodnotu. Zvyčajne to poukazuje na poškodenú uloženú históriu tohto sledovača. Skontrolujte protokoly Home Assistant, či neobsahujú chybu, a potom znovu načítajte integráciu."
     }
   }
 }

@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "Kaydedici kullanılamıyor",
       "description": "Entity State Tracker, durum sürelerini hesaplamak için kaydediciye dayanır. Kaydedici kullanılamadığından, izleme bundan böyle yalnızca canlı birikime geçer ve geçmiş verileri geriye dönük olarak dolduramaz. Tam zaman aralığı geçmişini geri yüklemek için kaydedici entegrasyonunu etkinleştirin."
+    },
+    "frame_compute_failed": {
+      "title": "Bir zaman aralığı güncellenmeyi durdurdu",
+      "description": "Entity State Tracker, {entity} için «{frame}» zaman aralığını {count} güncelleme boyunca üst üste hesaplayamadı, bu nedenle o sensör son değerini koruyor. Bu genellikle bu izleyici için bozuk depolanmış geçmişe işaret eder. Hatayı Home Assistant günlüklerinde kontrol edin, ardından entegrasyonu yeniden yükleyin."
     }
   }
 }

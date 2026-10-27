@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "El gravador no està disponible",
       "description": "Entity State Tracker es basa en el gravador per calcular les durades d'estat. El gravador no està disponible, així que el seguiment recorre d'ara endavant només a l'acumulació en directe i no pot reomplir l'historial passat. Activeu la integració del gravador per restaurar l'historial complet de períodes de temps."
+    },
+    "frame_compute_failed": {
+      "title": "Un període de temps ha deixat d'actualitzar-se",
+      "description": "Entity State Tracker no ha pogut calcular el període de temps «{frame}» per a {entity} durant {count} actualitzacions seguides, de manera que aquest sensor manté el seu darrer valor. Això sol indicar un historial emmagatzemat malmès per a aquest seguidor. Reviseu els registres de Home Assistant per trobar l'error i, a continuació, torneu a carregar la integració."
     }
   }
 }

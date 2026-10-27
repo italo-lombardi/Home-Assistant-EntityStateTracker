@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "记录器不可用",
       "description": "Entity State Tracker 依赖记录器来计算状态时长。记录器不可用，因此跟踪从现在起回退为仅实时累积，无法回填过去的历史。启用记录器集成以恢复完整的时间范围历史。"
+    },
+    "frame_compute_failed": {
+      "title": "某个时间范围已停止更新",
+      "description": "Entity State Tracker 连续 {count} 次更新都无法为 {entity} 计算“{frame}”时间范围，因此该传感器保持其最后的值。这通常表明此跟踪器存储的历史已损坏。请在 Home Assistant 日志中查看该错误，然后重新加载此集成。"
     }
   }
 }

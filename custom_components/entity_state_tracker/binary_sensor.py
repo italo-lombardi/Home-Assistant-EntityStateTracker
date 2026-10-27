@@ -50,6 +50,8 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up Entity State Tracker binary sensors for a config entry."""
+    from . import disable_orphaned_entities
+
     coordinator: EntityStateTrackerCoordinator = hass.data[DOMAIN][entry.entry_id]
 
     entities: list[DedupCoordinatorBinarySensor] = []
@@ -64,6 +66,10 @@ async def async_setup_entry(
         )
 
     async_add_entities(entities)
+    # AFTER the add (see sensor.py): valid set is the entities just added.
+    disable_orphaned_entities(
+        hass, entry, "binary_sensor", {e.unique_id for e in entities if e.unique_id}
+    )
 
 
 def _device_info(coordinator: EntityStateTrackerCoordinator) -> DeviceInfo:

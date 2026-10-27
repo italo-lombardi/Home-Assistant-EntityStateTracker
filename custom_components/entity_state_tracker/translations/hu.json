@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "A rögzítő nem érhető el",
       "description": "Az Entity State Tracker a rögzítőre támaszkodik az állapotidőtartamok kiszámításához. A rögzítő nem érhető el, ezért a követés mostantól csak élő felhalmozásra vált vissza, és nem tudja pótolni a múltbeli előzményeket. Engedélyezze a rögzítő integrációt a teljes időszak-előzmény visszaállításához."
+    },
+    "frame_compute_failed": {
+      "title": "Egy időszak frissítése leállt",
+      "description": "Az Entity State Tracker {count} egymást követő frissítésen át nem tudta kiszámítani a(z) „{frame}” időszakot ehhez: {entity}, így az az érzékelő megtartja az utolsó értékét. Ez általában a követő sérült tárolt előzményeire utal. Keresse meg a hibát a Home Assistant naplóiban, majd töltse be újra az integrációt."
     }
   }
 }

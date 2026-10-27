@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "O recorder está indisponível",
       "description": "O Entity State Tracker depende do recorder para calcular as durações de estado. O recorder não está disponível, por isso o rastreamento passa a recorrer apenas à acumulação em tempo real e não consegue preencher o histórico passado. Ative a integração recorder para restaurar o histórico completo dos períodos."
+    },
+    "frame_compute_failed": {
+      "title": "Um período deixou de atualizar",
+      "description": "O Entity State Tracker não conseguiu calcular o período «{frame}» de {entity} durante {count} atualizações seguidas, por isso esse sensor mantém o seu último valor. Isto costuma indicar um histórico armazenado corrompido para este rastreador. Verifique o erro nos registos do Home Assistant e, em seguida, recarregue a integração."
     }
   }
 }

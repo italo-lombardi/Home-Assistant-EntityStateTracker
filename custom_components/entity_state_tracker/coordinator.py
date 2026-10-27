@@ -82,6 +82,12 @@ _REFRESH_DEBOUNCE = 0.5  # seconds
 # process, not once per tick per tracker.
 _RECORDER_OFF_ISSUE = "recorder_off"
 
+# Consecutive per-frame compute failures before we raise a Repair issue. One bad
+# tick is isolated silently (transient data blip); a frame failing this many ticks
+# in a row is a real fault that must become visible rather than freeze on a stale
+# value. At the ~1-min poll this is ~10 min of sustained failure.
+FRAME_FAIL_ESCALATE = 10
+
 # Rolling frames whose window_start lands MID-DAY. Their recent portion is
 # computed from the recorder (real intra-day timeline) clamped at recorder
 # retention, and the ledger only fills WHOLE days strictly below that seam — so
@@ -166,6 +172,12 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         # longer suppressed by an unrelated tracker that warned the same label
         # first (L4). Per-coordinator, so each instance warns independently.
         self._warned_overflow: set[str] = set()
+        # Consecutive compute failures per frame key. A single frame's compute is
+        # isolated (one bad frame must not blank the whole tracker), but a
+        # PERSISTENT failure must still surface — after FRAME_FAIL_ESCALATE ticks
+        # we raise a Repair issue so a frozen frame isn't hidden behind a stale
+        # value forever. Reset to 0 on the frame's next success.
+        self._frame_fail_streak: dict[str, int] = {}
         # (state, start_day_iso) of the most recent SURVIVING live fold — the
         # "preceding block" a sub-``min_state_duration`` glitch merges into, so
         # the live fold matches ``accumulate_blocks``' glitch rule (§6.5). None
@@ -720,22 +732,56 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
                 recent_blocks = today_blocks if today_midnight_utc < end_utc else {}
 
             prior_dominant = prior[frame_key].dominant if frame_key in prior else None
-            result = compute_frame(
-                frame_key,
-                now,
-                self.tz,
-                recent_blocks,
-                ledger.daily,
-                data_start_iso,
-                mode=self.mode,
-                tracked_states=self.tracked_states,
-                target_states=self.target_states,
-                prior_dominant=prior_dominant,
-                ledger_upper_local_day=ledger_upper_local_day,
-                open_state=ledger.last_state,
-            )
+            try:
+                result = compute_frame(
+                    frame_key,
+                    now,
+                    self.tz,
+                    recent_blocks,
+                    ledger.daily,
+                    data_start_iso,
+                    mode=self.mode,
+                    tracked_states=self.tracked_states,
+                    target_states=self.target_states,
+                    prior_dominant=prior_dominant,
+                    ledger_upper_local_day=ledger_upper_local_day,
+                    open_state=ledger.last_state,
+                )
+            except (ValueError, ArithmeticError, LookupError) as err:
+                # Isolate a single frame's DATA anomaly: the frames dict is shared
+                # entry-wide, so a propagating error would flip
+                # last_update_success=False and strand EVERY sensor. Keep this
+                # frame's prior value (last good) so it doesn't flicker on a
+                # transient blip. Narrow catch — a programming error of another
+                # kind still propagates and fails the tick visibly.
+                streak = self._frame_fail_streak.get(frame_key, 0) + 1
+                self._frame_fail_streak[frame_key] = streak
+                _LOGGER.warning(
+                    "Entity State Tracker: frame %r failed for %s (%d in a row): %s",
+                    frame_key,
+                    self.entity_id,
+                    streak,
+                    err,
+                )
+                # A PERSISTENT failure must surface, not hide behind a stale value.
+                if streak >= FRAME_FAIL_ESCALATE:
+                    self._raise_frame_fail_issue(frame_key, streak)
+                if frame_key in prior:
+                    frames[frame_key] = prior[frame_key]
+                continue
+            # Success: clear any failure streak + its Repair issue for this frame.
+            self._clear_frame_fail(frame_key)
             self._warn_overflow(frame_key, result)
             frames[frame_key] = result
+
+        # A frame dropped from enabled_frames (toggled off / default narrowed)
+        # is never revisited by the loop above, so a Repair issue it raised while
+        # failing would strand forever. Clear frame-fail state for any frame no
+        # longer enabled.
+        for stale in [
+            f for f in self._frame_fail_streak if f not in self.enabled_frames
+        ]:
+            self._clear_frame_fail(stale)
 
         # Prune stale buckets IN-MEMORY and let the single flush persist (one
         # disk write, not prune's own save + flush — P4). Disk is best-effort:
@@ -988,6 +1034,56 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             return
         flags[_RECORDER_OFF_ISSUE] = False
         ir.async_delete_issue(self.hass, DOMAIN, _RECORDER_OFF_ISSUE)
+
+    @callback
+    def _raise_frame_fail_issue(self, frame_key: str, streak: int) -> None:
+        """Raise a Repair issue for a frame that has failed many ticks in a row.
+
+        Per (entry, frame) so distinct frozen frames surface independently; the
+        issue is deleted on the frame's next success, when the frame is dropped
+        from enabled_frames, or on unload (see _clear_frame_fail).
+        """
+        ir.async_create_issue(
+            self.hass,
+            DOMAIN,
+            f"frame_fail_{self.entry.entry_id}_{frame_key}",
+            is_fixable=False,
+            severity=ir.IssueSeverity.ERROR,
+            translation_key="frame_compute_failed",
+            translation_placeholders={
+                "entity": self.entity_id,
+                "frame": frame_key,
+                "count": str(streak),
+            },
+        )
+
+    @callback
+    def _clear_frame_fail(self, frame_key: str) -> None:
+        """Drop a frame's failure streak and delete its Repair issue.
+
+        No-op when the frame has no active streak (the common success path), so
+        a healthy tick does not fire a delete per frame. Called on the frame's
+        next success, when it leaves enabled_frames, and (via
+        clear_all_frame_fail_issues) on unload so a stranded issue can't outlive
+        the thing it describes. Relies on a stored streak always being >= 1
+        (seeded as get(...)+1): a 0 would be falsy and skip the delete, so never
+        store 0 — clear instead.
+        """
+        if self._frame_fail_streak.pop(frame_key, 0):
+            ir.async_delete_issue(
+                self.hass, DOMAIN, f"frame_fail_{self.entry.entry_id}_{frame_key}"
+            )
+
+    @callback
+    def clear_all_frame_fail_issues(self) -> None:
+        """Clear every outstanding frame-fail Repair issue for this entry.
+
+        Called from async_unload_entry (which HA runs before async_remove_entry
+        on deletion) — an issue active at teardown would otherwise linger in the
+        UI with no backing entry.
+        """
+        for frame_key in list(self._frame_fail_streak):
+            self._clear_frame_fail(frame_key)
 
 
 def _parse_ts(iso: str | None) -> dt.datetime | None:

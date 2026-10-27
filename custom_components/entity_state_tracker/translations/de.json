@@ -167,6 +167,10 @@
     "recorder_off": {
       "title": "Recorder ist nicht verfügbar",
       "description": "Entity State Tracker verlässt sich auf den Recorder, um Zustandsdauern zu berechnen. Der Recorder ist nicht verfügbar, daher fällt die Verfolgung ab jetzt auf reine Live-Akkumulation zurück und kann keinen vergangenen Verlauf nachfüllen. Aktiviere die Recorder-Integration, um den vollständigen Zeitraumverlauf wiederherzustellen."
+    },
+    "frame_compute_failed": {
+      "title": "Ein Zeitraum wird nicht mehr aktualisiert",
+      "description": "Entity State Tracker konnte den Zeitraum „{frame}“ für {entity} bei {count} Aktualisierungen in Folge nicht berechnen, daher behält dieser Sensor seinen letzten Wert bei. Dies deutet in der Regel auf einen beschädigten gespeicherten Verlauf für diesen Tracker hin. Prüfe die Home-Assistant-Protokolle auf den Fehler und lade dann die Integration neu."
     }
   }
 }

@@ -130,6 +130,19 @@ def match_state(candidate: str, real_states: list[str]) -> str | None:
     return fold_hits[0] if len(fold_hits) == 1 else None
 
 
+def resolve_wanted(subset: list[str], real_keys: list[str]) -> set[str]:
+    """Resolve a config ``subset`` to the SET of distinct recorded keys it covers.
+
+    De-duplicates on the resolved key: :func:`match_state` is many-to-one, so two
+    config states can fold to one recorded key. Returning a set means a consumer
+    summing seconds counts each recorded key once — the shared invariant behind
+    both the ``In a Tracked State %`` (``engine._subset_percent``) and the headline
+    tracked duration (``sensor._tracked_seconds``); they MUST agree, so the
+    resolve+dedup rule lives here once instead of in each.
+    """
+    return {m for s in subset if (m := match_state(s, real_keys)) is not None}
+
+
 def zone_label_map(zone_friendly_names: list[str]) -> dict[str, str]:
     """Map each recorded zone state key → the zone's REAL friendly name.
 
