@@ -69,7 +69,7 @@ def _zone_labels(
     zone rename is reflected the next refresh with no migration. Keys with no
     live-zone match are omitted; a consumer falls back to its own title-casing
     for those (unchanged behaviour). Lets templates / other dashboards show the
-    real "Casa ... (Parma)" instead of the lossy lowercased storage key.
+    real "Zone ... (Suffix)" instead of the lossy lowercased storage key.
 
     ONLY person/device_tracker get zone resolution -- their state IS a zone
     name. For any other domain a state that merely collides with a zone's name
