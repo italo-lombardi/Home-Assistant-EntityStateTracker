@@ -189,9 +189,7 @@ def test_zone_label_map_resolves_lowercased_key_to_real_name() -> None:
     """A lowercased stored key maps back to the zone's real friendly name."""
     zmap = zone_label_map(["Zone One (Suffix)", "Office HQ"])
     # Keyed by normalize_state, so the lowercased storage key resolves.
-    assert zmap[normalize_state("zone one (suffix)")] == (
-        "Zone One (Suffix)"
-    )
+    assert zmap[normalize_state("zone one (suffix)")] == "Zone One (Suffix)"
     assert zmap[normalize_state("office hq")] == "Office HQ"
 
 

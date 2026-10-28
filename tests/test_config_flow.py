@@ -984,9 +984,7 @@ def test_to_label_uses_real_zone_name_not_recased_key() -> None:
 
     zones = zone_label_map(["Zone One (Suffix)"])
     # The stored key is lowercased; title-casing it would yield "(suffix)".
-    assert _to_label("zone one (suffix)", zones) == (
-        "Zone One (Suffix)"
-    )
+    assert _to_label("zone one (suffix)", zones) == "Zone One (Suffix)"
     # No zone map (or no match) → the original title-case behaviour.
     assert _to_label("not_home") == "Not Home"
     assert _to_label("cleaning", zones) == "Cleaning"
