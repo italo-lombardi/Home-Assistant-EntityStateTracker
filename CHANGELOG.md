@@ -5,12 +5,10 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.9]
+## [0.1.8]
 
 ### Fixed
 - **Card: states never seen in the window cluttered the legend as `0 s · 0.0%`** — a tracked state that recorded no time in a frame still appeared as its own legend row (and a zero-width donut/bar segment), e.g. `0 s · 0.0%` entries sitting below the states that actually accrued time. The card already dropped sub-second *derived* filler slices (`other`/`No data`); it now applies the same `secs >= 1` threshold to **real** state slices too, across every render path — pie legend, stacked bar, and the `show_states` table drill-down — so a state with no time in the window is simply not shown. States that accrue at least a second are unaffected.
-
-## [0.1.8]
 
 ### Fixed
 - **Cumulative frames dipped at local midnight for a held state** — when an entity stayed in one tracked state across local midnight with no state change, the just-closed day's "tail" (the time from its last change before midnight until midnight) briefly vanished from the cumulative/closed frames (`This week`/`This month`/`This year`/`Yesterday`): at the midnight tick they stopped counting that day from the live recorder slice and switched to the day's ledger bucket, which is only written on the entity's *next* state change — so until that change (or the next restart's backfill) the day was short by the tail and the cumulative counter ran backwards by that amount (~0.7–0.8 h in practice), then jumped back up. Cumulative frames now carry the open visit's pre-midnight tail across the boundary the same way the startup backfill already does — matching how Home Assistant's own history tools treat a state held across a gap — so the counter stays monotonic. (A visit split across days where the earlier part of the day already has other recorded states is covered on the entity's next state change, as before.)
