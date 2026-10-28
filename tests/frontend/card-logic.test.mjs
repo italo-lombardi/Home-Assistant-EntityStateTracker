@@ -164,7 +164,6 @@ test("_visibleSlices: drops zero-duration states (no '0 s · 0.0%' legend clutte
   assert.deepEqual(Card._visibleSlices([{ state: "x", secs: 0.4, derived: true }]), []);
 });
 
-
 test("_formatTrackedState: zone key resolves to the zone's LIVE friendly name, not re-cased key", () => {
   // The engine lowercases every state key, so a zone named "Casa Maria Teresa
   // (Parma)" is stored as "casa maria teresa (parma)". toLabel() only re-cases
