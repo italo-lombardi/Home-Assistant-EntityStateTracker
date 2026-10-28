@@ -173,8 +173,8 @@ function toLabel(state) {
 
 // A person/device_tracker inside a zone reports that zone's friendly name as
 // its state — but EST lowercases every state key for storage (engine.py), so
-// "Casa Maria Teresa (Parma)" becomes "casa maria teresa (parma)". toLabel()
-// only re-cases word-initial chars, so "(parma)" can never recover its "P".
+// "Zone One (Suffix)" becomes "zone one (suffix)". toLabel()
+// only re-cases word-initial chars, so "(suffix)" can never recover its "S".
 // Resolve the key back to the zone's LIVE friendly name from hass instead of
 // reconstructing it. Returns null when no zone's friendly name matches.
 //
@@ -1245,7 +1245,7 @@ class EntityStateTrackerCard extends LitElement {
   _formatTrackedState(sourceId, rawValue) {
     if (rawValue == null) return "unknown";
     // Ground truth for a zone state: the zone's LIVE friendly name in hass,
-    // not the lowercased key re-cased by toLabel (which mangles "(Parma)").
+    // not the lowercased key re-cased by toLabel (which mangles "(Suffix)").
     // ONLY for person/device_tracker — the domains whose state IS a zone name;
     // any other domain's state that collides with a zone name is NOT a zone.
     const domain = typeof sourceId === "string" ? sourceId.split(".", 1)[0] : "";

@@ -165,14 +165,14 @@ test("_visibleSlices: drops zero-duration states (no '0 s · 0.0%' legend clutte
 });
 
 test("_formatTrackedState: zone key resolves to the zone's LIVE friendly name, not re-cased key", () => {
-  // The engine lowercases every state key, so a zone named "Casa Maria Teresa
-  // (Parma)" is stored as "casa maria teresa (parma)". toLabel() only re-cases
-  // word-initial chars → "(parma)" keeps its lowercase p. The card must instead
+  // The engine lowercases every state key, so a zone named "Zone One
+  // (Suffix)" is stored as "zone one (suffix)". toLabel() only re-cases
+  // word-initial chars → "(suffix)" keeps its lowercase s. The card must instead
   // pull the real friendly name from hass (ground truth).
   const stub = {
     hass: {
       states: {
-        "zone.cmt": { attributes: { friendly_name: "Casa Maria Teresa (Parma)" } },
+        "zone.one": { attributes: { friendly_name: "Zone One (Suffix)" } },
         "person.x": { attributes: {} },
       },
       formatEntityState: () => null,
@@ -181,9 +181,9 @@ test("_formatTrackedState: zone key resolves to the zone's LIVE friendly name, n
   const out = Card.prototype._formatTrackedState.call(
     stub,
     "person.x",
-    "casa maria teresa (parma)"
+    "zone one (suffix)"
   );
-  assert.equal(out, "Casa Maria Teresa (Parma)");
+  assert.equal(out, "Zone One (Suffix)");
 });
 
 test("_formatTrackedState: non-zone key still title-cases via toLabel", () => {

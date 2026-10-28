@@ -148,9 +148,9 @@ def zone_label_map(zone_friendly_names: list[str]) -> dict[str, str]:
 
     A ``person``/``device_tracker`` reports its zone's friendly name as state,
     but EST lowercases every state key for storage/matching (engine + coordinator
-    ``.lower()``). That fold is lossy — ``Casa Maria Teresa (Parma)`` becomes
-    ``casa maria teresa (parma)`` and a title-case re-derivation can never recover
-    the inner ``P``. So display code must not reconstruct the label; it looks the
+    ``.lower()``). That fold is lossy — ``Zone One (Suffix)`` becomes
+    ``zone one (suffix)`` and a title-case re-derivation can never recover
+    the inner ``S``. So display code must not reconstruct the label; it looks the
     key back up here against the zones LIVE in ``hass`` to get the real name.
 
     Keyed by :func:`normalize_state` so the lookup survives the same case/separator

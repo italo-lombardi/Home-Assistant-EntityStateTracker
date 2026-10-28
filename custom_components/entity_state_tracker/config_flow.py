@@ -60,7 +60,7 @@ def _to_label(state: str, zone_names: dict[str, str] | None = None) -> str:
     """Human-readable label for a raw state key — mirrors card toLabel().
 
     A key that matches a LIVE zone's friendly name (via ``zone_names``) is shown
-    with that real name — never re-cased, so "Casa … (Parma)" keeps its inner
+    with that real name — never re-cased, so "Zone … (Suffix)" keeps its inner
     caps. Everything else capitalises the first letter of each whitespace-
     separated word only, so apostrophes ("st. john's") don't produce mid-word
     capitals.
