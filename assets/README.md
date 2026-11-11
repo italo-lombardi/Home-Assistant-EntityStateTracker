@@ -15,5 +15,6 @@ README embeds these images. Capture each from a live Home Assistant install and 
 | `08_card_bars.png` | The Card | The custom card in `chart: bars` mode. |
 | `09_card_pie.png` | The Card | The custom card in `chart: pie` mode (donut breakdown). |
 | `10_card_table.png` | The Card | The custom card in `chart: table` mode. |
+| `11_automation_triggers.png` | Named automation triggers | The automation editor's "Add trigger → By type" dialog showing the four Entity State Tracker triggers (Compliant turned on/off, Dominant state changed, New state seen). |
 
 Keep filenames stable — the README links to them by name. PNG preferred; crop tight; light or dark theme is fine (be consistent).

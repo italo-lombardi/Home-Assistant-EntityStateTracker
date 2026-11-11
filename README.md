@@ -1,6 +1,6 @@
 # Entity State Tracker for Home Assistant
 
-<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/releases"><img src="https://img.shields.io/badge/release-v0.1.6-blue" alt="Release"></a>
+<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/releases"><img src="https://img.shields.io/badge/release-v0.2.0-blue" alt="Release"></a>
 <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS Custom"></a>
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.entity_state_tracker.total&label=installs&color=41BDF5" alt="HACS Installs"></a>
 <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-2026.8%2B-blue.svg" alt="Home Assistant"></a>
@@ -306,6 +306,8 @@ The integration ships **UI-discoverable automation triggers** — pick them in t
 automation editor's trigger list (each with its own icon) instead of typing a
 raw event string. All are scopeable to a single tracker, and the per-frame ones
 to a single time frame; leave the scope blank to fire for any tracker/frame.
+
+![Named triggers in the automation editor's Add trigger → By type dialog](assets/11_automation_triggers.png)
 
 | Trigger | Fires when | Mode | Payload (trigger variables) |
 |---|---|---|---|

@@ -3824,120 +3824,184 @@ def ec46_cumulative_frame_not_below_today():
     return entry, eid
 
 
-def ec47_dominant_changed_trigger_event():
-    """EC47: flipping the dominant state fires dominant_changed with payload.
+def _trigger_relay_check(ec, slug, event_type, fire_payload, scope, extra_checks):
+    """Prove a named trigger is live end-to-end: a real automation using the
+    trigger relays the integration's bus event to its action.
 
-    All-states tracker on one entity. Dwell in state A (make it dominant), then
-    dwell longer in state B so B overtakes A past the hysteresis margin — the
-    coordinator must fire ``entity_state_tracker_dominant_changed`` carrying the
-    prev→new names and the frame. Event-only surface (the named trigger is a thin
-    relay over this event), so asserting the event IS the contract. Needs the
-    websocket; skips cleanly without it (EC6 class).
+    This exercises the TRIGGER PLATFORM (registration + async_attach_runner +
+    scope filter + payload passthrough) against the running HA, which is the part
+    the automation editor and a user's automation depend on. The coordinator's
+    decision of WHEN to fire each edge is covered exhaustively by the unit suite
+    (tests/test_triggers.py / the A/B/C invariants) — forcing a real edge live is
+    impossible in a short window (dominant hysteresis is 1% of the frame window =
+    864 s on today/24h; compliance needs two folded ticks), so re-proving the
+    decision here would only add a flaky duplicate. Needs the websocket.
+    """
+    if not _WS_AVAILABLE:
+        note(f"{ec}: websocket-client absent — trigger relay check skipped")
+        return
+    aid = f"est_smoke_{slug}"
+    sentinel = f"est_smoke_relay_{slug}"
+    # An automation: <named trigger>  ->  fire a sentinel event carrying the
+    # trigger variables, so capturing the sentinel proves the trigger fired AND
+    # passed the payload through.
+    trigger_block = {"trigger": f"{DOMAIN}.{slug}", **scope}
+    config = {
+        "alias": f"EST smoke relay {slug}",
+        "trigger": [trigger_block],
+        "action": [
+            {
+                "event": sentinel,
+                "event_data": {
+                    "dominant": "{{ trigger.dominant | default('') }}",
+                    "frame": "{{ trigger.frame | default('') }}",
+                    "compliant": "{{ trigger.compliant | default('') }}",
+                    "entry_id": "{{ trigger.entry_id | default('') }}",
+                },
+            }
+        ],
+        "mode": "queued",
+    }
+    # Create/replace the automation, then reload so the trigger attaches.
+    api("POST", f"/api/config/automation/config/{aid}", config)
+    api("POST", "/api/services/automation/reload", {})
+    time.sleep(2)
+
+    def _fire():
+        time.sleep(1)  # let the sentinel subscription settle
+        api("POST", f"/api/events/{event_type}", fire_payload)
+
+    relayed = capture_events(sentinel, _fire, timeout=15)
+    chk(
+        f"{ec} {slug} trigger relayed the event",
+        len(relayed) >= 1,
+        True,
+        f"got={relayed}",
+    )
+    if relayed:
+        extra_checks(relayed[0])
+    # Clean up the smoke automation.
+    try:
+        api("DELETE", f"/api/config/automation/config/{aid}")
+        api("POST", "/api/services/automation/reload", {})
+    except Exception as e:
+        note(f"{ec}: automation cleanup failed: {e}")
+
+
+def ec47_dominant_changed_trigger_event():
+    """EC47: the dominant_changed named trigger is registered and relays its event.
+
+    Proves the trigger platform end-to-end on the live instance: an automation
+    using `entity_state_tracker.dominant_changed` (frame-scoped to today) fires
+    its action with the event payload passed through as trigger variables. The
+    coordinator's edge-firing decision (hysteresis, A/B/C invariants) is unit-
+    tested — see _trigger_relay_check for why it isn't re-forced live.
     """
     print(
-        "\n=== EC47: dominant-state flip fires dominant_changed event ===",
+        "\n=== EC47: dominant_changed trigger registered + relays payload ===",
         flush=True,
     )
-    eid = make_entity("dominant", "alpha")
-    entry = create_tracker(eid, "all_states", frames={"today": True})
-    wait_entities(entry, min_count=1)
-
-    def _flip():
-        # Establish alpha as dominant, then pile more time into beta so it wins.
-        ss(eid, "alpha")
-        time.sleep(6 if FAST else 10)
-        ss(eid, "beta")
-        time.sleep(10 if FAST else 16)
-        ss(eid, "alpha")  # trailing transition folds beta's visit into the ledger
-
-    events = capture_events(EVENT_DOMINANT_CHANGED, _flip, timeout=40 if FAST else 55)
-    if not _WS_AVAILABLE:
-        note("EC47: websocket-client absent — event capture skipped")
-        return entry, eid
-
-    ev = next((e for e in events if e.get("dominant") == "beta"), None)
-    chk("EC47 dominant_changed event fired", ev is not None, True, f"events={events}")
-    if ev:
-        chk("EC47 event entry_id matches", ev.get("entry_id"), entry)
-        chk("EC47 event carries frame", ev.get("frame"), "today")
-        chk("EC47 event dominant = beta", ev.get("dominant"), "beta")
-        chk(
-            "EC47 event previous_dominant = alpha", ev.get("previous_dominant"), "alpha"
+    _trigger_relay_check(
+        "EC47",
+        "dominant_changed",
+        EVENT_DOMINANT_CHANGED,
+        {
+            "entry_id": "smoke",
+            "entity_id": "sensor.x",
+            "frame": "today",
+            "dominant": "beta",
+            "previous_dominant": "alpha",
+            "dominant_pct": 55.0,
+        },
+        scope={"frame": "today"},
+        extra_checks=lambda d: (
+            chk("EC47 relayed dominant = beta", d.get("dominant"), "beta"),
+            chk("EC47 relayed frame = today", d.get("frame"), "today"),
+        ),
+    )
+    # Also prove the frame scope FILTERS: a week-frame event must NOT relay to the
+    # today-scoped automation. Recreate the today automation, fire a week event.
+    if _WS_AVAILABLE:
+        aid = "est_smoke_dominant_changed"
+        api(
+            "POST",
+            f"/api/config/automation/config/{aid}",
+            {
+                "alias": "EST smoke relay dominant_changed scope",
+                "trigger": [
+                    {"trigger": f"{DOMAIN}.dominant_changed", "frame": "today"}
+                ],
+                "action": [{"event": "est_smoke_relay_scope", "event_data": {}}],
+                "mode": "queued",
+            },
         )
-    return entry, eid
+        api("POST", "/api/services/automation/reload", {})
+        time.sleep(2)
+        leaked = capture_events(
+            "est_smoke_relay_scope",
+            lambda: (
+                time.sleep(1),
+                api(
+                    "POST",
+                    f"/api/events/{EVENT_DOMINANT_CHANGED}",
+                    {"entry_id": "smoke", "frame": "week", "dominant": "beta"},
+                ),
+            ),
+            timeout=10,
+        )
+        chk("EC47 frame scope filters a mismatched frame", leaked, [])
+        try:
+            api("DELETE", f"/api/config/automation/config/{aid}")
+            api("POST", "/api/services/automation/reload", {})
+        except Exception:
+            pass
 
 
 def ec48_compliant_trigger_events():
-    """EC48: compliance crossing the threshold fires compliant_on / compliant_off.
+    """EC48: the compliant_on / compliant_off named triggers register and relay.
 
-    Specific-states tracker with a target + threshold. Hold the compliant target
-    state to drive compliance up across the bar (→ compliant_on), then hold a
-    non-target state to drive it back down (→ compliant_off). The event verdict
-    is the SAME predicate as the `compliant` binary sensor (shared helper), so
-    these edges line up with the sensor flipping. Needs the websocket; skips
-    cleanly without it.
+    Proves both compliance triggers are live and pass their payload through. The
+    coordinator's threshold-crossing decision (shared with the compliant binary
+    sensor via frame_compliant) is unit-tested; see _trigger_relay_check.
     """
     print(
-        "\n=== EC48: compliance threshold crossing fires compliant_on/off ===",
+        "\n=== EC48: compliant_on/off triggers registered + relay payload ===",
         flush=True,
     )
-    eid = make_entity("compliant", "good")
-    # Low threshold so a short dwell in the target state clears the bar quickly.
-    entry = create_tracker(
-        eid,
-        "specific_states",
-        states=["good", "bad"],
-        enable_compliance=True,
-        target=["good"],
-        target_threshold=50,
-        frames={"today": True},
+    _trigger_relay_check(
+        "EC48",
+        "compliant_on",
+        EVENT_COMPLIANT_ON,
+        {
+            "entry_id": "smoke",
+            "entity_id": "sensor.x",
+            "frame": "today",
+            "compliant": True,
+            "compliance_percent": 85.0,
+            "threshold": 50,
+        },
+        scope={},
+        extra_checks=lambda d: chk(
+            "EC48 compliant_on relayed compliant=True", d.get("compliant"), "True"
+        ),
     )
-    wait_entities(entry, min_count=1)
-
-    def _cross_up():
-        ss(eid, "good")
-        time.sleep(8 if FAST else 12)
-        api("POST", "/api/services/homeassistant/update_entity", {"entity_id": eid})
-
-    on_events = capture_events(
-        EVENT_COMPLIANT_ON, _cross_up, timeout=30 if FAST else 45
+    _trigger_relay_check(
+        "EC48",
+        "compliant_off",
+        EVENT_COMPLIANT_OFF,
+        {
+            "entry_id": "smoke",
+            "entity_id": "sensor.x",
+            "frame": "today",
+            "compliant": False,
+            "compliance_percent": 20.0,
+            "threshold": 50,
+        },
+        scope={},
+        extra_checks=lambda d: chk(
+            "EC48 compliant_off relayed compliant=False", d.get("compliant"), "False"
+        ),
     )
-    if not _WS_AVAILABLE:
-        note("EC48: websocket-client absent — event capture skipped")
-        return entry, eid
-
-    on_ev = next((e for e in on_events if e.get("frame") == "today"), None)
-    chk(
-        "EC48 compliant_on fired on cross-up",
-        on_ev is not None,
-        True,
-        f"on={on_events}",
-    )
-    if on_ev:
-        chk("EC48 compliant_on entry_id matches", on_ev.get("entry_id"), entry)
-        chk("EC48 compliant_on compliant=True", on_ev.get("compliant"), True)
-        chk("EC48 compliant_on carries threshold", on_ev.get("threshold"), 50)
-
-    def _cross_down():
-        # Pile non-target time on until the target share drops below 50%.
-        for _ in range(3):
-            ss(eid, "bad")
-            time.sleep(8 if FAST else 12)
-        api("POST", "/api/services/homeassistant/update_entity", {"entity_id": eid})
-
-    off_events = capture_events(
-        EVENT_COMPLIANT_OFF, _cross_down, timeout=45 if FAST else 60
-    )
-    off_ev = next((e for e in off_events if e.get("frame") == "today"), None)
-    chk(
-        "EC48 compliant_off fired on cross-down",
-        off_ev is not None,
-        True,
-        f"off={off_events}",
-    )
-    if off_ev:
-        chk("EC48 compliant_off compliant=False", off_ev.get("compliant"), False)
-    return entry, eid
 
 
 def main():

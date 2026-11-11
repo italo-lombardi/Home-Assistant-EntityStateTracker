@@ -79,12 +79,6 @@ EVENT_COMPLIANT_OFF = "entity_state_tracker_compliant_off"
 CONF_CONFIG_ENTRY_ID = "config_entry_id"
 CONF_FRAME = "frame"
 
-# Minimum HA version — the class-based Trigger platform (async_attach_runner)
-# that the named triggers require landed in HA Core 2025.11.0. The enforced
-# floor in hacs.json is already higher (2026.8.0); this documents the
-# trigger-specific requirement next to the trigger constants.
-MIN_HA_VERSION = "2025.11.0"
-
 # Translation keys per metric (§5, §11) — one per emitted entity kind.
 TRANSLATION_KEY_DURATION = "duration"
 TRANSLATION_KEY_PERCENT = "percent"

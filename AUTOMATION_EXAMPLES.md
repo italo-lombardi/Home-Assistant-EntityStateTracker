@@ -83,12 +83,44 @@ automation:
 
 > The `new_state` trigger is a friendlier wrapper over the `entity_state_tracker_new_state` bus event, which still fires exactly as before (see the event example further down if you prefer subscribing to the raw event).
 
+### Trigger 4 — One automation that reacts to every trigger
+
+A single catch-all: subscribe to all four triggers and branch on the payload. `trigger.platform` is the `<domain>.<slug>` string; `trigger.entity_id` is the tracked entity; `trigger.frame` is set on every trigger except `new_state`.
+
+```yaml
+automation:
+  - alias: EST — track all events
+    triggers:
+      - trigger: entity_state_tracker.new_state
+      - trigger: entity_state_tracker.dominant_changed
+      - trigger: entity_state_tracker.compliant_on
+      - trigger: entity_state_tracker.compliant_off
+    actions:
+      - variables:
+          tgt: "{{ trigger.entity_id | default('') }}"
+          tgt_name: "{{ state_attr(tgt, 'friendly_name') | default(tgt, true) }}"
+          frame: "{{ trigger.frame | default('') }}"
+          detail: >-
+            {%- if trigger.state is defined %}new state: {{ trigger.state }}
+            {%- elif trigger.dominant is defined %}dominant {{ trigger.previous_dominant }} → {{ trigger.dominant }} ({{ trigger.dominant_pct }}%)
+            {%- elif trigger.compliant is defined %}compliance {{ trigger.compliance_percent }}% vs {{ trigger.threshold }}% → {{ 'OK' if trigger.compliant else 'below' }}
+            {%- endif %}
+      - action: notify.mobile_app_phone
+        data:
+          title: "EST: {{ trigger.platform.split('.')[1] }}"
+          message: >-
+            {{ tgt_name }}{% if frame %} · {{ frame }}{% endif %} · {{ detail }}
+    mode: queued
+    max: 25
+```
+
 ---
 
 ## What you can trigger on
 
 | Kind | Trigger style | Notes |
 |------|---------------|-------|
+| New state / dominant flip / compliance crossing | **named trigger** | `entity_state_tracker.{new_state,dominant_changed,compliant_on,compliant_off}` — see the top of this file (HA 2025.11+) |
 | Today's percentage (specific mode) | `template` | `state_attr('sensor..._duration_today', 'percent')` |
 | Today's compliance (specific mode, target set) | `template` | `state_attr('sensor..._duration_today', 'compliance_percent')` |
 | Compliant / not compliant (target threshold set) | `state` | `binary_sensor..._compliant`, `on`/`off` |
