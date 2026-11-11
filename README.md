@@ -1,8 +1,7 @@
 # Entity State Tracker for Home Assistant
 
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/releases"><img src="https://img.shields.io/badge/release-v0.2.0-blue" alt="Release"></a>
-<a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS Custom"></a>
-<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.entity_state_tracker.total&label=installs&color=41BDF5" alt="HACS Installs"></a>
+<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.entity_state_tracker.total&label=installs&color=41BDF5" alt="Marketplace Installs"></a>
 <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-2026.8%2B-blue.svg" alt="Home Assistant"></a>
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/blob/main/LICENSE"><img src="https://img.shields.io/github/license/italo-lombardi/Home-Assistant-EntityStateTracker?logo=gnu&logoColor=white" alt="License"></a>
 <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Test Coverage">
@@ -52,13 +51,15 @@ The only real equivalent for state-duration in Home Assistant is the native `his
 
 ## Installation
 
-### HACS (Recommended)
+### Marketplace (Recommended)
 
-1. Open HACS in your Home Assistant instance.
-2. Go to **Integrations** and click the three-dot menu.
-3. Select **Custom repositories**.
-4. Add `https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker` with category **Integration**.
-5. Click **Install** and restart Home Assistant.
+HACS is built into Home Assistant as the **Marketplace** from 2026.11 onward — nothing extra to install.
+
+1. In Home Assistant, go to **Settings → Marketplace** (or use the [Add to HACS](https://my.home-assistant.io/redirect/hacs_repository/?owner=italo-lombardi&repository=Home-Assistant-EntityStateTracker&category=integration) badge above).
+2. Search for **Entity State Tracker** and open it.
+3. Click **Download**, then restart Home Assistant.
+
+> On Home Assistant **before 2026.11**, use HACS: if the integration isn't listed, add this repository as a custom repository (category **Integration**), then download it.
 
 ### Manual
 

@@ -54,8 +54,18 @@ def _frame(dominant=None, compliance=None, pct=None) -> FrameResult:
 async def coord(
     hass: HomeAssistant, compliance_config_data
 ) -> EntityStateTrackerCoordinator:
-    """A coordinator with a compliance threshold set (threshold=80 by fixture)."""
+    """A specific-states coordinator with a compliance threshold set (threshold=80)."""
     entry = MockConfigEntry(domain=DOMAIN, data=compliance_config_data, title="Tracker")
+    entry.add_to_hass(hass)
+    return EntityStateTrackerCoordinator(hass, entry)
+
+
+@pytest.fixture
+async def all_states_coord(
+    hass: HomeAssistant, all_states_config_data
+) -> EntityStateTrackerCoordinator:
+    """An all-states coordinator — the mode where `dominant` is surfaced/fires."""
+    entry = MockConfigEntry(domain=DOMAIN, data=all_states_config_data, title="Tracker")
     entry.add_to_hass(hass)
     return EntityStateTrackerCoordinator(hass, entry)
 
@@ -75,8 +85,11 @@ async def test_no_edge_when_frame_absent_from_prior(hass: HomeAssistant, coord) 
     assert dom == [] and on == [] and off == []
 
 
-async def test_dominant_changed_fires_on_flip(hass: HomeAssistant, coord) -> None:
+async def test_dominant_changed_fires_on_flip(
+    hass: HomeAssistant, all_states_coord
+) -> None:
     """A real alpha→beta flip fires exactly one dominant_changed with payload."""
+    coord = all_states_coord
     events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
 
     prior = _frame(dominant="alpha")
@@ -93,20 +106,42 @@ async def test_dominant_changed_fires_on_flip(hass: HomeAssistant, coord) -> Non
     assert data["entry_id"] == coord._entry_id
 
 
-async def test_dominant_no_edge_when_unchanged(hass: HomeAssistant, coord) -> None:
+async def test_dominant_no_edge_when_unchanged(
+    hass: HomeAssistant, all_states_coord
+) -> None:
     events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
-    coord._fire_frame_edges("today", _frame(dominant="alpha"), _frame(dominant="alpha"))
+    all_states_coord._fire_frame_edges(
+        "today", _frame(dominant="alpha"), _frame(dominant="alpha")
+    )
     await hass.async_block_till_done()
     assert events == []
 
 
-async def test_dominant_no_edge_into_or_out_of_none(hass: HomeAssistant, coord) -> None:
+async def test_dominant_no_edge_into_or_out_of_none(
+    hass: HomeAssistant, all_states_coord
+) -> None:
     """Invariant B: None dominant (count==0) is not a meaningful flip either way."""
+    coord = all_states_coord
     events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
     # prior had a value, new has none (no data this tick) — suppress.
     coord._fire_frame_edges("today", _frame(dominant="alpha"), _frame(dominant=None))
     # prior had none, new gained one — also suppress (first real data isn't a flip).
     coord._fire_frame_edges("today", _frame(dominant=None), _frame(dominant="alpha"))
+    await hass.async_block_till_done()
+    assert events == []
+
+
+async def test_dominant_no_edge_in_specific_mode(hass: HomeAssistant, coord) -> None:
+    """Dominant edge is gated to all-states mode — a specific-mode tracker never
+    surfaces `dominant` as an entity, so a real max-duration flip must NOT fire.
+
+    `coord` is a specific-states tracker; a clean alpha→beta flip that WOULD fire
+    in all-states mode is suppressed here by the mode gate.
+    """
+    events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
+    coord._fire_frame_edges(
+        "today", _frame(dominant="alpha"), _frame(dominant="beta", pct={"beta": 55.0})
+    )
     await hass.async_block_till_done()
     assert events == []
 

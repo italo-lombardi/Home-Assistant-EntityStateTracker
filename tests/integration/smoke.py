@@ -3865,7 +3865,12 @@ def _trigger_relay_check(ec, slug, event_type, fire_payload, scope, extra_checks
     # Create/replace the automation, then reload so the trigger attaches.
     api("POST", f"/api/config/automation/config/{aid}", config)
     api("POST", "/api/services/automation/reload", {})
-    time.sleep(2)
+    # Wait until the automation entity is actually loaded + on (its trigger
+    # attached) before firing — a fixed sleep flakes when ECs run back-to-back and
+    # a prior reload is still settling. automation.reload drops then re-adds every
+    # automation entity, so poll for ours to come back `on`.
+    auto_eid = f"automation.{aid}"
+    wait_until(lambda: gs(auto_eid).get("state") == "on", timeout=20)
 
     def _fire():
         time.sleep(1)  # let the sentinel subscription settle
@@ -3936,7 +3941,9 @@ def ec47_dominant_changed_trigger_event():
             },
         )
         api("POST", "/api/services/automation/reload", {})
-        time.sleep(2)
+        wait_until(
+            lambda: gs(f"automation.{aid}").get("state") == "on", timeout=20
+        )
         leaked = capture_events(
             "est_smoke_relay_scope",
             lambda: (

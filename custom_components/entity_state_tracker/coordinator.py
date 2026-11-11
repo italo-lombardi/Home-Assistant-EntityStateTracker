@@ -507,8 +507,14 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         # is None at count==0; firing into/out of None is not a meaningful flip.
         # (Hysteresis already lives in compute_frame's _pick_dominant, so a flip
         # here is already debounced — do not add another.)
+        # Gated to all-states mode: ``dominant`` is only surfaced as an entity (the
+        # BreakdownSensor) in all-states mode, so a dominant_changed trigger is only
+        # meaningful there. In specific mode the user has no dominant entity and the
+        # max-duration state may be an untracked one — don't fire a trigger for a
+        # value the tracker never exposes.
         if (
-            result.dominant is not None
+            self.mode == MODE_ALL
+            and result.dominant is not None
             and prior.dominant is not None
             and prior.dominant != result.dominant
         ):
