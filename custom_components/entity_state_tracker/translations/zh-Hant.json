@@ -161,6 +161,21 @@
         "specific_states": "特定狀態",
         "all_states": "所有狀態"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "今天",
+        "yesterday": "昨天",
+        "24h": "過去 24 小時",
+        "week": "本週",
+        "last_week": "上週",
+        "7d": "過去 7 天",
+        "30d": "過去 30 天",
+        "month": "本月",
+        "last_month": "上月",
+        "year": "今年",
+        "365d": "過去 365 天"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "某個時間範圍已停止更新",
       "description": "Entity State Tracker 連續 {count} 次更新都無法為 {entity} 計算「{frame}」時間範圍，因此該感測器保持其最後的值。這通常表示此追蹤器儲存的歷史已損毀。請在 Home Assistant 記錄中查看該錯誤，然後重新載入此整合。"
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "發現新狀態",
+      "description": "當「所有狀態」追蹤器觀察到一個從未見過的狀態時觸發。",
+      "fields": {
+        "config_entry_id": {
+          "name": "追蹤器",
+          "description": "將此觸發器限定為單一 Entity State Tracker 項目。留空則對任意追蹤器觸發。"
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "主導狀態已變更",
+      "description": "當某個時間範圍內保持時間最長的狀態發生變化時觸發（在遲滯裕度之後）。",
+      "fields": {
+        "config_entry_id": {
+          "name": "追蹤器",
+          "description": "將此觸發器限定為單一 Entity State Tracker 項目。留空則對任意追蹤器觸發。"
+        },
+        "frame": {
+          "name": "時間範圍",
+          "description": "將此觸發器限定為單一時間範圍。留空則對任意時間範圍觸發。"
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "合規已開啟",
+      "description": "當某個時間範圍的合規性上升並達到所設定的門檻時觸發。",
+      "fields": {
+        "config_entry_id": {
+          "name": "追蹤器",
+          "description": "將此觸發器限定為單一 Entity State Tracker 項目。留空則對任意追蹤器觸發。"
+        },
+        "frame": {
+          "name": "時間範圍",
+          "description": "將此觸發器限定為單一時間範圍。留空則對任意時間範圍觸發。"
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "合規已關閉",
+      "description": "當某個時間範圍的合規性降到所設定的門檻以下時觸發。",
+      "fields": {
+        "config_entry_id": {
+          "name": "追蹤器",
+          "description": "將此觸發器限定為單一 Entity State Tracker 項目。留空則對任意追蹤器觸發。"
+        },
+        "frame": {
+          "name": "時間範圍",
+          "description": "將此觸發器限定為單一時間範圍。留空則對任意時間範圍觸發。"
+        }
+      }
     }
   }
 }

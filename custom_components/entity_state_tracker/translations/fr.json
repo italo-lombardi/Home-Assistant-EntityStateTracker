@@ -161,6 +161,21 @@
         "specific_states": "États spécifiques",
         "all_states": "Tous les états"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Aujourd'hui",
+        "yesterday": "Hier",
+        "24h": "Dernières 24 heures",
+        "week": "Cette semaine",
+        "last_week": "La semaine dernière",
+        "7d": "7 derniers jours",
+        "30d": "30 derniers jours",
+        "month": "Ce mois-ci",
+        "last_month": "Le mois dernier",
+        "year": "Cette année",
+        "365d": "365 derniers jours"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Une période a cessé de se mettre à jour",
       "description": "Entity State Tracker n'a pas pu calculer la période « {frame} » pour {entity} pendant {count} mises à jour consécutives, donc ce capteur conserve sa dernière valeur. Cela indique généralement un historique stocké corrompu pour ce suivi. Vérifiez l'erreur dans les journaux de Home Assistant, puis rechargez l'intégration."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Nouvel état détecté",
+      "description": "Se déclenche lorsqu'un suivi de tous les états observe un état qu'il n'avait jamais vu auparavant.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Suivi",
+          "description": "Limitez ce déclencheur à une seule entrée Entity State Tracker. Laissez vide pour déclencher pour n'importe quel suivi."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "État dominant modifié",
+      "description": "Se déclenche lorsque l'état le plus maintenu d'une période change (après la marge d'hystérésis).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Suivi",
+          "description": "Limitez ce déclencheur à une seule entrée Entity State Tracker. Laissez vide pour déclencher pour n'importe quel suivi."
+        },
+        "frame": {
+          "name": "Période",
+          "description": "Limitez ce déclencheur à une seule période. Laissez vide pour déclencher pour n'importe quelle période."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Conformité activée",
+      "description": "Se déclenche lorsque la conformité d'une période augmente jusqu'à atteindre le seuil configuré.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Suivi",
+          "description": "Limitez ce déclencheur à une seule entrée Entity State Tracker. Laissez vide pour déclencher pour n'importe quel suivi."
+        },
+        "frame": {
+          "name": "Période",
+          "description": "Limitez ce déclencheur à une seule période. Laissez vide pour déclencher pour n'importe quelle période."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Conformité désactivée",
+      "description": "Se déclenche lorsque la conformité d'une période descend sous le seuil configuré.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Suivi",
+          "description": "Limitez ce déclencheur à une seule entrée Entity State Tracker. Laissez vide pour déclencher pour n'importe quel suivi."
+        },
+        "frame": {
+          "name": "Période",
+          "description": "Limitez ce déclencheur à une seule période. Laissez vide pour déclencher pour n'importe quelle période."
+        }
+      }
     }
   }
 }

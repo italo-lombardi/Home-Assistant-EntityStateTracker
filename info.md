@@ -12,6 +12,7 @@ Point it at one entity, pick a mode, and it produces a bundle of duration, perce
 - **Compliance** — declare a target set of desired states and the percentage becomes a score, with an optional threshold that spawns a `compliant` binary sensor.
 - **Transitions** — per-state entry count, average visit duration, last-seen, and previous-state.
 - **Auto-discovered breakdown** — a new state seen at runtime just becomes a new key (no restart), and fires an `entity_state_tracker_new_state` event.
+- **Named automation triggers** — UI-discoverable triggers in the automation editor (New state seen, Dominant state changed, Compliant turned on/off), scopeable per tracker and time frame. Requires Home Assistant 2025.11+.
 - **DST-correct** — percentages divide by real elapsed window seconds, so a 23h/25h DST day still reads 100%.
 - **Recorder-friendly** — churny breakdown dicts are unrecorded; only sensor states record, rounded so idle ticks don't create rows.
 - **Custom Lovelace card** — bars, pie/donut, or table; deterministic per-state colours; auto-installed.

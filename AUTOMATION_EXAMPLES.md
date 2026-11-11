@@ -18,10 +18,109 @@ Ready-to-adapt automations for every feature. The examples use placeholder entit
 
 ---
 
+## Named automation triggers
+
+> **Requires Home Assistant 2025.11 or newer** (the class-based trigger platform).
+
+The integration ships **UI-discoverable triggers** — pick them from the automation editor's trigger list (each with its own icon) instead of typing a raw event string. Every trigger is scopeable to a single tracker (`config_entry_id`), and the per-frame ones to a single time frame (`frame`); leave the scope blank to fire for any tracker/frame. The payload is exposed as `{{ trigger.<field> }}`.
+
+| Trigger (`platform`) | Fires when | Mode | Payload fields |
+|---|---|---|---|
+| `entity_state_tracker.new_state` | an all-states tracker sees a never-seen state | all-states | `entry_id`, `entity_id`, `state` |
+| `entity_state_tracker.dominant_changed` | a frame's most-held state flips (after hysteresis) | all-states | `entry_id`, `entity_id`, `frame`, `dominant`, `previous_dominant`, `dominant_pct` |
+| `entity_state_tracker.compliant_on` | a frame's compliance rises to meet the threshold | specific + target | `entry_id`, `entity_id`, `frame`, `compliant`, `compliance_percent`, `threshold` |
+| `entity_state_tracker.compliant_off` | a frame's compliance falls below the threshold | specific + target | same as `compliant_on` |
+
+### Trigger 1 — Notify when today's dominant state changes
+
+```yaml
+automation:
+  - alias: EST — dominant state changed today
+    triggers:
+      - trigger: entity_state_tracker.dominant_changed
+        frame: today
+    actions:
+      - action: notify.mobile_app_phone
+        data:
+          message: >
+            Today's dominant state changed from {{ trigger.previous_dominant }}
+            to {{ trigger.dominant }} ({{ trigger.dominant_pct }}%).
+```
+
+### Trigger 2 — React when a frame crosses the compliance threshold
+
+```yaml
+automation:
+  - alias: EST — compliance crossed the bar
+    triggers:
+      - trigger: entity_state_tracker.compliant_on
+        id: passed
+      - trigger: entity_state_tracker.compliant_off
+        id: failed
+    actions:
+      - action: notify.mobile_app_phone
+        data:
+          message: >
+            {{ trigger.frame }} compliance is now
+            {{ 'above' if trigger.id == 'passed' else 'below' }} the
+            {{ trigger.threshold }}% threshold ({{ trigger.compliance_percent }}%).
+```
+
+### Trigger 3 — Catch a brand-new state (scoped to one tracker)
+
+```yaml
+automation:
+  - alias: EST — new state seen
+    triggers:
+      - trigger: entity_state_tracker.new_state
+        # config_entry_id optional — omit to fire for any tracker.
+    actions:
+      - action: persistent_notification.create
+        data:
+          title: New state observed
+          message: "{{ trigger.entity_id }} entered a new state: {{ trigger.state }}"
+```
+
+> The `new_state` trigger is a friendlier wrapper over the `entity_state_tracker_new_state` bus event, which still fires exactly as before (see the event example further down if you prefer subscribing to the raw event).
+
+### Trigger 4 — One automation that reacts to every trigger
+
+A single catch-all: subscribe to all four triggers and branch on the payload. `trigger.platform` is the `<domain>.<slug>` string; `trigger.entity_id` is the tracked entity; `trigger.frame` is set on every trigger except `new_state`.
+
+```yaml
+automation:
+  - alias: EST — track all events
+    triggers:
+      - trigger: entity_state_tracker.new_state
+      - trigger: entity_state_tracker.dominant_changed
+      - trigger: entity_state_tracker.compliant_on
+      - trigger: entity_state_tracker.compliant_off
+    actions:
+      - variables:
+          tgt: "{{ trigger.entity_id | default('') }}"
+          tgt_name: "{{ state_attr(tgt, 'friendly_name') | default(tgt, true) }}"
+          frame: "{{ trigger.frame | default('') }}"
+          detail: >-
+            {%- if trigger.state is defined %}new state: {{ trigger.state }}
+            {%- elif trigger.dominant is defined %}dominant {{ trigger.previous_dominant }} → {{ trigger.dominant }} ({{ trigger.dominant_pct }}%)
+            {%- elif trigger.compliant is defined %}compliance {{ trigger.compliance_percent }}% vs {{ trigger.threshold }}% → {{ 'OK' if trigger.compliant else 'below' }}
+            {%- endif %}
+      - action: notify.mobile_app_phone
+        data:
+          title: "EST: {{ trigger.platform.split('.')[1] }}"
+          message: >-
+            {{ tgt_name }}{% if frame %} · {{ frame }}{% endif %} · {{ detail }}
+    mode: queued
+    max: 25
+```
+
+---
+
 ## What you can trigger on
 
 | Kind | Trigger style | Notes |
 |------|---------------|-------|
+| New state / dominant flip / compliance crossing | **named trigger** | `entity_state_tracker.{new_state,dominant_changed,compliant_on,compliant_off}` — see the top of this file (HA 2025.11+) |
 | Today's percentage (specific mode) | `template` | `state_attr('sensor..._duration_today', 'percent')` |
 | Today's compliance (specific mode, target set) | `template` | `state_attr('sensor..._duration_today', 'compliance_percent')` |
 | Compliant / not compliant (target threshold set) | `state` | `binary_sensor..._compliant`, `on`/`off` |

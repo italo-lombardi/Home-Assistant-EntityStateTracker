@@ -1,8 +1,7 @@
 # Entity State Tracker for Home Assistant
 
-<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/releases"><img src="https://img.shields.io/badge/release-v0.1.6-blue" alt="Release"></a>
-<a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS Custom"></a>
-<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.entity_state_tracker.total&label=installs&color=41BDF5" alt="HACS Installs"></a>
+<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/releases"><img src="https://img.shields.io/badge/release-v0.2.0-blue" alt="Release"></a>
+<a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker"><img src="https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fanalytics.home-assistant.io%2Fcustom_integrations.json&query=%24.entity_state_tracker.total&label=installs&color=41BDF5" alt="Marketplace Installs"></a>
 <a href="https://www.home-assistant.io/"><img src="https://img.shields.io/badge/Home%20Assistant-2026.8%2B-blue.svg" alt="Home Assistant"></a>
 <a href="https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker/blob/main/LICENSE"><img src="https://img.shields.io/github/license/italo-lombardi/Home-Assistant-EntityStateTracker?logo=gnu&logoColor=white" alt="License"></a>
 <img src="https://img.shields.io/badge/coverage-100%25-brightgreen" alt="Test Coverage">
@@ -52,13 +51,15 @@ The only real equivalent for state-duration in Home Assistant is the native `his
 
 ## Installation
 
-### HACS (Recommended)
+### Marketplace (Recommended)
 
-1. Open HACS in your Home Assistant instance.
-2. Go to **Integrations** and click the three-dot menu.
-3. Select **Custom repositories**.
-4. Add `https://github.com/italo-lombardi/Home-Assistant-EntityStateTracker` with category **Integration**.
-5. Click **Install** and restart Home Assistant.
+HACS is built into Home Assistant as the **Marketplace** from 2026.11 onward — nothing extra to install.
+
+1. In Home Assistant, go to **Settings → Marketplace** (or use the [Add to HACS](https://my.home-assistant.io/redirect/hacs_repository/?owner=italo-lombardi&repository=Home-Assistant-EntityStateTracker&category=integration) badge above).
+2. Search for **Entity State Tracker** and open it.
+3. Click **Download**, then restart Home Assistant.
+
+> On Home Assistant **before 2026.11**, use HACS: if the integration isn't listed, add this repository as a custom repository (category **Integration**), then download it.
 
 ### Manual
 
@@ -298,9 +299,34 @@ The `tracker_id` is the tracker's config-entry id. You normally never type it by
 
 ---
 
+## Named automation triggers
+
+> **Requires Home Assistant 2025.11 or newer** — the named triggers use the class-based trigger platform. (Older releases keep working via the `entity_state_tracker_new_state` bus event.)
+
+The integration ships **UI-discoverable automation triggers** — pick them in the
+automation editor's trigger list (each with its own icon) instead of typing a
+raw event string. All are scopeable to a single tracker, and the per-frame ones
+to a single time frame; leave the scope blank to fire for any tracker/frame.
+
+![Named triggers in the automation editor's Add trigger → By type dialog](assets/11_automation_triggers.png)
+
+| Trigger | Fires when | Mode | Payload (trigger variables) |
+|---|---|---|---|
+| **New state seen** | an all-states tracker observes a never-before-seen state | all-states | `entry_id`, `entity_id`, `state` |
+| **Dominant state changed** | a frame's most-held state flips (after the hysteresis margin) | all-states | `entry_id`, `entity_id`, `frame`, `dominant`, `previous_dominant`, `dominant_pct` |
+| **Compliant turned on** | a frame's compliance rises to meet the threshold | specific + target | `entry_id`, `entity_id`, `frame`, `compliant`, `compliance_percent`, `threshold` |
+| **Compliant turned off** | a frame's compliance falls below the threshold | specific + target | `entry_id`, `entity_id`, `frame`, `compliant`, `compliance_percent`, `threshold` |
+
+The payload is exposed to the automation as `{{ trigger.<field> }}`. Ready-to-adapt
+automations for all four triggers are at the top of **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)**.
+The `entity_state_tracker_new_state` bus event still fires as before — the **New
+state seen** trigger is just a friendlier way to subscribe to it.
+
+---
+
 ## Automation examples
 
-See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `in_a_tracked_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration_seconds` off a breakdown sensor, and guarding on `has_gap` / `window_coverage` — plus Telegram/TTS channels and cooldown patterns.
+See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: the four **named automation triggers** (at the top), `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `in_a_tracked_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration_seconds` off a breakdown sensor, and guarding on `has_gap` / `window_coverage` — plus Telegram/TTS channels and cooldown patterns.
 
 ---
 

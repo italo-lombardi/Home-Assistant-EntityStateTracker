@@ -161,6 +161,21 @@
         "specific_states": "Konkrétní stavy",
         "all_states": "Všechny stavy"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Dnes",
+        "yesterday": "Včera",
+        "24h": "Posledních 24 hodin",
+        "week": "Tento týden",
+        "last_week": "Minulý týden",
+        "7d": "Posledních 7 dní",
+        "30d": "Posledních 30 dní",
+        "month": "Tento měsíc",
+        "last_month": "Minulý měsíc",
+        "year": "Letos",
+        "365d": "Posledních 365 dní"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Časové období se přestalo aktualizovat",
       "description": "Entity State Tracker nedokázal vypočítat časové období „{frame}“ pro {entity} během {count} aktualizací za sebou, takže tento senzor podržuje svou poslední hodnotu. To obvykle ukazuje na poškozenou uloženou historii tohoto sledovače. Zkontrolujte protokoly Home Assistant, zda neobsahují chybu, a poté integraci znovu načtěte."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Spatřen nový stav",
+      "description": "Spustí se, když sledovač všech stavů zaznamená stav, který ještě nikdy předtím neviděl.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sledovač",
+          "description": "Omezte tento spouštěč na jeden záznam Entity State Tracker. Ponechte prázdné, aby se spustil pro libovolný sledovač."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Dominantní stav se změnil",
+      "description": "Spustí se, když se nejdéle udržovaný stav časového období změní (po hysterezní rezervě).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sledovač",
+          "description": "Omezte tento spouštěč na jeden záznam Entity State Tracker. Ponechte prázdné, aby se spustil pro libovolný sledovač."
+        },
+        "frame": {
+          "name": "Časové období",
+          "description": "Omezte tento spouštěč na jedno časové období. Ponechte prázdné, aby se spustil pro libovolné období."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Shoda zapnuta",
+      "description": "Spustí se, když shoda časového období vzroste a dosáhne nastaveného prahu.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sledovač",
+          "description": "Omezte tento spouštěč na jeden záznam Entity State Tracker. Ponechte prázdné, aby se spustil pro libovolný sledovač."
+        },
+        "frame": {
+          "name": "Časové období",
+          "description": "Omezte tento spouštěč na jedno časové období. Ponechte prázdné, aby se spustil pro libovolné období."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Shoda vypnuta",
+      "description": "Spustí se, když shoda časového období klesne pod nastavený práh.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sledovač",
+          "description": "Omezte tento spouštěč na jeden záznam Entity State Tracker. Ponechte prázdné, aby se spustil pro libovolný sledovač."
+        },
+        "frame": {
+          "name": "Časové období",
+          "description": "Omezte tento spouštěč na jedno časové období. Ponechte prázdné, aby se spustil pro libovolné období."
+        }
+      }
     }
   }
 }

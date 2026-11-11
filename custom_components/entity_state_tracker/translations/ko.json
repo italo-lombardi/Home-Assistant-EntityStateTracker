@@ -161,6 +161,75 @@
         "specific_states": "특정 상태",
         "all_states": "모든 상태"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "오늘",
+        "yesterday": "어제",
+        "24h": "지난 24시간",
+        "week": "이번 주",
+        "last_week": "지난주",
+        "7d": "지난 7일",
+        "30d": "지난 30일",
+        "month": "이번 달",
+        "last_month": "지난달",
+        "year": "올해",
+        "365d": "지난 365일"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "새 상태 관측됨",
+      "description": "모든 상태 트래커가 이전에 본 적 없는 상태를 관측할 때 실행됩니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "트래커",
+          "description": "이 트리거를 단일 Entity State Tracker 항목으로 제한합니다. 비워 두면 모든 트래커에 대해 실행됩니다."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "우세 상태 변경됨",
+      "description": "시간대에서 가장 오래 유지된 상태가 (히스테리시스 여유 범위를 지나) 변경될 때 실행됩니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "트래커",
+          "description": "이 트리거를 단일 Entity State Tracker 항목으로 제한합니다. 비워 두면 모든 트래커에 대해 실행됩니다."
+        },
+        "frame": {
+          "name": "시간대",
+          "description": "이 트리거를 하나의 시간대로 제한합니다. 비워 두면 모든 시간대에 대해 실행됩니다."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "준수 켜짐",
+      "description": "시간대의 준수율이 상승하여 구성된 임계값에 도달할 때 실행됩니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "트래커",
+          "description": "이 트리거를 단일 Entity State Tracker 항목으로 제한합니다. 비워 두면 모든 트래커에 대해 실행됩니다."
+        },
+        "frame": {
+          "name": "시간대",
+          "description": "이 트리거를 하나의 시간대로 제한합니다. 비워 두면 모든 시간대에 대해 실행됩니다."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "준수 꺼짐",
+      "description": "시간대의 준수율이 구성된 임계값 아래로 떨어질 때 실행됩니다.",
+      "fields": {
+        "config_entry_id": {
+          "name": "트래커",
+          "description": "이 트리거를 단일 Entity State Tracker 항목으로 제한합니다. 비워 두면 모든 트래커에 대해 실행됩니다."
+        },
+        "frame": {
+          "name": "시간대",
+          "description": "이 트리거를 하나의 시간대로 제한합니다. 비워 두면 모든 시간대에 대해 실행됩니다."
+        }
+      }
     }
   },
   "issues": {

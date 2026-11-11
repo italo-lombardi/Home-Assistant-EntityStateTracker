@@ -1,0 +1,8 @@
+{
+  "triggers": {
+    "new_state": { "trigger": "mdi:new-box" },
+    "dominant_changed": { "trigger": "mdi:swap-horizontal" },
+    "compliant_on": { "trigger": "mdi:check-circle" },
+    "compliant_off": { "trigger": "mdi:close-circle" }
+  }
+}

@@ -161,6 +161,21 @@
         "specific_states": "Stări specifice",
         "all_states": "Toate stările"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Astăzi",
+        "yesterday": "Ieri",
+        "24h": "Ultimele 24 de ore",
+        "week": "Săptămâna aceasta",
+        "last_week": "Săptămâna trecută",
+        "7d": "Ultimele 7 zile",
+        "30d": "Ultimele 30 de zile",
+        "month": "Luna aceasta",
+        "last_month": "Luna trecută",
+        "year": "Anul acesta",
+        "365d": "Ultimele 365 de zile"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Un interval de timp a încetat să se actualizeze",
       "description": "Entity State Tracker nu a putut calcula intervalul de timp „{frame}” pentru {entity} timp de {count} actualizări la rând, așa că acel senzor își păstrează ultima valoare. Acest lucru indică de obicei un istoric stocat corupt pentru acest tracker. Verifică eroarea în jurnalele Home Assistant, apoi reîncarcă integrarea."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Stare nouă observată",
+      "description": "Se declanșează când un urmăritor cu toate stările observă o stare pe care nu a mai văzut-o niciodată.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Urmăritor",
+          "description": "Limitează acest declanșator la o singură intrare Entity State Tracker. Lasă gol pentru a se declanșa pentru orice urmăritor."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Starea dominantă s-a schimbat",
+      "description": "Se declanșează când starea cel mai mult menținută a unui interval de timp se schimbă (după marja de histerezis).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Urmăritor",
+          "description": "Limitează acest declanșator la o singură intrare Entity State Tracker. Lasă gol pentru a se declanșa pentru orice urmăritor."
+        },
+        "frame": {
+          "name": "Interval de timp",
+          "description": "Limitează acest declanșator la un singur interval de timp. Lasă gol pentru a se declanșa pentru orice interval de timp."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Conformitate activată",
+      "description": "Se declanșează când conformitatea unui interval de timp crește până la a atinge pragul configurat.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Urmăritor",
+          "description": "Limitează acest declanșator la o singură intrare Entity State Tracker. Lasă gol pentru a se declanșa pentru orice urmăritor."
+        },
+        "frame": {
+          "name": "Interval de timp",
+          "description": "Limitează acest declanșator la un singur interval de timp. Lasă gol pentru a se declanșa pentru orice interval de timp."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Conformitate dezactivată",
+      "description": "Se declanșează când conformitatea unui interval de timp scade sub pragul configurat.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Urmăritor",
+          "description": "Limitează acest declanșator la o singură intrare Entity State Tracker. Lasă gol pentru a se declanșa pentru orice urmăritor."
+        },
+        "frame": {
+          "name": "Interval de timp",
+          "description": "Limitează acest declanșator la un singur interval de timp. Lasă gol pentru a se declanșa pentru orice interval de timp."
+        }
+      }
     }
   }
 }

@@ -1,0 +1,46 @@
+# Automation-editor field schemas for the named triggers (§5.4). The file's
+# presence is what sets has_triggers and drives these selectors in the UI.
+# config_entry_id scopes a trigger to one tracker; frame scopes a per-frame
+# trigger to one window. Both optional — blank fires for any entry/frame.
+
+.entry: &entry
+  config_entry_id:
+    required: false
+    selector:
+      config_entry:
+        integration: entity_state_tracker
+
+.frame: &frame
+  frame:
+    required: false
+    selector:
+      select:
+        translation_key: frame
+        options:
+          - today
+          - yesterday
+          - 24h
+          - week
+          - last_week
+          - 7d
+          - 30d
+          - month
+          - last_month
+          - year
+          - 365d
+
+new_state:
+  fields:
+    <<: *entry
+
+dominant_changed:
+  fields:
+    <<: [*entry, *frame]
+
+compliant_on:
+  fields:
+    <<: [*entry, *frame]
+
+compliant_off:
+  fields:
+    <<: [*entry, *frame]

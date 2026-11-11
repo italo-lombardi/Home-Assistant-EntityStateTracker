@@ -161,6 +161,75 @@
         "specific_states": "Konkrēti stāvokļi",
         "all_states": "Visi stāvokļi"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Šodien",
+        "yesterday": "Vakar",
+        "24h": "Pēdējās 24 stundas",
+        "week": "Šī nedēļa",
+        "last_week": "Pagājušā nedēļa",
+        "7d": "Pēdējās 7 dienas",
+        "30d": "Pēdējās 30 dienas",
+        "month": "Šis mēnesis",
+        "last_month": "Pagājušais mēnesis",
+        "year": "Šogad",
+        "365d": "Pēdējās 365 dienas"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Novērots jauns stāvoklis",
+      "description": "Nostrādā, kad visu stāvokļu sekotājs novēro stāvokli, kādu vēl nekad nav redzējis.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sekotājs",
+          "description": "Ierobežot šo aktivizētāju līdz vienam Entity State Tracker ierakstam. Atstājiet tukšu, lai nostrādātu jebkuram sekotājam."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Dominējošais stāvoklis mainījies",
+      "description": "Nostrādā, kad laika intervāla visilgāk uzturētais stāvoklis mainās (pēc histerēzes rezerves).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sekotājs",
+          "description": "Ierobežot šo aktivizētāju līdz vienam Entity State Tracker ierakstam. Atstājiet tukšu, lai nostrādātu jebkuram sekotājam."
+        },
+        "frame": {
+          "name": "Laika intervāls",
+          "description": "Ierobežot šo aktivizētāju līdz vienam laika intervālam. Atstājiet tukšu, lai nostrādātu jebkuram intervālam."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Atbilstība ieslēgta",
+      "description": "Nostrādā, kad laika intervāla atbilstība paaugstinās līdz konfigurētajai robežvērtībai.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sekotājs",
+          "description": "Ierobežot šo aktivizētāju līdz vienam Entity State Tracker ierakstam. Atstājiet tukšu, lai nostrādātu jebkuram sekotājam."
+        },
+        "frame": {
+          "name": "Laika intervāls",
+          "description": "Ierobežot šo aktivizētāju līdz vienam laika intervālam. Atstājiet tukšu, lai nostrādātu jebkuram intervālam."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Atbilstība izslēgta",
+      "description": "Nostrādā, kad laika intervāla atbilstība nokrītas zem konfigurētās robežvērtības.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sekotājs",
+          "description": "Ierobežot šo aktivizētāju līdz vienam Entity State Tracker ierakstam. Atstājiet tukšu, lai nostrādātu jebkuram sekotājam."
+        },
+        "frame": {
+          "name": "Laika intervāls",
+          "description": "Ierobežot šo aktivizētāju līdz vienam laika intervālam. Atstājiet tukšu, lai nostrādātu jebkuram intervālam."
+        }
+      }
     }
   },
   "issues": {

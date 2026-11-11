@@ -161,6 +161,75 @@
         "specific_states": "Konkrečios būsenos",
         "all_states": "Visos būsenos"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Šiandien",
+        "yesterday": "Vakar",
+        "24h": "Paskutinės 24 valandos",
+        "week": "Ši savaitė",
+        "last_week": "Praėjusi savaitė",
+        "7d": "Paskutinės 7 dienos",
+        "30d": "Paskutinės 30 dienų",
+        "month": "Šį mėnesį",
+        "last_month": "Praėjęs mėnuo",
+        "year": "Šiais metais",
+        "365d": "Paskutinės 365 dienų"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Pastebėta nauja būsena",
+      "description": "Suaktyvinama, kai visų būsenų sekiklis pastebi būseną, kurios dar niekada nebuvo matęs.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sekiklis",
+          "description": "Apriboti šį trigerį vienu Entity State Tracker įrašu. Palikite tuščią, kad suveiktų bet kuriam sekikliui."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Dominuojanti būsena pasikeitė",
+      "description": "Suaktyvinama, kai laiko intervalo ilgiausiai išlaikyta būsena pasikeičia (praėjus histerezės ribai).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sekiklis",
+          "description": "Apriboti šį trigerį vienu Entity State Tracker įrašu. Palikite tuščią, kad suveiktų bet kuriam sekikliui."
+        },
+        "frame": {
+          "name": "Laiko intervalas",
+          "description": "Apriboti šį trigerį vienu laiko intervalu. Palikite tuščią, kad suveiktų bet kuriam intervalui."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Atitiktis įjungta",
+      "description": "Suaktyvinama, kai laiko intervalo atitiktis pakyla iki nustatytos ribos.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sekiklis",
+          "description": "Apriboti šį trigerį vienu Entity State Tracker įrašu. Palikite tuščią, kad suveiktų bet kuriam sekikliui."
+        },
+        "frame": {
+          "name": "Laiko intervalas",
+          "description": "Apriboti šį trigerį vienu laiko intervalu. Palikite tuščią, kad suveiktų bet kuriam intervalui."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Atitiktis išjungta",
+      "description": "Suaktyvinama, kai laiko intervalo atitiktis nukrinta žemiau nustatytos ribos.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sekiklis",
+          "description": "Apriboti šį trigerį vienu Entity State Tracker įrašu. Palikite tuščią, kad suveiktų bet kuriam sekikliui."
+        },
+        "frame": {
+          "name": "Laiko intervalas",
+          "description": "Apriboti šį trigerį vienu laiko intervalu. Palikite tuščią, kad suveiktų bet kuriam intervalui."
+        }
+      }
     }
   },
   "issues": {

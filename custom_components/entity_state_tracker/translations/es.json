@@ -161,6 +161,21 @@
         "specific_states": "Estados específicos",
         "all_states": "Todos los estados"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Hoy",
+        "yesterday": "Ayer",
+        "24h": "Últimas 24 horas",
+        "week": "Esta semana",
+        "last_week": "La semana pasada",
+        "7d": "Últimos 7 días",
+        "30d": "Últimos 30 días",
+        "month": "Este mes",
+        "last_month": "El mes pasado",
+        "year": "Este año",
+        "365d": "Últimos 365 días"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Un periodo de tiempo dejó de actualizarse",
       "description": "Entity State Tracker no pudo calcular el periodo «{frame}» de {entity} durante {count} actualizaciones seguidas, por lo que ese sensor mantiene su último valor. Esto suele indicar un historial almacenado dañado para este rastreador. Revisa los registros de Home Assistant para ver el error y luego recarga la integración."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Nuevo estado detectado",
+      "description": "Se activa cuando un rastreador de todos los estados observa un estado que nunca había visto antes.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rastreador",
+          "description": "Limita este activador a una sola entrada de Entity State Tracker. Déjalo en blanco para que se active con cualquier rastreador."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "El estado dominante cambió",
+      "description": "Se activa cuando el estado más mantenido de un periodo cambia (tras el margen de histéresis).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rastreador",
+          "description": "Limita este activador a una sola entrada de Entity State Tracker. Déjalo en blanco para que se active con cualquier rastreador."
+        },
+        "frame": {
+          "name": "Periodo",
+          "description": "Limita este activador a un solo periodo. Déjalo en blanco para que se active con cualquier periodo."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Conformidad activada",
+      "description": "Se activa cuando el cumplimiento de un periodo sube hasta alcanzar el umbral configurado.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rastreador",
+          "description": "Limita este activador a una sola entrada de Entity State Tracker. Déjalo en blanco para que se active con cualquier rastreador."
+        },
+        "frame": {
+          "name": "Periodo",
+          "description": "Limita este activador a un solo periodo. Déjalo en blanco para que se active con cualquier periodo."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Conformidad desactivada",
+      "description": "Se activa cuando el cumplimiento de un periodo cae por debajo del umbral configurado.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rastreador",
+          "description": "Limita este activador a una sola entrada de Entity State Tracker. Déjalo en blanco para que se active con cualquier rastreador."
+        },
+        "frame": {
+          "name": "Periodo",
+          "description": "Limita este activador a un solo periodo. Déjalo en blanco para que se active con cualquier periodo."
+        }
+      }
     }
   }
 }

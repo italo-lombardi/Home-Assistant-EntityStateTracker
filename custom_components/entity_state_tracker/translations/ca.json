@@ -161,6 +161,21 @@
         "specific_states": "Estats específics",
         "all_states": "Tots els estats"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Avui",
+        "yesterday": "Ahir",
+        "24h": "Últimes 24 hores",
+        "week": "Aquesta setmana",
+        "last_week": "La setmana passada",
+        "7d": "Últims 7 dies",
+        "30d": "Últims 30 dies",
+        "month": "Aquest mes",
+        "last_month": "El mes passat",
+        "year": "Enguany",
+        "365d": "Últims 365 dies"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Un període de temps ha deixat d'actualitzar-se",
       "description": "Entity State Tracker no ha pogut calcular el període de temps «{frame}» per a {entity} durant {count} actualitzacions seguides, de manera que aquest sensor manté el seu darrer valor. Això sol indicar un historial emmagatzemat malmès per a aquest seguidor. Reviseu els registres de Home Assistant per trobar l'error i, a continuació, torneu a carregar la integració."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Nou estat detectat",
+      "description": "S'activa quan un seguidor de tots els estats observa un estat que no havia vist mai abans.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Seguidor",
+          "description": "Limiteu aquest activador a una sola entrada d'Entity State Tracker. Deixeu-ho en blanc perquè s'activi per a qualsevol seguidor."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Ha canviat l'estat dominant",
+      "description": "S'activa quan l'estat més mantingut d'un període de temps canvia (després del marge d'histèresi).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Seguidor",
+          "description": "Limiteu aquest activador a una sola entrada d'Entity State Tracker. Deixeu-ho en blanc perquè s'activi per a qualsevol seguidor."
+        },
+        "frame": {
+          "name": "Període de temps",
+          "description": "Limiteu aquest activador a un sol període de temps. Deixeu-ho en blanc perquè s'activi per a qualsevol període."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Conformitat activada",
+      "description": "S'activa quan la conformitat d'un període de temps puja fins a assolir el llindar configurat.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Seguidor",
+          "description": "Limiteu aquest activador a una sola entrada d'Entity State Tracker. Deixeu-ho en blanc perquè s'activi per a qualsevol seguidor."
+        },
+        "frame": {
+          "name": "Període de temps",
+          "description": "Limiteu aquest activador a un sol període de temps. Deixeu-ho en blanc perquè s'activi per a qualsevol període."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Conformitat desactivada",
+      "description": "S'activa quan la conformitat d'un període de temps cau per sota del llindar configurat.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Seguidor",
+          "description": "Limiteu aquest activador a una sola entrada d'Entity State Tracker. Deixeu-ho en blanc perquè s'activi per a qualsevol seguidor."
+        },
+        "frame": {
+          "name": "Període de temps",
+          "description": "Limiteu aquest activador a un sol període de temps. Deixeu-ho en blanc perquè s'activi per a qualsevol període."
+        }
+      }
     }
   }
 }

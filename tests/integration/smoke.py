@@ -69,6 +69,9 @@ HA_CONFIG = os.environ.get("EST_SMOKE_HA_CONFIG", "./config")
 
 DOMAIN = "entity_state_tracker"
 EVENT_NEW_STATE = "entity_state_tracker_new_state"
+EVENT_DOMINANT_CHANGED = "entity_state_tracker_dominant_changed"
+EVENT_COMPLIANT_ON = "entity_state_tracker_compliant_on"
+EVENT_COMPLIANT_OFF = "entity_state_tracker_compliant_off"
 
 
 def ec_enabled(n: int) -> bool:
@@ -3821,6 +3824,191 @@ def ec46_cumulative_frame_not_below_today():
     return entry, eid
 
 
+def _trigger_relay_check(ec, slug, event_type, fire_payload, scope, extra_checks):
+    """Prove a named trigger is live end-to-end: a real automation using the
+    trigger relays the integration's bus event to its action.
+
+    This exercises the TRIGGER PLATFORM (registration + async_attach_runner +
+    scope filter + payload passthrough) against the running HA, which is the part
+    the automation editor and a user's automation depend on. The coordinator's
+    decision of WHEN to fire each edge is covered exhaustively by the unit suite
+    (tests/test_triggers.py / the A/B/C invariants) — forcing a real edge live is
+    impossible in a short window (dominant hysteresis is 1% of the frame window =
+    864 s on today/24h; compliance needs two folded ticks), so re-proving the
+    decision here would only add a flaky duplicate. Needs the websocket.
+    """
+    if not _WS_AVAILABLE:
+        note(f"{ec}: websocket-client absent — trigger relay check skipped")
+        return
+    aid = f"est_smoke_{slug}"
+    sentinel = f"est_smoke_relay_{slug}"
+    # An automation: <named trigger>  ->  fire a sentinel event carrying the
+    # trigger variables, so capturing the sentinel proves the trigger fired AND
+    # passed the payload through.
+    trigger_block = {"trigger": f"{DOMAIN}.{slug}", **scope}
+    config = {
+        "alias": f"EST smoke relay {slug}",
+        "trigger": [trigger_block],
+        "action": [
+            {
+                "event": sentinel,
+                "event_data": {
+                    "dominant": "{{ trigger.dominant | default('') }}",
+                    "frame": "{{ trigger.frame | default('') }}",
+                    "compliant": "{{ trigger.compliant | default('') }}",
+                    "entry_id": "{{ trigger.entry_id | default('') }}",
+                },
+            }
+        ],
+        "mode": "queued",
+    }
+    # Create/replace the automation, then reload so the trigger attaches.
+    api("POST", f"/api/config/automation/config/{aid}", config)
+    api("POST", "/api/services/automation/reload", {})
+    # Wait until the automation entity is actually loaded + on (its trigger
+    # attached) before firing — a fixed sleep flakes when ECs run back-to-back and
+    # a prior reload is still settling. automation.reload drops then re-adds every
+    # automation entity, so poll for ours to come back `on`.
+    auto_eid = f"automation.{aid}"
+    wait_until(lambda: gs(auto_eid).get("state") == "on", timeout=20)
+
+    def _fire():
+        time.sleep(1)  # let the sentinel subscription settle
+        api("POST", f"/api/events/{event_type}", fire_payload)
+
+    relayed = capture_events(sentinel, _fire, timeout=15)
+    chk(
+        f"{ec} {slug} trigger relayed the event",
+        len(relayed) >= 1,
+        True,
+        f"got={relayed}",
+    )
+    if relayed:
+        extra_checks(relayed[0])
+    # Clean up the smoke automation.
+    try:
+        api("DELETE", f"/api/config/automation/config/{aid}")
+        api("POST", "/api/services/automation/reload", {})
+    except Exception as e:
+        note(f"{ec}: automation cleanup failed: {e}")
+
+
+def ec47_dominant_changed_trigger_event():
+    """EC47: the dominant_changed named trigger is registered and relays its event.
+
+    Proves the trigger platform end-to-end on the live instance: an automation
+    using `entity_state_tracker.dominant_changed` (frame-scoped to today) fires
+    its action with the event payload passed through as trigger variables. The
+    coordinator's edge-firing decision (hysteresis, A/B/C invariants) is unit-
+    tested — see _trigger_relay_check for why it isn't re-forced live.
+    """
+    print(
+        "\n=== EC47: dominant_changed trigger registered + relays payload ===",
+        flush=True,
+    )
+    _trigger_relay_check(
+        "EC47",
+        "dominant_changed",
+        EVENT_DOMINANT_CHANGED,
+        {
+            "entry_id": "smoke",
+            "entity_id": "sensor.x",
+            "frame": "today",
+            "dominant": "beta",
+            "previous_dominant": "alpha",
+            "dominant_pct": 55.0,
+        },
+        scope={"frame": "today"},
+        extra_checks=lambda d: (
+            chk("EC47 relayed dominant = beta", d.get("dominant"), "beta"),
+            chk("EC47 relayed frame = today", d.get("frame"), "today"),
+        ),
+    )
+    # Also prove the frame scope FILTERS: a week-frame event must NOT relay to the
+    # today-scoped automation. Recreate the today automation, fire a week event.
+    if _WS_AVAILABLE:
+        aid = "est_smoke_dominant_changed"
+        api(
+            "POST",
+            f"/api/config/automation/config/{aid}",
+            {
+                "alias": "EST smoke relay dominant_changed scope",
+                "trigger": [
+                    {"trigger": f"{DOMAIN}.dominant_changed", "frame": "today"}
+                ],
+                "action": [{"event": "est_smoke_relay_scope", "event_data": {}}],
+                "mode": "queued",
+            },
+        )
+        api("POST", "/api/services/automation/reload", {})
+        wait_until(lambda: gs(f"automation.{aid}").get("state") == "on", timeout=20)
+        leaked = capture_events(
+            "est_smoke_relay_scope",
+            lambda: (
+                time.sleep(1),
+                api(
+                    "POST",
+                    f"/api/events/{EVENT_DOMINANT_CHANGED}",
+                    {"entry_id": "smoke", "frame": "week", "dominant": "beta"},
+                ),
+            ),
+            timeout=10,
+        )
+        chk("EC47 frame scope filters a mismatched frame", leaked, [])
+        try:
+            api("DELETE", f"/api/config/automation/config/{aid}")
+            api("POST", "/api/services/automation/reload", {})
+        except Exception:
+            pass
+
+
+def ec48_compliant_trigger_events():
+    """EC48: the compliant_on / compliant_off named triggers register and relay.
+
+    Proves both compliance triggers are live and pass their payload through. The
+    coordinator's threshold-crossing decision (shared with the compliant binary
+    sensor via frame_compliant) is unit-tested; see _trigger_relay_check.
+    """
+    print(
+        "\n=== EC48: compliant_on/off triggers registered + relay payload ===",
+        flush=True,
+    )
+    _trigger_relay_check(
+        "EC48",
+        "compliant_on",
+        EVENT_COMPLIANT_ON,
+        {
+            "entry_id": "smoke",
+            "entity_id": "sensor.x",
+            "frame": "today",
+            "compliant": True,
+            "compliance_percent": 85.0,
+            "threshold": 50,
+        },
+        scope={},
+        extra_checks=lambda d: chk(
+            "EC48 compliant_on relayed compliant=True", d.get("compliant"), "True"
+        ),
+    )
+    _trigger_relay_check(
+        "EC48",
+        "compliant_off",
+        EVENT_COMPLIANT_OFF,
+        {
+            "entry_id": "smoke",
+            "entity_id": "sensor.x",
+            "frame": "today",
+            "compliant": False,
+            "compliance_percent": 20.0,
+            "threshold": 50,
+        },
+        scope={},
+        extra_checks=lambda d: chk(
+            "EC48 compliant_off relayed compliant=False", d.get("compliant"), "False"
+        ),
+    )
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -3942,6 +4130,12 @@ def main():
 
         if ec_enabled(46):
             run_ec(ec46_cumulative_frame_not_below_today)
+
+        if ec_enabled(47):
+            run_ec(ec47_dominant_changed_trigger_event)
+
+        if ec_enabled(48):
+            run_ec(ec48_compliant_trigger_events)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

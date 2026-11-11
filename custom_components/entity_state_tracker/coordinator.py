@@ -52,6 +52,9 @@ from .const import (
     CONF_TARGET_THRESHOLD,
     DEFAULT_MIN_STATE_DURATION,
     DOMAIN,
+    EVENT_COMPLIANT_OFF,
+    EVENT_COMPLIANT_ON,
+    EVENT_DOMINANT_CHANGED,
     EVENT_NEW_STATE,
     FRAMES,
     MODE_ALL,
@@ -68,7 +71,7 @@ from .engine import (
     split_visit_across_days,
 )
 from .helpers import match_state
-from .models import FrameResult, TrackerData, TrackerLedger
+from .models import FrameResult, TrackerData, TrackerLedger, frame_compliant
 from .storage import EntityStateTrackerStore
 
 _LOGGER = logging.getLogger(__name__)
@@ -483,6 +486,70 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             },
         )
 
+    @callback
+    def _fire_frame_edges(
+        self,
+        frame_key: str,
+        prior: FrameResult | None,
+        result: FrameResult,
+    ) -> None:
+        """Fire the per-frame verdict edge events backing the named triggers (§5.4).
+
+        Invariant A: ``prior is None`` means this frame had no value last tick
+        (first refresh — ``self.data`` was None — or a frame enabled mid-session),
+        so no edge exists yet; suppress. This prevents a spurious edge on startup
+        and when a new frame comes online.
+        """
+        if prior is None:
+            return
+
+        # Invariant B: dominant edge only between two real state names. ``dominant``
+        # is None at count==0; firing into/out of None is not a meaningful flip.
+        # (Hysteresis already lives in compute_frame's _pick_dominant, so a flip
+        # here is already debounced — do not add another.)
+        # Gated to all-states mode: ``dominant`` is only surfaced as an entity (the
+        # BreakdownSensor) in all-states mode, so a dominant_changed trigger is only
+        # meaningful there. In specific mode the user has no dominant entity and the
+        # max-duration state may be an untracked one — don't fire a trigger for a
+        # value the tracker never exposes.
+        if (
+            self.mode == MODE_ALL
+            and result.dominant is not None
+            and prior.dominant is not None
+            and prior.dominant != result.dominant
+        ):
+            self.hass.bus.async_fire(
+                EVENT_DOMINANT_CHANGED,
+                {
+                    "entry_id": self._entry_id,
+                    "entity_id": self.entity_id,
+                    "frame": frame_key,
+                    "dominant": result.dominant,
+                    "previous_dominant": prior.dominant,
+                    "dominant_pct": result.breakdown_pct.get(result.dominant),
+                },
+            )
+
+        # Invariant C: compliance edge only between two known (non-None) verdicts.
+        # frame_compliant returns None for "unknown" (threshold cleared / N/A
+        # window), which is deliberately NOT an edge. Shared with the binary
+        # sensor's is_on so trigger and sensor can never disagree.
+        threshold = self.target_threshold
+        was = frame_compliant(prior, threshold)
+        now_compliant = frame_compliant(result, threshold)
+        if was is not None and now_compliant is not None and was != now_compliant:
+            self.hass.bus.async_fire(
+                EVENT_COMPLIANT_ON if now_compliant else EVENT_COMPLIANT_OFF,
+                {
+                    "entry_id": self._entry_id,
+                    "entity_id": self.entity_id,
+                    "frame": frame_key,
+                    "compliant": now_compliant,
+                    "compliance_percent": result.compliance_percent,
+                    "threshold": threshold,
+                },
+            )
+
     # --- Backfill ---------------------------------------------------------
 
     @callback
@@ -774,6 +841,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             self._clear_frame_fail(frame_key)
             self._warn_overflow(frame_key, result)
             frames[frame_key] = result
+            self._fire_frame_edges(frame_key, prior.get(frame_key), result)
 
         # A frame dropped from enabled_frames (toggled off / default narrowed)
         # is never revisited by the loop above, so a Repair issue it raised while

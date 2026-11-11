@@ -161,6 +161,21 @@
         "specific_states": "Tietyt tilat",
         "all_states": "Kaikki tilat"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Tänään",
+        "yesterday": "Eilen",
+        "24h": "Viimeiset 24 tuntia",
+        "week": "Tällä viikolla",
+        "last_week": "Viime viikolla",
+        "7d": "Viimeiset 7 päivää",
+        "30d": "Viimeiset 30 päivää",
+        "month": "Tässä kuussa",
+        "last_month": "Viime kuussa",
+        "year": "Tänä vuonna",
+        "365d": "Viimeiset 365 päivää"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Aikajakso lakkasi päivittymästä",
       "description": "Entity State Tracker ei pystynyt laskemaan aikajaksoa ”{frame}” kohteelle {entity} {count} päivityksen ajan peräkkäin, joten kyseinen anturi pitää viimeisen arvonsa. Tämä viittaa yleensä tämän seurannan vioittuneeseen tallennettuun historiaan. Tarkista virhe Home Assistantin lokeista ja lataa sitten integraatio uudelleen."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Uusi tila havaittu",
+      "description": "Laukeaa, kun kaikkien tilojen seuraaja havaitsee tilan, jota se ei ole koskaan ennen nähnyt.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Seuraaja",
+          "description": "Rajaa tämä liipaisin yhteen Entity State Tracker -merkintään. Jätä tyhjäksi, niin se laukeaa minkä tahansa seuraajan kohdalla."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Vallitseva tila muuttui",
+      "description": "Laukeaa, kun aikajakson pisimpään pidetty tila muuttuu (hystereesimarginaalin jälkeen).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Seuraaja",
+          "description": "Rajaa tämä liipaisin yhteen Entity State Tracker -merkintään. Jätä tyhjäksi, niin se laukeaa minkä tahansa seuraajan kohdalla."
+        },
+        "frame": {
+          "name": "Aikajakso",
+          "description": "Rajaa tämä liipaisin yhteen aikajaksoon. Jätä tyhjäksi, niin se laukeaa minkä tahansa aikajakson kohdalla."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Vaatimustenmukaisuus kytkeytyi päälle",
+      "description": "Laukeaa, kun aikajakson vaatimustenmukaisuus nousee määritettyyn kynnykseen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Seuraaja",
+          "description": "Rajaa tämä liipaisin yhteen Entity State Tracker -merkintään. Jätä tyhjäksi, niin se laukeaa minkä tahansa seuraajan kohdalla."
+        },
+        "frame": {
+          "name": "Aikajakso",
+          "description": "Rajaa tämä liipaisin yhteen aikajaksoon. Jätä tyhjäksi, niin se laukeaa minkä tahansa aikajakson kohdalla."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Vaatimustenmukaisuus kytkeytyi pois päältä",
+      "description": "Laukeaa, kun aikajakson vaatimustenmukaisuus laskee alle määritetyn kynnyksen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Seuraaja",
+          "description": "Rajaa tämä liipaisin yhteen Entity State Tracker -merkintään. Jätä tyhjäksi, niin se laukeaa minkä tahansa seuraajan kohdalla."
+        },
+        "frame": {
+          "name": "Aikajakso",
+          "description": "Rajaa tämä liipaisin yhteen aikajaksoon. Jätä tyhjäksi, niin se laukeaa minkä tahansa aikajakson kohdalla."
+        }
+      }
     }
   }
 }

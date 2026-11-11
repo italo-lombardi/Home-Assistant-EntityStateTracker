@@ -161,6 +161,75 @@
         "specific_states": "Bestemte tilstander",
         "all_states": "Alle tilstander"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "I dag",
+        "yesterday": "I går",
+        "24h": "Siste 24 timer",
+        "week": "Denne uken",
+        "last_week": "Forrige uke",
+        "7d": "Siste 7 dager",
+        "30d": "Siste 30 dager",
+        "month": "Denne måneden",
+        "last_month": "Forrige måned",
+        "year": "I år",
+        "365d": "Siste 365 dager"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Ny tilstand observert",
+      "description": "Utløses når en alle-tilstander-sporer observerer en tilstand den aldri har sett før.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sporer",
+          "description": "Begrens denne utløseren til én enkelt Entity State Tracker-oppføring. La stå tom for å utløse for alle sporere."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Dominerende tilstand endret",
+      "description": "Utløses når den mest holdte tilstanden i et tidsrom endres (etter hysteresemarginen).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sporer",
+          "description": "Begrens denne utløseren til én enkelt Entity State Tracker-oppføring. La stå tom for å utløse for alle sporere."
+        },
+        "frame": {
+          "name": "Tidsrom",
+          "description": "Begrens denne utløseren til ett tidsrom. La stå tom for å utløse for alle tidsrom."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Samsvar slått på",
+      "description": "Utløses når et tidsroms samsvar stiger til å nå den konfigurerte terskelen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sporer",
+          "description": "Begrens denne utløseren til én enkelt Entity State Tracker-oppføring. La stå tom for å utløse for alle sporere."
+        },
+        "frame": {
+          "name": "Tidsrom",
+          "description": "Begrens denne utløseren til ett tidsrom. La stå tom for å utløse for alle tidsrom."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Samsvar slått av",
+      "description": "Utløses når et tidsroms samsvar faller under den konfigurerte terskelen.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Sporer",
+          "description": "Begrens denne utløseren til én enkelt Entity State Tracker-oppføring. La stå tom for å utløse for alle sporere."
+        },
+        "frame": {
+          "name": "Tidsrom",
+          "description": "Begrens denne utløseren til ett tidsrom. La stå tom for å utløse for alle tidsrom."
+        }
+      }
     }
   },
   "issues": {

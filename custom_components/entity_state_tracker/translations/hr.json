@@ -161,6 +161,21 @@
         "specific_states": "Određena stanja",
         "all_states": "Sva stanja"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Danas",
+        "yesterday": "Jučer",
+        "24h": "Zadnja 24 sata",
+        "week": "Ovaj tjedan",
+        "last_week": "Prošli tjedan",
+        "7d": "Zadnjih 7 dana",
+        "30d": "Zadnjih 30 dana",
+        "month": "Ovaj mjesec",
+        "last_month": "Prošli mjesec",
+        "year": "Ove godine",
+        "365d": "Zadnjih 365 dana"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Vremensko razdoblje prestalo se ažurirati",
       "description": "Entity State Tracker nije mogao izračunati vremensko razdoblje „{frame}“ za {entity} tijekom {count} ažuriranja zaredom, pa taj senzor zadržava svoju posljednju vrijednost. To obično upućuje na oštećenu spremljenu povijest ovog pratitelja. Provjerite zapisnike Home Assistanta radi pogreške, a zatim ponovno učitajte integraciju."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Uočeno novo stanje",
+      "description": "Pokreće se kada pratitelj svih stanja uoči stanje koje nikada prije nije vidio.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pratitelj",
+          "description": "Ograničite ovaj okidač na jedan unos Entity State Trackera. Ostavite prazno da se pokreće za bilo kojeg pratitelja."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Dominantno stanje promijenjeno",
+      "description": "Pokreće se kada se najdulje zadržano stanje vremenskog razdoblja promijeni (nakon marže histereze).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pratitelj",
+          "description": "Ograničite ovaj okidač na jedan unos Entity State Trackera. Ostavite prazno da se pokreće za bilo kojeg pratitelja."
+        },
+        "frame": {
+          "name": "Vremensko razdoblje",
+          "description": "Ograničite ovaj okidač na jedno vremensko razdoblje. Ostavite prazno da se pokreće za bilo koje razdoblje."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Usklađenost uključena",
+      "description": "Pokreće se kada usklađenost vremenskog razdoblja poraste do postavljenog praga.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pratitelj",
+          "description": "Ograničite ovaj okidač na jedan unos Entity State Trackera. Ostavite prazno da se pokreće za bilo kojeg pratitelja."
+        },
+        "frame": {
+          "name": "Vremensko razdoblje",
+          "description": "Ograničite ovaj okidač na jedno vremensko razdoblje. Ostavite prazno da se pokreće za bilo koje razdoblje."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Usklađenost isključena",
+      "description": "Pokreće se kada usklađenost vremenskog razdoblja padne ispod postavljenog praga.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Pratitelj",
+          "description": "Ograničite ovaj okidač na jedan unos Entity State Trackera. Ostavite prazno da se pokreće za bilo kojeg pratitelja."
+        },
+        "frame": {
+          "name": "Vremensko razdoblje",
+          "description": "Ograničite ovaj okidač na jedno vremensko razdoblje. Ostavite prazno da se pokreće za bilo koje razdoblje."
+        }
+      }
     }
   }
 }

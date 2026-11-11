@@ -161,6 +161,21 @@
         "specific_states": "Specifika tillstånd",
         "all_states": "Alla tillstånd"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Idag",
+        "yesterday": "Igår",
+        "24h": "Senaste 24 timmarna",
+        "week": "Denna vecka",
+        "last_week": "Förra veckan",
+        "7d": "Senaste 7 dagarna",
+        "30d": "Senaste 30 dagarna",
+        "month": "Denna månad",
+        "last_month": "Förra månaden",
+        "year": "I år",
+        "365d": "Senaste 365 dagarna"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "En tidsperiod slutade uppdateras",
       "description": "Entity State Tracker kunde inte beräkna tidsperioden ”{frame}” för {entity} under {count} uppdateringar i rad, så den sensorn behåller sitt senaste värde. Detta tyder vanligtvis på skadad lagrad historik för den här spåraren. Kontrollera felet i Home Assistant-loggarna och läs sedan om integrationen."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Nytt tillstånd upptäckt",
+      "description": "Utlöses när en spårare för alla tillstånd observerar ett tillstånd den aldrig sett förut.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Spårare",
+          "description": "Begränsa denna utlösare till en enda Entity State Tracker-post. Lämna tomt för att utlösa för valfri spårare."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Dominerande tillstånd ändrades",
+      "description": "Utlöses när det mest innehavda tillståndet i en tidsperiod ändras (efter hysteresmarginalen).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Spårare",
+          "description": "Begränsa denna utlösare till en enda Entity State Tracker-post. Lämna tomt för att utlösa för valfri spårare."
+        },
+        "frame": {
+          "name": "Tidsperiod",
+          "description": "Begränsa denna utlösare till en tidsperiod. Lämna tomt för att utlösa för valfri tidsperiod."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Efterlevande slogs på",
+      "description": "Utlöses när en tidsperiods efterlevnad stiger till att nå den konfigurerade tröskeln.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Spårare",
+          "description": "Begränsa denna utlösare till en enda Entity State Tracker-post. Lämna tomt för att utlösa för valfri spårare."
+        },
+        "frame": {
+          "name": "Tidsperiod",
+          "description": "Begränsa denna utlösare till en tidsperiod. Lämna tomt för att utlösa för valfri tidsperiod."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Efterlevande slogs av",
+      "description": "Utlöses när en tidsperiods efterlevnad faller under den konfigurerade tröskeln.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Spårare",
+          "description": "Begränsa denna utlösare till en enda Entity State Tracker-post. Lämna tomt för att utlösa för valfri spårare."
+        },
+        "frame": {
+          "name": "Tidsperiod",
+          "description": "Begränsa denna utlösare till en tidsperiod. Lämna tomt för att utlösa för valfri tidsperiod."
+        }
+      }
     }
   }
 }

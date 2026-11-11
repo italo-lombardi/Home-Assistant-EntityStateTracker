@@ -161,6 +161,21 @@
         "specific_states": "Belirli durumlar",
         "all_states": "Tüm durumlar"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Bugün",
+        "yesterday": "Dün",
+        "24h": "Son 24 saat",
+        "week": "Bu hafta",
+        "last_week": "Geçen hafta",
+        "7d": "Son 7 gün",
+        "30d": "Son 30 gün",
+        "month": "Bu ay",
+        "last_month": "Geçen ay",
+        "year": "Bu yıl",
+        "365d": "Son 365 gün"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Bir zaman aralığı güncellenmeyi durdurdu",
       "description": "Entity State Tracker, {entity} için «{frame}» zaman aralığını {count} güncelleme boyunca üst üste hesaplayamadı, bu nedenle o sensör son değerini koruyor. Bu genellikle bu izleyici için bozuk depolanmış geçmişe işaret eder. Hatayı Home Assistant günlüklerinde kontrol edin, ardından entegrasyonu yeniden yükleyin."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Yeni durum görüldü",
+      "description": "Tüm durumlar izleyicisi daha önce hiç görmediği bir durumu gözlemlediğinde tetiklenir.",
+      "fields": {
+        "config_entry_id": {
+          "name": "İzleyici",
+          "description": "Bu tetikleyiciyi tek bir Entity State Tracker girişiyle sınırlayın. Herhangi bir izleyici için tetiklenmesi için boş bırakın."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Baskın durum değişti",
+      "description": "Bir zaman aralığının en çok kalınan durumu değiştiğinde (histerezis payından sonra) tetiklenir.",
+      "fields": {
+        "config_entry_id": {
+          "name": "İzleyici",
+          "description": "Bu tetikleyiciyi tek bir Entity State Tracker girişiyle sınırlayın. Herhangi bir izleyici için tetiklenmesi için boş bırakın."
+        },
+        "frame": {
+          "name": "Zaman aralığı",
+          "description": "Bu tetikleyiciyi tek bir zaman aralığıyla sınırlayın. Herhangi bir zaman aralığı için tetiklenmesi için boş bırakın."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Uyumlu açıldı",
+      "description": "Bir zaman aralığının uyumluluğu yükselerek yapılandırılan eşiğe ulaştığında tetiklenir.",
+      "fields": {
+        "config_entry_id": {
+          "name": "İzleyici",
+          "description": "Bu tetikleyiciyi tek bir Entity State Tracker girişiyle sınırlayın. Herhangi bir izleyici için tetiklenmesi için boş bırakın."
+        },
+        "frame": {
+          "name": "Zaman aralığı",
+          "description": "Bu tetikleyiciyi tek bir zaman aralığıyla sınırlayın. Herhangi bir zaman aralığı için tetiklenmesi için boş bırakın."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Uyumlu kapandı",
+      "description": "Bir zaman aralığının uyumluluğu yapılandırılan eşiğin altına düştüğünde tetiklenir.",
+      "fields": {
+        "config_entry_id": {
+          "name": "İzleyici",
+          "description": "Bu tetikleyiciyi tek bir Entity State Tracker girişiyle sınırlayın. Herhangi bir izleyici için tetiklenmesi için boş bırakın."
+        },
+        "frame": {
+          "name": "Zaman aralığı",
+          "description": "Bu tetikleyiciyi tek bir zaman aralığıyla sınırlayın. Herhangi bir zaman aralığı için tetiklenmesi için boş bırakın."
+        }
+      }
     }
   }
 }

@@ -161,6 +161,21 @@
         "specific_states": "Estados específicos",
         "all_states": "Todos os estados"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Hoje",
+        "yesterday": "Ontem",
+        "24h": "Últimas 24 horas",
+        "week": "Esta semana",
+        "last_week": "Semana passada",
+        "7d": "Últimos 7 dias",
+        "30d": "Últimos 30 dias",
+        "month": "Este mês",
+        "last_month": "Mês passado",
+        "year": "Este ano",
+        "365d": "Últimos 365 dias"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Um período deixou de atualizar",
       "description": "O Entity State Tracker não conseguiu calcular o período «{frame}» de {entity} durante {count} atualizações seguidas, por isso esse sensor mantém o seu último valor. Isto costuma indicar um histórico armazenado corrompido para este rastreador. Verifique o erro nos registos do Home Assistant e, em seguida, recarregue a integração."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Novo estado observado",
+      "description": "Dispara quando um rastreador de todos os estados observa um estado que nunca tinha visto antes.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rastreador",
+          "description": "Limite este acionador a uma única entrada do Entity State Tracker. Deixe em branco para disparar para qualquer rastreador."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Estado dominante alterado",
+      "description": "Dispara quando o estado mais prolongado de um período muda (após a margem de histerese).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rastreador",
+          "description": "Limite este acionador a uma única entrada do Entity State Tracker. Deixe em branco para disparar para qualquer rastreador."
+        },
+        "frame": {
+          "name": "Período",
+          "description": "Limite este acionador a um único período. Deixe em branco para disparar para qualquer período."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Conformidade ativada",
+      "description": "Dispara quando a conformidade de um período sobe até atingir o limite configurado.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rastreador",
+          "description": "Limite este acionador a uma única entrada do Entity State Tracker. Deixe em branco para disparar para qualquer rastreador."
+        },
+        "frame": {
+          "name": "Período",
+          "description": "Limite este acionador a um único período. Deixe em branco para disparar para qualquer período."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Conformidade desativada",
+      "description": "Dispara quando a conformidade de um período cai abaixo do limite configurado.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Rastreador",
+          "description": "Limite este acionador a uma única entrada do Entity State Tracker. Deixe em branco para disparar para qualquer rastreador."
+        },
+        "frame": {
+          "name": "Período",
+          "description": "Limite este acionador a um único período. Deixe em branco para disparar para qualquer período."
+        }
+      }
     }
   }
 }
