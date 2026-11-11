@@ -161,6 +161,21 @@
         "specific_states": "Bestimmte Zustände",
         "all_states": "Alle Zustände"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Heute",
+        "yesterday": "Gestern",
+        "24h": "Letzte 24 Stunden",
+        "week": "Diese Woche",
+        "last_week": "Letzte Woche",
+        "7d": "Letzte 7 Tage",
+        "30d": "Letzte 30 Tage",
+        "month": "Dieser Monat",
+        "last_month": "Letzter Monat",
+        "year": "Dieses Jahr",
+        "365d": "Letzte 365 Tage"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Ein Zeitraum wird nicht mehr aktualisiert",
       "description": "Entity State Tracker konnte den Zeitraum „{frame}“ für {entity} bei {count} Aktualisierungen in Folge nicht berechnen, daher behält dieser Sensor seinen letzten Wert bei. Dies deutet in der Regel auf einen beschädigten gespeicherten Verlauf für diesen Tracker hin. Prüfe die Home-Assistant-Protokolle auf den Fehler und lade dann die Integration neu."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Neuer Zustand erkannt",
+      "description": "Wird ausgelöst, wenn ein Alle-Zustände-Tracker einen Zustand beobachtet, den er noch nie zuvor gesehen hat.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Beschränke diesen Auslöser auf einen einzelnen Entity-State-Tracker-Eintrag. Leer lassen, um für jeden Tracker auszulösen."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Vorherrschender Zustand geändert",
+      "description": "Wird ausgelöst, wenn sich der am längsten gehaltene Zustand eines Zeitraums ändert (nach der Hysterese-Marge).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Beschränke diesen Auslöser auf einen einzelnen Entity-State-Tracker-Eintrag. Leer lassen, um für jeden Tracker auszulösen."
+        },
+        "frame": {
+          "name": "Zeitraum",
+          "description": "Beschränke diesen Auslöser auf einen Zeitraum. Leer lassen, um für jeden Zeitraum auszulösen."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Konform eingeschaltet",
+      "description": "Wird ausgelöst, wenn die Konformität eines Zeitraums ansteigt und den konfigurierten Schwellenwert erreicht.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Beschränke diesen Auslöser auf einen einzelnen Entity-State-Tracker-Eintrag. Leer lassen, um für jeden Tracker auszulösen."
+        },
+        "frame": {
+          "name": "Zeitraum",
+          "description": "Beschränke diesen Auslöser auf einen Zeitraum. Leer lassen, um für jeden Zeitraum auszulösen."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Konform ausgeschaltet",
+      "description": "Wird ausgelöst, wenn die Konformität eines Zeitraums unter den konfigurierten Schwellenwert fällt.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Beschränke diesen Auslöser auf einen einzelnen Entity-State-Tracker-Eintrag. Leer lassen, um für jeden Tracker auszulösen."
+        },
+        "frame": {
+          "name": "Zeitraum",
+          "description": "Beschränke diesen Auslöser auf einen Zeitraum. Leer lassen, um für jeden Zeitraum auszulösen."
+        }
+      }
     }
   }
 }

@@ -161,6 +161,21 @@
         "specific_states": "Bestemte tilstande",
         "all_states": "Alle tilstande"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "I dag",
+        "yesterday": "I går",
+        "24h": "Sidste 24 timer",
+        "week": "Denne uge",
+        "last_week": "Sidste uge",
+        "7d": "Sidste 7 dage",
+        "30d": "Sidste 30 dage",
+        "month": "Denne måned",
+        "last_month": "Sidste måned",
+        "year": "I år",
+        "365d": "Sidste 365 dage"
+      }
     }
   },
   "issues": {
@@ -171,6 +186,60 @@
     "frame_compute_failed": {
       "title": "Et tidsrum holdt op med at opdatere",
       "description": "Entity State Tracker kunne ikke beregne tidsrummet \"{frame}\" for {entity} i {count} opdateringer i træk, så den sensor fastholder sin seneste værdi. Dette peger som regel på beskadiget gemt historik for denne tracker. Tjek Home Assistant-loggene for fejlen, og genindlæs derefter integrationen."
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Ny tilstand set",
+      "description": "Udløses, når en tracker for alle tilstande observerer en tilstand, den aldrig har set før.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Begræns denne udløser til en enkelt Entity State Tracker-post. Lad stå tom for at udløse for enhver tracker."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Dominerende tilstand ændret",
+      "description": "Udløses, når den mest fastholdte tilstand i et tidsrum ændrer sig (efter hysterese-margenen).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Begræns denne udløser til en enkelt Entity State Tracker-post. Lad stå tom for at udløse for enhver tracker."
+        },
+        "frame": {
+          "name": "Tidsrum",
+          "description": "Begræns denne udløser til ét tidsrum. Lad stå tom for at udløse for ethvert tidsrum."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Overholdelse slået til",
+      "description": "Udløses, når et tidsrums overholdelse stiger til at nå den konfigurerede tærskel.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Begræns denne udløser til en enkelt Entity State Tracker-post. Lad stå tom for at udløse for enhver tracker."
+        },
+        "frame": {
+          "name": "Tidsrum",
+          "description": "Begræns denne udløser til ét tidsrum. Lad stå tom for at udløse for ethvert tidsrum."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Overholdelse slået fra",
+      "description": "Udløses, når et tidsrums overholdelse falder under den konfigurerede tærskel.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Begræns denne udløser til en enkelt Entity State Tracker-post. Lad stå tom for at udløse for enhver tracker."
+        },
+        "frame": {
+          "name": "Tidsrum",
+          "description": "Begræns denne udløser til ét tidsrum. Lad stå tom for at udløse for ethvert tidsrum."
+        }
+      }
     }
   }
 }

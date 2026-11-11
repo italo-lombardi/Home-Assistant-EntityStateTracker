@@ -161,6 +161,75 @@
         "specific_states": "特定の状態",
         "all_states": "すべての状態"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "今日",
+        "yesterday": "昨日",
+        "24h": "過去24時間",
+        "week": "今週",
+        "last_week": "先週",
+        "7d": "過去7日間",
+        "30d": "過去30日間",
+        "month": "今月",
+        "last_month": "先月",
+        "year": "今年",
+        "365d": "過去365日間"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "新しい状態を検出",
+      "description": "すべての状態を追跡するトラッカーが、これまでに一度も見たことのない状態を観測したときに発火します。",
+      "fields": {
+        "config_entry_id": {
+          "name": "トラッカー",
+          "description": "このトリガーを単一の Entity State Tracker エントリに限定します。空欄のままにすると、任意のトラッカーで発火します。"
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "優勢な状態が変化",
+      "description": "時間枠で最も長く保持された状態が（ヒステリシスマージンを超えて）変化したときに発火します。",
+      "fields": {
+        "config_entry_id": {
+          "name": "トラッカー",
+          "description": "このトリガーを単一の Entity State Tracker エントリに限定します。空欄のままにすると、任意のトラッカーで発火します。"
+        },
+        "frame": {
+          "name": "時間枠",
+          "description": "このトリガーを1つの時間枠に限定します。空欄のままにすると、任意の時間枠で発火します。"
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "準拠がオンになった",
+      "description": "時間枠の準拠率が設定されたしきい値に達するまで上昇したときに発火します。",
+      "fields": {
+        "config_entry_id": {
+          "name": "トラッカー",
+          "description": "このトリガーを単一の Entity State Tracker エントリに限定します。空欄のままにすると、任意のトラッカーで発火します。"
+        },
+        "frame": {
+          "name": "時間枠",
+          "description": "このトリガーを1つの時間枠に限定します。空欄のままにすると、任意の時間枠で発火します。"
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "準拠がオフになった",
+      "description": "時間枠の準拠率が設定されたしきい値を下回ったときに発火します。",
+      "fields": {
+        "config_entry_id": {
+          "name": "トラッカー",
+          "description": "このトリガーを単一の Entity State Tracker エントリに限定します。空欄のままにすると、任意のトラッカーで発火します。"
+        },
+        "frame": {
+          "name": "時間枠",
+          "description": "このトリガーを1つの時間枠に限定します。空欄のままにすると、任意の時間枠で発火します。"
+        }
+      }
     }
   },
   "issues": {

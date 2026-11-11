@@ -58,6 +58,27 @@ class FrameResult:
     unaccounted_seconds: float = 0.0
 
 
+def frame_compliant(result: FrameResult | None, threshold: float | None) -> bool | None:
+    """Return the compliance verdict for one frame, or ``None`` when N/A.
+
+    Single source of truth shared by ``CompliantBinarySensor.is_on`` and the
+    coordinator's ``compliant_on``/``compliant_off`` trigger edge, so the trigger
+    can never disagree with the sensor (divergent copies have bitten this repo
+    before — see the separator-mismatch regression). ``None`` when the threshold
+    is cleared, the frame is absent, or its ``compliance_percent`` is ``None``
+    (N/A window) — i.e. "unknown", which is deliberately NOT a trigger edge.
+
+    Note: this is a bare threshold compare with NO hysteresis (unlike the
+    dominant-state verdict). Compliance can therefore flap tick-to-tick if the
+    percentage oscillates around the bar — accepted on purpose: the trigger MUST
+    equal the sensor's on/off contract, and adding a debounce here would desync
+    the trigger from the binary_sensor it mirrors.
+    """
+    if threshold is None or result is None or result.compliance_percent is None:
+        return None
+    return result.compliance_percent >= threshold
+
+
 @dataclass(frozen=True, slots=True)
 class TrackerData:
     """Coordinator output for one tracker — not persisted.

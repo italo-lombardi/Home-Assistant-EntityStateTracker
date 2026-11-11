@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0]
+
+### Added
+- **Named automation triggers** — the integration now exposes its events as UI-discoverable automation triggers, so you pick them from the automation editor's trigger list (each with its own icon) instead of typing a raw event string. Four triggers ship: **New state seen** (an all-states tracker observes a never-before-seen state), **Dominant state changed** (a frame's most-held state flips, after the hysteresis margin, carrying `previous_dominant`/`dominant`/`dominant_pct`), and **Compliant turned on**/**off** (a frame's compliance crosses the configured threshold, carrying `compliance_percent`/`threshold`). Each trigger is scopeable to a single tracker, and the per-frame triggers to a single time frame; leaving the scope blank fires for any tracker/frame. The compliance triggers share the exact verdict of the `compliant` binary sensor, so the two can never disagree. The pre-existing `entity_state_tracker_new_state` bus event is unchanged — the **New state seen** trigger is simply a friendlier way to subscribe to it. Fully translated across all 29 supported locales. **Requires Home Assistant 2025.11 or newer** (the class-based trigger platform), already within the integration's minimum-version floor.
+
 ## [0.1.8]
 
 ### Fixed

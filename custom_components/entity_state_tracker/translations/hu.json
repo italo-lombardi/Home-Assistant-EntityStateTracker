@@ -161,6 +161,75 @@
         "specific_states": "Konkrét állapotok",
         "all_states": "Összes állapot"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Ma",
+        "yesterday": "Tegnap",
+        "24h": "Utolsó 24 óra",
+        "week": "Ezen a héten",
+        "last_week": "Múlt héten",
+        "7d": "Utolsó 7 nap",
+        "30d": "Utolsó 30 nap",
+        "month": "Ez a hónap",
+        "last_month": "Múlt hónap",
+        "year": "Ez az év",
+        "365d": "Utolsó 365 nap"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Új állapot észlelve",
+      "description": "Akkor aktiválódik, amikor egy összes-állapotot követő tracker olyan állapotot észlel, amelyet korábban még soha nem látott.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Korlátozza ezt a triggert egyetlen Entity State Tracker bejegyzésre. Hagyja üresen, hogy bármely trackerre aktiválódjon."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Domináns állapot megváltozott",
+      "description": "Akkor aktiválódik, amikor egy időintervallum legtöbbet tartott állapota megváltozik (a hiszterézis-határ után).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Korlátozza ezt a triggert egyetlen Entity State Tracker bejegyzésre. Hagyja üresen, hogy bármely trackerre aktiválódjon."
+        },
+        "frame": {
+          "name": "Időintervallum",
+          "description": "Korlátozza ezt a triggert egyetlen időintervallumra. Hagyja üresen, hogy bármely intervallumra aktiválódjon."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Megfelelőség bekapcsolva",
+      "description": "Akkor aktiválódik, amikor egy időintervallum megfelelősége a beállított küszöbérték eléréséig emelkedik.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Korlátozza ezt a triggert egyetlen Entity State Tracker bejegyzésre. Hagyja üresen, hogy bármely trackerre aktiválódjon."
+        },
+        "frame": {
+          "name": "Időintervallum",
+          "description": "Korlátozza ezt a triggert egyetlen időintervallumra. Hagyja üresen, hogy bármely intervallumra aktiválódjon."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Megfelelőség kikapcsolva",
+      "description": "Akkor aktiválódik, amikor egy időintervallum megfelelősége a beállított küszöbérték alá esik.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Korlátozza ezt a triggert egyetlen Entity State Tracker bejegyzésre. Hagyja üresen, hogy bármely trackerre aktiválódjon."
+        },
+        "frame": {
+          "name": "Időintervallum",
+          "description": "Korlátozza ezt a triggert egyetlen időintervallumra. Hagyja üresen, hogy bármely intervallumra aktiválódjon."
+        }
+      }
     }
   },
   "issues": {

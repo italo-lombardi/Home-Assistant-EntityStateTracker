@@ -67,6 +67,24 @@ DOMINANT_HYSTERESIS_PCT = 1.0
 # Bus event fired when an all-states tracker sees a previously unseen state (§5.2).
 EVENT_NEW_STATE = "entity_state_tracker_new_state"
 
+# Per-frame edge events backing the named automation triggers (§5.4). Fired from
+# the coordinator's per-frame compute loop when a frame's verdict flips.
+EVENT_DOMINANT_CHANGED = "entity_state_tracker_dominant_changed"
+EVENT_COMPLIANT_ON = "entity_state_tracker_compliant_on"
+EVENT_COMPLIANT_OFF = "entity_state_tracker_compliant_off"
+
+# Scope-field keys for the trigger options (editor-settable). CONF_CONFIG_ENTRY_ID
+# limits a trigger to one tracker; CONF_FRAME limits a per-frame trigger to one
+# window. Both optional — blank = fire for any entry/frame.
+CONF_CONFIG_ENTRY_ID = "config_entry_id"
+CONF_FRAME = "frame"
+
+# Minimum HA version — the class-based Trigger platform (async_attach_runner)
+# that the named triggers require landed in HA Core 2025.11.0. The enforced
+# floor in hacs.json is already higher (2026.8.0); this documents the
+# trigger-specific requirement next to the trigger constants.
+MIN_HA_VERSION = "2025.11.0"
+
 # Translation keys per metric (§5, §11) — one per emitted entity kind.
 TRANSLATION_KEY_DURATION = "duration"
 TRANSLATION_KEY_PERCENT = "percent"

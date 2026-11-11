@@ -161,6 +161,75 @@
         "specific_states": "Stati specifici",
         "all_states": "Tutti gli stati"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Oggi",
+        "yesterday": "Ieri",
+        "24h": "Ultime 24 ore",
+        "week": "Questa settimana",
+        "last_week": "La settimana scorsa",
+        "7d": "Ultimi 7 giorni",
+        "30d": "Ultimi 30 giorni",
+        "month": "Questo mese",
+        "last_month": "Il mese scorso",
+        "year": "Quest'anno",
+        "365d": "Ultimi 365 giorni"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Nuovo stato osservato",
+      "description": "Si attiva quando un tracker di tutti gli stati osserva uno stato mai visto prima.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Limita questo trigger a una singola voce di Entity State Tracker. Lascia vuoto per attivarlo per qualsiasi tracker."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Stato dominante cambiato",
+      "description": "Si attiva quando lo stato più mantenuto di un intervallo di tempo cambia (dopo il margine di isteresi).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Limita questo trigger a una singola voce di Entity State Tracker. Lascia vuoto per attivarlo per qualsiasi tracker."
+        },
+        "frame": {
+          "name": "Intervallo di tempo",
+          "description": "Limita questo trigger a un solo intervallo di tempo. Lascia vuoto per attivarlo per qualsiasi intervallo."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Conformità attivata",
+      "description": "Si attiva quando la conformità di un intervallo di tempo sale fino a raggiungere la soglia configurata.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Limita questo trigger a una singola voce di Entity State Tracker. Lascia vuoto per attivarlo per qualsiasi tracker."
+        },
+        "frame": {
+          "name": "Intervallo di tempo",
+          "description": "Limita questo trigger a un solo intervallo di tempo. Lascia vuoto per attivarlo per qualsiasi intervallo."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Conformità disattivata",
+      "description": "Si attiva quando la conformità di un intervallo di tempo scende al di sotto della soglia configurata.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Limita questo trigger a una singola voce di Entity State Tracker. Lascia vuoto per attivarlo per qualsiasi tracker."
+        },
+        "frame": {
+          "name": "Intervallo di tempo",
+          "description": "Limita questo trigger a un solo intervallo di tempo. Lascia vuoto per attivarlo per qualsiasi intervallo."
+        }
+      }
     }
   },
   "issues": {

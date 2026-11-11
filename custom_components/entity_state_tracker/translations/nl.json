@@ -161,6 +161,75 @@
         "specific_states": "Specifieke toestanden",
         "all_states": "Alle toestanden"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Vandaag",
+        "yesterday": "Gisteren",
+        "24h": "Laatste 24 uur",
+        "week": "Deze week",
+        "last_week": "Vorige week",
+        "7d": "Laatste 7 dagen",
+        "30d": "Laatste 30 dagen",
+        "month": "Deze maand",
+        "last_month": "Vorige maand",
+        "year": "Dit jaar",
+        "365d": "Laatste 365 dagen"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Nieuwe toestand gezien",
+      "description": "Wordt geactiveerd wanneer een alle-toestanden-tracker een toestand waarneemt die nog niet eerder is gezien.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Beperk deze trigger tot één Entity State Tracker-item. Laat leeg om voor elke tracker te activeren."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Dominante toestand gewijzigd",
+      "description": "Wordt geactiveerd wanneer de meest aangehouden toestand van een tijdvak wijzigt (na de hysteresemarge).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Beperk deze trigger tot één Entity State Tracker-item. Laat leeg om voor elke tracker te activeren."
+        },
+        "frame": {
+          "name": "Tijdvak",
+          "description": "Beperk deze trigger tot één tijdvak. Laat leeg om voor elk tijdvak te activeren."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Conform ingeschakeld",
+      "description": "Wordt geactiveerd wanneer de naleving van een tijdvak stijgt tot de ingestelde drempel.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Beperk deze trigger tot één Entity State Tracker-item. Laat leeg om voor elke tracker te activeren."
+        },
+        "frame": {
+          "name": "Tijdvak",
+          "description": "Beperk deze trigger tot één tijdvak. Laat leeg om voor elk tijdvak te activeren."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Conform uitgeschakeld",
+      "description": "Wordt geactiveerd wanneer de naleving van een tijdvak onder de ingestelde drempel daalt.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Beperk deze trigger tot één Entity State Tracker-item. Laat leeg om voor elke tracker te activeren."
+        },
+        "frame": {
+          "name": "Tijdvak",
+          "description": "Beperk deze trigger tot één tijdvak. Laat leeg om voor elk tijdvak te activeren."
+        }
+      }
     }
   },
   "issues": {

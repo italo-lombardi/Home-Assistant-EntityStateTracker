@@ -41,6 +41,7 @@ from .helpers import (
     tracker_device_name,
     unique_id,
 )
+from .models import frame_compliant
 from .write_dedup import DedupCoordinatorBinarySensor
 
 
@@ -237,16 +238,12 @@ class CompliantBinarySensor(DedupCoordinatorBinarySensor):
 
         ``None`` when the threshold is cleared, there is no data yet, the frame is
         absent from the computed output, or its ``compliance_percent`` is ``None``
-        (N/A window).
+        (N/A window). Delegates to :func:`~.models.frame_compliant` so the
+        ``compliant_on``/``compliant_off`` trigger edge shares this exact verdict.
         """
-        threshold = self.coordinator.target_threshold
         data = self.coordinator.data
-        if threshold is None or data is None:
-            return None
-        frame = data.frames.get(self._frame_key)
-        if frame is None or frame.compliance_percent is None:
-            return None
-        return frame.compliance_percent >= threshold
+        frame = data.frames.get(self._frame_key) if data is not None else None
+        return frame_compliant(frame, self.coordinator.target_threshold)
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:

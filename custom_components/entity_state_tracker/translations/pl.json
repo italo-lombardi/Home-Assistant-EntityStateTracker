@@ -161,6 +161,75 @@
         "specific_states": "Określone stany",
         "all_states": "Wszystkie stany"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Dzisiaj",
+        "yesterday": "Wczoraj",
+        "24h": "Ostatnie 24 godziny",
+        "week": "W tym tygodniu",
+        "last_week": "Zeszły tydzień",
+        "7d": "Ostatnie 7 dni",
+        "30d": "Ostatnie 30 dni",
+        "month": "Ten miesiąc",
+        "last_month": "Zeszły miesiąc",
+        "year": "Ten rok",
+        "365d": "Ostatnie 365 dni"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "Zaobserwowano nowy stan",
+      "description": "Wyzwala się, gdy tracker wszystkich stanów zaobserwuje stan, którego nigdy wcześniej nie widział.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Ogranicz ten wyzwalacz do pojedynczego wpisu Entity State Tracker. Pozostaw puste, aby wyzwalać dla dowolnego trackera."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Zmiana stanu dominującego",
+      "description": "Wyzwala się, gdy najdłużej utrzymywany stan przedziału czasu ulega zmianie (po marginesie histerezy).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Ogranicz ten wyzwalacz do pojedynczego wpisu Entity State Tracker. Pozostaw puste, aby wyzwalać dla dowolnego trackera."
+        },
+        "frame": {
+          "name": "Przedział czasu",
+          "description": "Ogranicz ten wyzwalacz do jednego przedziału czasu. Pozostaw puste, aby wyzwalać dla dowolnego przedziału."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Zgodność włączona",
+      "description": "Wyzwala się, gdy zgodność przedziału czasu wzrasta do skonfigurowanego progu.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Ogranicz ten wyzwalacz do pojedynczego wpisu Entity State Tracker. Pozostaw puste, aby wyzwalać dla dowolnego trackera."
+        },
+        "frame": {
+          "name": "Przedział czasu",
+          "description": "Ogranicz ten wyzwalacz do jednego przedziału czasu. Pozostaw puste, aby wyzwalać dla dowolnego przedziału."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Zgodność wyłączona",
+      "description": "Wyzwala się, gdy zgodność przedziału czasu spada poniżej skonfigurowanego progu.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Ogranicz ten wyzwalacz do pojedynczego wpisu Entity State Tracker. Pozostaw puste, aby wyzwalać dla dowolnego trackera."
+        },
+        "frame": {
+          "name": "Przedział czasu",
+          "description": "Ogranicz ten wyzwalacz do jednego przedziału czasu. Pozostaw puste, aby wyzwalać dla dowolnego przedziału."
+        }
+      }
     }
   },
   "issues": {

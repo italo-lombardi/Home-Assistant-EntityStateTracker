@@ -161,6 +161,75 @@
         "specific_states": "Specific states",
         "all_states": "All states"
       }
+    },
+    "frame": {
+      "options": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "24h": "Last 24 hours",
+        "week": "This week",
+        "last_week": "Last week",
+        "7d": "Last 7 days",
+        "30d": "Last 30 days",
+        "month": "This month",
+        "last_month": "Last month",
+        "year": "This year",
+        "365d": "Last 365 days"
+      }
+    }
+  },
+  "triggers": {
+    "new_state": {
+      "name": "New state seen",
+      "description": "Fires when an all-states tracker observes a state it has never seen before.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Limit this trigger to a single Entity State Tracker entry. Leave blank to fire for any tracker."
+        }
+      }
+    },
+    "dominant_changed": {
+      "name": "Dominant state changed",
+      "description": "Fires when the most-held state of a time frame changes (after the hysteresis margin).",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Limit this trigger to a single Entity State Tracker entry. Leave blank to fire for any tracker."
+        },
+        "frame": {
+          "name": "Time frame",
+          "description": "Limit this trigger to one time frame. Leave blank to fire for any frame."
+        }
+      }
+    },
+    "compliant_on": {
+      "name": "Compliant turned on",
+      "description": "Fires when a time frame's compliance rises to meet the configured threshold.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Limit this trigger to a single Entity State Tracker entry. Leave blank to fire for any tracker."
+        },
+        "frame": {
+          "name": "Time frame",
+          "description": "Limit this trigger to one time frame. Leave blank to fire for any frame."
+        }
+      }
+    },
+    "compliant_off": {
+      "name": "Compliant turned off",
+      "description": "Fires when a time frame's compliance falls below the configured threshold.",
+      "fields": {
+        "config_entry_id": {
+          "name": "Tracker",
+          "description": "Limit this trigger to a single Entity State Tracker entry. Leave blank to fire for any tracker."
+        },
+        "frame": {
+          "name": "Time frame",
+          "description": "Limit this trigger to one time frame. Leave blank to fire for any frame."
+        }
+      }
     }
   },
   "issues": {

@@ -69,6 +69,9 @@ HA_CONFIG = os.environ.get("EST_SMOKE_HA_CONFIG", "./config")
 
 DOMAIN = "entity_state_tracker"
 EVENT_NEW_STATE = "entity_state_tracker_new_state"
+EVENT_DOMINANT_CHANGED = "entity_state_tracker_dominant_changed"
+EVENT_COMPLIANT_ON = "entity_state_tracker_compliant_on"
+EVENT_COMPLIANT_OFF = "entity_state_tracker_compliant_off"
 
 
 def ec_enabled(n: int) -> bool:
@@ -3821,6 +3824,122 @@ def ec46_cumulative_frame_not_below_today():
     return entry, eid
 
 
+def ec47_dominant_changed_trigger_event():
+    """EC47: flipping the dominant state fires dominant_changed with payload.
+
+    All-states tracker on one entity. Dwell in state A (make it dominant), then
+    dwell longer in state B so B overtakes A past the hysteresis margin — the
+    coordinator must fire ``entity_state_tracker_dominant_changed`` carrying the
+    prev→new names and the frame. Event-only surface (the named trigger is a thin
+    relay over this event), so asserting the event IS the contract. Needs the
+    websocket; skips cleanly without it (EC6 class).
+    """
+    print(
+        "\n=== EC47: dominant-state flip fires dominant_changed event ===",
+        flush=True,
+    )
+    eid = make_entity("dominant", "alpha")
+    entry = create_tracker(eid, "all_states", frames={"today": True})
+    wait_entities(entry, min_count=1)
+
+    def _flip():
+        # Establish alpha as dominant, then pile more time into beta so it wins.
+        ss(eid, "alpha")
+        time.sleep(6 if FAST else 10)
+        ss(eid, "beta")
+        time.sleep(10 if FAST else 16)
+        ss(eid, "alpha")  # trailing transition folds beta's visit into the ledger
+
+    events = capture_events(EVENT_DOMINANT_CHANGED, _flip, timeout=40 if FAST else 55)
+    if not _WS_AVAILABLE:
+        note("EC47: websocket-client absent — event capture skipped")
+        return entry, eid
+
+    ev = next((e for e in events if e.get("dominant") == "beta"), None)
+    chk("EC47 dominant_changed event fired", ev is not None, True, f"events={events}")
+    if ev:
+        chk("EC47 event entry_id matches", ev.get("entry_id"), entry)
+        chk("EC47 event carries frame", ev.get("frame"), "today")
+        chk("EC47 event dominant = beta", ev.get("dominant"), "beta")
+        chk(
+            "EC47 event previous_dominant = alpha", ev.get("previous_dominant"), "alpha"
+        )
+    return entry, eid
+
+
+def ec48_compliant_trigger_events():
+    """EC48: compliance crossing the threshold fires compliant_on / compliant_off.
+
+    Specific-states tracker with a target + threshold. Hold the compliant target
+    state to drive compliance up across the bar (→ compliant_on), then hold a
+    non-target state to drive it back down (→ compliant_off). The event verdict
+    is the SAME predicate as the `compliant` binary sensor (shared helper), so
+    these edges line up with the sensor flipping. Needs the websocket; skips
+    cleanly without it.
+    """
+    print(
+        "\n=== EC48: compliance threshold crossing fires compliant_on/off ===",
+        flush=True,
+    )
+    eid = make_entity("compliant", "good")
+    # Low threshold so a short dwell in the target state clears the bar quickly.
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["good", "bad"],
+        enable_compliance=True,
+        target=["good"],
+        target_threshold=50,
+        frames={"today": True},
+    )
+    wait_entities(entry, min_count=1)
+
+    def _cross_up():
+        ss(eid, "good")
+        time.sleep(8 if FAST else 12)
+        api("POST", "/api/services/homeassistant/update_entity", {"entity_id": eid})
+
+    on_events = capture_events(
+        EVENT_COMPLIANT_ON, _cross_up, timeout=30 if FAST else 45
+    )
+    if not _WS_AVAILABLE:
+        note("EC48: websocket-client absent — event capture skipped")
+        return entry, eid
+
+    on_ev = next((e for e in on_events if e.get("frame") == "today"), None)
+    chk(
+        "EC48 compliant_on fired on cross-up",
+        on_ev is not None,
+        True,
+        f"on={on_events}",
+    )
+    if on_ev:
+        chk("EC48 compliant_on entry_id matches", on_ev.get("entry_id"), entry)
+        chk("EC48 compliant_on compliant=True", on_ev.get("compliant"), True)
+        chk("EC48 compliant_on carries threshold", on_ev.get("threshold"), 50)
+
+    def _cross_down():
+        # Pile non-target time on until the target share drops below 50%.
+        for _ in range(3):
+            ss(eid, "bad")
+            time.sleep(8 if FAST else 12)
+        api("POST", "/api/services/homeassistant/update_entity", {"entity_id": eid})
+
+    off_events = capture_events(
+        EVENT_COMPLIANT_OFF, _cross_down, timeout=45 if FAST else 60
+    )
+    off_ev = next((e for e in off_events if e.get("frame") == "today"), None)
+    chk(
+        "EC48 compliant_off fired on cross-down",
+        off_ev is not None,
+        True,
+        f"off={off_events}",
+    )
+    if off_ev:
+        chk("EC48 compliant_off compliant=False", off_ev.get("compliant"), False)
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -3942,6 +4061,12 @@ def main():
 
         if ec_enabled(46):
             run_ec(ec46_cumulative_frame_not_below_today)
+
+        if ec_enabled(47):
+            run_ec(ec47_dominant_changed_trigger_event)
+
+        if ec_enabled(48):
+            run_ec(ec48_compliant_trigger_events)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
