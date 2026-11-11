@@ -3941,9 +3941,7 @@ def ec47_dominant_changed_trigger_event():
             },
         )
         api("POST", "/api/services/automation/reload", {})
-        wait_until(
-            lambda: gs(f"automation.{aid}").get("state") == "on", timeout=20
-        )
+        wait_until(lambda: gs(f"automation.{aid}").get("state") == "on", timeout=20)
         leaked = capture_events(
             "est_smoke_relay_scope",
             lambda: (
