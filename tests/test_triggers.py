@@ -282,3 +282,19 @@ async def test_attached_trigger_scopes_by_entry(hass: HomeAssistant) -> None:
     assert len(fired) == 1
 
     unsub()
+
+
+async def test_attached_trigger_blank_scope_fires_for_any(hass: HomeAssistant) -> None:
+    """Default (no scope) relays every event — the empty-selector match-all path."""
+    fired: list[dict] = []
+    cfg = TriggerConfig(key="dominant_changed", target=None, options=None)
+    trig = trigger_mod._DominantChangedTrigger(hass, cfg)
+    assert trig._entry_id is None and trig._frame is None
+    unsub = await trig.async_attach_runner(lambda rv, d, context=None: fired.append(rv))
+
+    hass.bus.async_fire(EVENT_DOMINANT_CHANGED, {"entry_id": "a", "frame": "today"})
+    hass.bus.async_fire(EVENT_DOMINANT_CHANGED, {"entry_id": "b", "frame": "week"})
+    await hass.async_block_till_done()
+    assert len(fired) == 2  # neither entry nor frame filtered
+
+    unsub()

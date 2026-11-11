@@ -300,6 +300,8 @@ The `tracker_id` is the tracker's config-entry id. You normally never type it by
 
 ## Named automation triggers
 
+> **Requires Home Assistant 2025.11 or newer** — the named triggers use the class-based trigger platform. (Older releases keep working via the `entity_state_tracker_new_state` bus event.)
+
 The integration ships **UI-discoverable automation triggers** — pick them in the
 automation editor's trigger list (each with its own icon) instead of typing a
 raw event string. All are scopeable to a single tracker, and the per-frame ones
@@ -312,30 +314,16 @@ to a single time frame; leave the scope blank to fire for any tracker/frame.
 | **Compliant turned on** | a frame's compliance rises to meet the threshold | specific + target | `entry_id`, `entity_id`, `frame`, `compliant`, `compliance_percent`, `threshold` |
 | **Compliant turned off** | a frame's compliance falls below the threshold | specific + target | `entry_id`, `entity_id`, `frame`, `compliant`, `compliance_percent`, `threshold` |
 
-The payload is exposed to the automation as `{{ trigger.<field> }}`. Example:
-
-```yaml
-triggers:
-  - trigger: entity_state_tracker.dominant_changed
-    frame: today
-actions:
-  - action: notify.mobile_app
-    data:
-      message: >
-        Today's dominant state changed from
-        {{ trigger.previous_dominant }} to {{ trigger.dominant }}
-        ({{ trigger.dominant_pct }}%).
-```
-
-> Requires Home Assistant 2025.11 or newer (the class-based trigger platform).
-> The `entity_state_tracker_new_state` bus event still fires as before — the
-> **New state seen** trigger is just a friendlier way to subscribe to it.
+The payload is exposed to the automation as `{{ trigger.<field> }}`. Ready-to-adapt
+automations for all four triggers are at the top of **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)**.
+The `entity_state_tracker_new_state` bus event still fires as before — the **New
+state seen** trigger is just a friendlier way to subscribe to it.
 
 ---
 
 ## Automation examples
 
-See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `in_a_tracked_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration_seconds` off a breakdown sensor, and guarding on `has_gap` / `window_coverage` — plus Telegram/TTS channels and cooldown patterns.
+See **[AUTOMATION_EXAMPLES.md](AUTOMATION_EXAMPLES.md)** for ready-to-adapt YAML covering every feature: the four **named automation triggers** (at the top), `template` triggers on the today `percent` / `compliance_percent` attributes, reacting to the `compliant` and `in_a_tracked_state` binary sensors, catching new states via the `entity_state_tracker_new_state` event, reading `breakdown_pct` / `counts` / `avg_duration_seconds` off a breakdown sensor, and guarding on `has_gap` / `window_coverage` — plus Telegram/TTS channels and cooldown patterns.
 
 ---
 
