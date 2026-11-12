@@ -20,9 +20,13 @@ from typing import Any
 def _str_map(raw: Any) -> dict[str, str]:
     """Coerce a raw value into a ``{str: str}`` dict, dropping non-string rows.
 
-    Used for the persisted ``last_entered``/``last_exited`` maps: a legacy store
-    (written before these fields) or a corrupt row yields an empty/clean dict
-    rather than raising, matching the defensive daily-bucket load contract.
+    Used for the persisted ``last_entered`` / ``last_exited`` (state → ISO ts) and
+    ``last_dominant`` (frame_key → state) maps: a legacy store (written before a
+    field existed) or a corrupt row yields an empty/clean dict rather than raising,
+    matching the defensive daily-bucket load contract. Keys AND values are
+    lowercased — correct for every current map (state names are stored lowercase
+    throughout, and all frame_keys are already lowercase); if a future map ever
+    needs case-preserving keys, it must not reuse this helper.
     """
     if not isinstance(raw, dict):
         return {}
@@ -121,6 +125,13 @@ class TrackerLedger:
     # without the keys (no STORAGE_VERSION bump).
     last_entered: dict[str, str] = field(default_factory=dict)
     last_exited: dict[str, str] = field(default_factory=dict)
+    # The dominant state last REPORTED per frame (``frame_key`` → state), persisted
+    # so dominant hysteresis (``_pick_dominant``, R10) survives a restart/reload.
+    # Without it the first post-restart tick has no prior incumbent and reverts to
+    # the raw max-seconds leader, silently flipping a near-tie that hysteresis had
+    # pinned — and the flip fires no edge (prior is None), so it is invisible and
+    # permanent. Empty on a fresh/legacy store (no STORAGE_VERSION bump).
+    last_dominant: dict[str, str] = field(default_factory=dict)
     # The min_state_duration (glitch threshold) the closed-day daily buckets were
     # LAST built with. Persisted so an options edit that changes the threshold can
     # detect stale buckets across a restart and re-backfill them with the new
@@ -163,6 +174,7 @@ class TrackerLedger:
         # {str: str}, dropping malformed rows (mirrors the daily-bucket contract).
         last_entered = _str_map(d.get("last_entered"))
         last_exited = _str_map(d.get("last_exited"))
+        last_dominant = _str_map(d.get("last_dominant"))
         raw_last_state = d.get("last_state")
         return cls(
             entity_id=str(d.get("entity_id", "")),
@@ -181,6 +193,7 @@ class TrackerLedger:
             last_updated_day=d.get("last_updated_day"),
             last_entered=last_entered,
             last_exited=last_exited,
+            last_dominant=last_dominant,
             built_min_state_duration=built_min_state_duration,
         )
 
@@ -199,6 +212,7 @@ class TrackerLedger:
             "last_updated_day": self.last_updated_day,
             "last_entered": dict(self.last_entered),
             "last_exited": dict(self.last_exited),
+            "last_dominant": dict(self.last_dominant),
             "built_min_state_duration": self.built_min_state_duration,
         }
 

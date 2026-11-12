@@ -103,6 +103,7 @@ def _ledger_stats(coordinator: EntityStateTrackerCoordinator) -> dict[str, Any]:
         "last_state": ledger.last_state,
         "last_changed_ts": ledger.last_changed_ts,
         "last_updated_day": ledger.last_updated_day,
+        "last_dominant": dict(ledger.last_dominant),
         "per_state_seconds": per_state_secs,
         "per_state_count": per_state_count,
     }

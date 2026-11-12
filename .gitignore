@@ -51,3 +51,4 @@ cov.json
 # Claude Code
 .claude/settings.local.json
 coverage.json
+.venv314/

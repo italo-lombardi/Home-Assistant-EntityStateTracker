@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+- **Cumulative frames could still dip at local midnight (and after a history purge) for a held state** — the v0.1.8 fix carried an open visit's pre-midnight tail across the day boundary, but only when that day's ledger bucket did not already list the state. Two cases slipped through and showed the counter running backwards (then jumping back) at the seam: (1) the same state had an *earlier* closed visit the same day, so its name was already in the bucket and the still-open visit's tail was wrongly skipped; (2) the day had **no** ledger bucket at all — a recorder gap, an entity unavailable the whole day, or a day below recorder retention — yet was marked as processed, so the tail had nothing to fall back on and was dropped entirely. The carry now decides ownership by the ledger's fold watermark **and** whether the day actually holds data: a closed day is left to the ledger only when it is both at/below the watermark and has a non-empty bucket, otherwise the open visit's real per-day seconds are carried. This keeps cumulative frames (`This week`/`This month`/`This year`/`Yesterday`/`Last 365 days`) monotonic across midnight in every case, with no double-count on days the ledger already owns.
+- **A frame's dominant state could silently flip after a restart** — the "dominant" (most-held) state of a frame only changes once a new leader beats the incumbent by the hysteresis margin, so a near-tie stays pinned and doesn't flap. That incumbent lived only in memory, so the first refresh after a Home Assistant restart or an options change had no prior to compare against and fell back to the raw most-seconds leader — flipping the reported dominant inside the hysteresis band, with no `Dominant state changed` event to explain it, and the flip then became the new permanent incumbent. The dominant is now persisted per frame and restored on the first post-restart refresh, so hysteresis is continuous across restarts. (Diagnostics now also report the persisted per-frame dominant.)
+
 ## [0.2.0]
 
 ### Added
