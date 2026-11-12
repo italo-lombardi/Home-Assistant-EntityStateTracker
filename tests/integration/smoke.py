@@ -4009,6 +4009,88 @@ def ec48_compliant_trigger_events():
     )
 
 
+def ec49_dominant_persists_across_restart():
+    """EC49: the per-frame dominant is persisted and survives an HA restart.
+
+    Locks Bug-2 end to end: dominant hysteresis (R10) must not reset across a
+    restart. Before the fix the first post-restart tick had no in-memory prior,
+    so a near-tie dominant that hysteresis had pinned silently flipped to the raw
+    leader with no edge event. The fix persists ``last_dominant`` per frame in the
+    ledger and re-seeds the incumbent on first refresh. The exact near-tie flip
+    can't be forced live (no second-level control over which state leads by a
+    sub-margin amount — the EC46/EC47 class), so the unit tests
+    (test_dominant_hysteresis_survives_restart + its control) prove the flip is
+    prevented; EC49 guards the user-visible persistence symptom: diagnostics
+    exposes a dominant for the frame, and the SAME value is still there after a
+    restart (it was durably stored, not recomputed from nothing).
+
+    Heavy (restarts HA); runs in the restart group with EC12.
+    """
+    print("\n=== EC49: per-frame dominant persists across HA restart ===", flush=True)
+    if not HA_DIR:
+        print(
+            "EC49 SKIPPED: set EST_SMOKE_HA_DIR (see EC12 / tests/integration/README.md).",
+            flush=True,
+        )
+        return None, None
+    eid = make_entity("dompersist", "on")
+    entry = create_tracker(eid, "all_states", frames={"today": True, "7d": True})
+    wait_entities(entry, min_count=2)
+
+    # Accrue enough of one state that it is the unambiguous dominant, then force a
+    # transition so the ledger flushes (store flushes on transitions + HA stop).
+    ss(eid, "on")
+    time.sleep(8 if FAST else 12)
+    ss(eid, "off")
+    time.sleep(3)
+    ss(eid, "on")
+    time.sleep(5)
+    for metric_frame in ("today", "7d"):
+        e = eid_for(entry, metric_frame, M_DURATION, wait_entities(entry, min_count=2))
+        if e:
+            api("POST", "/api/services/homeassistant/update_entity", {"entity_id": e})
+
+    def _ledger(entry_id):
+        raw = api("GET", f"/api/diagnostics/config_entry/{entry_id}")
+        return (raw.get("data", raw) or {}).get("ledger") or {}
+
+    before = _ledger(entry)
+    dom_before = before.get("last_dominant") or {}
+    note(f"last_dominant before restart: {dom_before}")
+    chk(
+        "EC49 a dominant was persisted for at least one frame before restart",
+        len(dom_before) >= 1,
+        True,
+        f"last_dominant={dom_before}",
+    )
+    if not dom_before:
+        return entry, eid
+
+    note("restarting HA (this takes ~40s)…")
+    back = _restart_ha()
+    chk("EC49 HA came back after restart", back, True)
+    if not back:
+        return entry, eid
+    wait_until(
+        lambda: _ledger(entry).get("loaded"),
+        timeout=90,
+    )
+    after = _ledger(entry)
+    dom_after = after.get("last_dominant") or {}
+    note(f"last_dominant after restart: {dom_after}")
+    # Every incumbent present before the restart must still be present, unchanged:
+    # the persisted dominant re-seeds the hysteresis prior so it cannot silently
+    # flip on the first post-restart tick.
+    preserved = all(dom_after.get(f) == d for f, d in dom_before.items())
+    chk(
+        "EC49 persisted dominant identical across restart (no silent flip)",
+        preserved,
+        True,
+        f"before={dom_before} after={dom_after}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -4149,6 +4231,10 @@ def main():
         # restart cluster, last — same reason EC12/EC17 are last.
         if ec_enabled(35):
             run_ec(ec35_config_heal_rewrites_drifted_states)
+
+        # EC49 restarts HA (dominant hysteresis survives restart); restart cluster.
+        if ec_enabled(49):
+            run_ec(ec49_dominant_persists_across_restart)
 
     finally:
         cleanup()

@@ -799,6 +799,12 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
                 recent_blocks = today_blocks if today_midnight_utc < end_utc else {}
 
             prior_dominant = prior[frame_key].dominant if frame_key in prior else None
+            # First tick after a restart/reload: self.data is None, so there is no
+            # in-memory prior. Re-seed the hysteresis incumbent from the persisted
+            # ledger so a near-tie dominant that _pick_dominant had pinned does not
+            # silently flip to the raw leader across the restart boundary (R10).
+            if frame_key not in prior:
+                prior_dominant = ledger.last_dominant.get(frame_key)
             try:
                 result = compute_frame(
                     frame_key,
@@ -812,6 +818,7 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
                     target_states=self.target_states,
                     prior_dominant=prior_dominant,
                     ledger_upper_local_day=ledger_upper_local_day,
+                    ledger_last_updated_day=ledger.last_updated_day,
                     open_state=ledger.last_state,
                     open_ts=_parse_ts(ledger.last_changed_ts),
                 )
@@ -841,6 +848,16 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             self._clear_frame_fail(frame_key)
             self._warn_overflow(frame_key, result)
             frames[frame_key] = result
+            # Persist the reported dominant so hysteresis survives a restart (R10).
+            # Only a real state name is a valid incumbent; a None dominant (count 0)
+            # clears any stale entry so the next boot does not resurrect it.
+            if result.dominant is not None:
+                if ledger.last_dominant.get(frame_key) != result.dominant:
+                    ledger.last_dominant[frame_key] = result.dominant
+                    self._dirty = True
+            elif frame_key in ledger.last_dominant:
+                del ledger.last_dominant[frame_key]
+                self._dirty = True
             self._fire_frame_edges(frame_key, prior.get(frame_key), result)
 
         # A frame dropped from enabled_frames (toggled off / default narrowed)
@@ -851,6 +868,13 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             f for f in self._frame_fail_streak if f not in self.enabled_frames
         ]:
             self._clear_frame_fail(stale)
+
+        # Drop persisted dominant incumbents for frames no longer enabled, so a
+        # frame toggled off (then later back on) does not resurrect a stale
+        # pre-disable dominant as its hysteresis seed.
+        for stale in [f for f in ledger.last_dominant if f not in self.enabled_frames]:
+            del ledger.last_dominant[stale]
+            self._dirty = True
 
         # Prune stale buckets IN-MEMORY and let the single flush persist (one
         # disk write, not prune's own save + flush — P4). Disk is best-effort:

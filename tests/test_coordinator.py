@@ -605,6 +605,179 @@ async def test_one_frame_failure_does_not_blank_other_frames(
     await c.async_shutdown()
 
 
+async def test_dominant_hysteresis_survives_restart(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """R10 across a restart: the persisted ``last_dominant`` re-seeds the
+    hysteresis incumbent on the first post-restart tick, so a near-tie that
+    ``_pick_dominant`` had pinned does not silently flip to the raw leader.
+
+    Before the fix, the fresh coordinator had ``self.data is None`` → no prior →
+    ``_pick_dominant`` returned the raw max-seconds leader, flipping the dominant
+    inside the hysteresis band with no edge event (invisible + permanent).
+    """
+    now = _utc(2026, 6, 10, 12, 0)
+    all_states_config_entry.add_to_hass(hass)
+
+    # Register the ledger in the shared store and give the 7d frame a NEAR-TIE:
+    # off leads on by 2000s, but the 7d window is 604800s so the R10 margin is
+    # 1% = 6048s. The raw leader is "off"; hysteresis must keep the incumbent.
+    c0 = EntityStateTrackerCoordinator(hass, all_states_config_entry)
+    await c0.store.get_or_create_tracker(
+        c0._entry_id, c0.entity_id, c0.mode, c0.tracked_states, c0.target_states
+    )
+    data = await c0.store.load()
+    ledger = data.trackers[c0._entry_id]
+    ledger.daily = {
+        "2026-06-05": {
+            "on": {"secs": 300000.0, "count": 1},
+            "off": {"secs": 302000.0, "count": 1},
+        }
+    }
+    ledger.last_updated_day = "2026-06-09"
+    ledger.last_state = "off"
+    # Anchor the open visit at NOW so it seeds a zero-width block — the near-tie
+    # lives entirely in the closed 06-05 ledger bucket, with no open-visit carry
+    # to perturb the 7d totals (keeps this test about the re-seed, not the carry).
+    ledger.last_changed_ts = now.isoformat()
+    ledger.last_dominant = {"7d": "on"}  # persisted incumbent
+    await c0.store.save(data)
+
+    # Restart: a fresh coordinator over the SAME store, no in-memory self.data.
+    patch_recorder([])
+    c = EntityStateTrackerCoordinator(hass, all_states_config_entry)
+    c._ledger = (await c.store.load()).trackers[c._entry_id]
+    assert c.data is None  # first tick — the restart boundary
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        result = await c._async_update_data()
+
+    # Incumbent held across the restart: dominant stayed "on" despite "off" being
+    # the raw leader, because last_dominant re-seeded prior_dominant.
+    assert result.frames["7d"].dominant == "on"
+    # And it is now re-persisted as the incumbent for the next tick.
+    assert c._ledger.last_dominant["7d"] == "on"
+    await c.async_shutdown()
+
+
+async def test_dominant_no_persisted_incumbent_takes_raw_leader(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """Control for :func:`test_dominant_hysteresis_survives_restart`: with NO
+    persisted ``last_dominant`` (fresh install), the first tick legitimately
+    takes the raw max-seconds leader — proving the test above isolates the
+    re-seed, not a blanket pin."""
+    now = _utc(2026, 6, 10, 12, 0)
+    all_states_config_entry.add_to_hass(hass)
+    c0 = EntityStateTrackerCoordinator(hass, all_states_config_entry)
+    await c0.store.get_or_create_tracker(
+        c0._entry_id, c0.entity_id, c0.mode, c0.tracked_states, c0.target_states
+    )
+    data = await c0.store.load()
+    ledger = data.trackers[c0._entry_id]
+    ledger.daily = {
+        "2026-06-05": {
+            "on": {"secs": 300000.0, "count": 1},
+            "off": {"secs": 302000.0, "count": 1},
+        }
+    }
+    ledger.last_updated_day = "2026-06-09"
+    ledger.last_state = "off"
+    ledger.last_changed_ts = now.isoformat()
+    # last_dominant intentionally empty.
+    await c0.store.save(data)
+
+    patch_recorder([])
+    c = EntityStateTrackerCoordinator(hass, all_states_config_entry)
+    c._ledger = (await c.store.load()).trackers[c._entry_id]
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        result = await c._async_update_data()
+
+    assert result.frames["7d"].dominant == "off"  # raw leader, no incumbent
+    assert c._ledger.last_dominant["7d"] == "off"  # now seeded for next tick
+    await c.async_shutdown()
+
+
+async def test_dominant_none_clears_persisted_incumbent(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """When a frame's dominant goes None (empty window after an incumbent existed),
+    the persisted ``last_dominant`` entry is DELETED, not left stale.
+
+    A stale incumbent would otherwise re-seed hysteresis on the next restart with
+    a state the frame no longer holds. Covers coordinator.py's dominant→None clear
+    branch (``elif frame_key in ledger.last_dominant: del ...``).
+    """
+    now = _utc(2026, 6, 10, 12, 0)
+    all_states_config_entry.add_to_hass(hass)
+    c0 = EntityStateTrackerCoordinator(hass, all_states_config_entry)
+    await c0.store.get_or_create_tracker(
+        c0._entry_id, c0.entity_id, c0.mode, c0.tracked_states, c0.target_states
+    )
+    data = await c0.store.load()
+    ledger = data.trackers[c0._entry_id]
+    # No daily buckets and no open visit → every frame's breakdown is empty →
+    # dominant is None. Pre-seed a stale incumbent that must be cleared.
+    ledger.daily = {}
+    ledger.last_state = None
+    ledger.last_dominant = {"7d": "on", "today": "off"}
+    await c0.store.save(data)
+
+    patch_recorder([])
+    c = EntityStateTrackerCoordinator(hass, all_states_config_entry)
+    c._ledger = (await c.store.load()).trackers[c._entry_id]
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        result = await c._async_update_data()
+
+    # Dominant is None for every frame (empty breakdown) → incumbents cleared.
+    assert result.frames["7d"].dominant is None
+    assert "7d" not in c._ledger.last_dominant
+    assert "today" not in c._ledger.last_dominant
+    # The clear was persisted (the end-of-tick flush writes it, resetting _dirty).
+    persisted = (await c.store.load()).trackers[c._entry_id]
+    assert "7d" not in persisted.last_dominant
+    assert "today" not in persisted.last_dominant
+    await c.async_shutdown()
+
+
+async def test_disabled_frame_dominant_is_pruned(
+    hass: HomeAssistant,
+    all_states_config_entry: MockConfigEntry,
+    patch_recorder: Callable[[Any], None],
+) -> None:
+    """A persisted dominant for a frame no longer in ``enabled_frames`` is pruned
+    on the next tick, so a frame toggled off (then back on) can't resurrect a
+    stale pre-disable incumbent. Covers the disabled-frame prune branch."""
+    now = _utc(2026, 6, 10, 12, 0)
+    all_states_config_entry.add_to_hass(hass)
+    c0 = EntityStateTrackerCoordinator(hass, all_states_config_entry)
+    await c0.store.get_or_create_tracker(
+        c0._entry_id, c0.entity_id, c0.mode, c0.tracked_states, c0.target_states
+    )
+    data = await c0.store.load()
+    ledger = data.trackers[c0._entry_id]
+    # "year" is not in the default enabled frames → its incumbent must be pruned.
+    ledger.last_dominant = {"year": "on"}
+    await c0.store.save(data)
+    assert "year" not in c0.enabled_frames
+
+    patch_recorder([])
+    c = EntityStateTrackerCoordinator(hass, all_states_config_entry)
+    c._ledger = (await c.store.load()).trackers[c._entry_id]
+    with patch.object(coord_mod.dt_util, "utcnow", return_value=now):
+        await c._async_update_data()
+
+    assert "year" not in c._ledger.last_dominant  # pruned
+    persisted = (await c.store.load()).trackers[c._entry_id]
+    assert "year" not in persisted.last_dominant  # prune persisted
+    await c.async_shutdown()
+
+
 async def test_frame_failure_with_no_prior_is_skipped(
     hass: HomeAssistant,
     specific_config_entry: MockConfigEntry,
@@ -968,38 +1141,57 @@ def _midnight_straddle_entry(entry_id: str) -> MockConfigEntry:
     )
 
 
-async def test_straddle_carry_forward_partial_day_other_state_already_folded(
+async def test_straddle_carry_forward_when_same_state_recurred_earlier_that_day(
     hass: HomeAssistant,
     patch_recorder: Callable[[Any], None],
 ) -> None:
-    """The open visit's tail is carried into a closed day that already holds a
-    DIFFERENT folded state (the prod partial-day case).
+    """Open-visit carry must fire for a day ABOVE the fold watermark even when
+    that day's bucket already holds the SAME state from an EARLIER closed visit.
 
-    06-09 already has an 'auto' bucket (earlier transitions that day), THEN the
-    entity holds 'heat' open across midnight. The state-level guard
-    (``open_key in ledger_daily[day]``) must still add the 'heat' tail for 06-09
-    because 'heat' is NOT yet folded there — a day-level guard would wrongly skip
-    it and lose the tail (the exact partial-day drop).
+    Regression for the midnight-dip, same-state-recurs variant: the old guard
+    skipped the carry whenever the state NAME was already present for the day
+    (``open_key in ledger_daily[day]``). But an earlier CLOSED visit of the same
+    state leaves the name present while THIS still-open visit is unfolded, so the
+    open tail was dropped and the cumulative frame dipped at the seam. The guard
+    is now the fold watermark (``day > last_updated_day`` is owned by the live/
+    carry path, matching ``_fold_visit``), so a same-state-recurs day above the
+    watermark still gets the open tail.
+
+    Consistent ledger: backfill last advanced the watermark to 06-08 (the open
+    visit predates the last backfill). 06-09 is ABOVE the watermark, so the ledger
+    does NOT own it — the only 06-09 ``heat`` seconds present are from an earlier
+    CLOSED heat visit that live-folded that day (08:00-12:00 PDT = 14400s). The
+    entity is then held ``heat`` open from 20:00 PDT 06-09 across midnight; that
+    tail (20:00-24:00 PDT = 14400s) is unfolded and must be carried for 06-09.
     """
-    open_start = _utc(2026, 6, 9, 20, 0)  # 13:00 PDT 06-09
+    open_start = _utc(2026, 6, 10, 3, 0)  # 20:00 PDT 06-09
     post = _utc(2026, 6, 10, 7, 10)  # 00:10 PDT 06-10 — 06-09 closed
-    patch_recorder.mock.side_effect = lambda *a, **k: [_FakeState("heat", open_start)]
+    # Recorder off so first_refresh's backfill does NOT advance the watermark past
+    # 06-08 (we pin a consistent pre-open-visit ledger by hand below).
+    patch_recorder.mock.side_effect = lambda *a, **k: None
 
-    entry = _midnight_straddle_entry("est_straddle_partial")
+    entry = _midnight_straddle_entry("est_straddle_recurs")
     with patch.object(coord_mod.dt_util, "utcnow", return_value=post):
         c = await _make_coordinator(hass, entry)
         await _first_refresh(hass, c)
-        # 06-09 already holds an unrelated folded state; 'heat' is NOT folded there.
-        c._ledger.daily["2026-06-09"] = {"auto": {"secs": 3600.0, "count": 1}}
+        # Watermark frozen at 06-08: 06-09 is above it (carry path owns 06-09).
+        c._ledger.last_updated_day = "2026-06-08"
+        # Earlier CLOSED heat visit already live-folded into 06-09 (08:00-12:00).
+        c._ledger.daily["2026-06-09"] = {"heat": {"secs": 14400.0, "count": 1}}
+        # Entity now held heat OPEN since 20:00 PDT 06-09 (unfolded tail).
         c._ledger.last_state = "heat"
         c._ledger.last_changed_ts = open_start.isoformat()
         data = await c._async_update_data()
 
     month_heat = data.frames["month"].breakdown_seconds.get("heat", 0.0)
     await c.async_shutdown()
-    # 06-09 heat tail (20:00Z→07:00Z = 11h = 39600s) + today's slice must be present,
-    # NOT lost because 'auto' already occupied the 06-09 bucket.
-    assert month_heat > 39000.0, f"heat tail lost on partial day: {month_heat:.0f}s"
+    # 06-09: 14400 (earlier folded visit) + 14400 (open tail carried) = 28800s,
+    # plus today's open slice (00:00-00:10 PDT = ~600s). The open tail must NOT be
+    # dropped just because 'heat' was already present for 06-09.
+    assert month_heat > 28000.0, (
+        f"open tail dropped on same-state-recurs day: {month_heat:.0f}s"
+    )
+    assert month_heat < 30000.0, f"heat over-counted (double carry?): {month_heat:.0f}s"
 
 
 async def test_straddle_no_double_count_when_state_already_folded(

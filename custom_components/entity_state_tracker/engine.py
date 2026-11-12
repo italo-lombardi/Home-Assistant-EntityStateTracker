@@ -424,6 +424,7 @@ def compute_frame(
     target_states: list[str] | None = None,
     prior_dominant: str | None = None,
     ledger_upper_local_day: str | None = None,
+    ledger_last_updated_day: str | None = None,
     open_state: str | None = None,
     open_ts: dt.datetime | None = None,
 ) -> FrameResult:
@@ -529,10 +530,14 @@ def compute_frame(
     # dips (the midnight shed). Backfill already carries a held state across such a
     # gap (``_async_backfill`` → whole-day bucket); this makes the LIVE path agree:
     # attribute the open visit's real per-day seconds to each day it covered that
-    # is inside the window, below the seam, and NOT already in the ledger. Computed
+    # is inside the window, below the seam, and NOT already folded. Computed
     # at READ time only — never written to ledger.daily, so the eventual real fold
     # (which owns days > last_updated_day) can't double-count, and the seam day
-    # stays owned by exactly one side. Idempotent: the same open_ts/now yield the
+    # stays owned by exactly one side. The skip is gated on the fold watermark
+    # (``ledger_last_updated_day``), NOT on whether the day's bucket already holds
+    # this state name — an earlier CLOSED visit of the same state that day leaves
+    # the name present while THIS open visit is still unfolded, so a presence test
+    # would wrongly drop the open tail. Idempotent: the same open_ts/now yield the
     # same split every tick until the visit folds.
     if open_state is not None and open_ts is not None and open_ts < end_utc:
         open_key = open_state.lower()
@@ -541,8 +546,30 @@ def compute_frame(
         ):
             if day_iso < window_start_local_day or day_iso >= upper_local_day:
                 continue  # outside window, or recorder/seam owns it (not a closed ledger day)
-            if open_key in ledger_daily.get(day_iso, {}):
-                continue  # this state already folded for the day — ledger owns it, don't double-count
+            # Skip a day only when the ledger has REAL folded data for it: the
+            # fold watermark covers it (``day <= last_updated_day``) AND its bucket
+            # is non-empty. Both conditions are needed:
+            #  * Watermark, not state-name presence — an earlier CLOSED visit of the
+            #    same state leaves ``open_key`` present while THIS still-open visit
+            #    is unfolded, so a presence test would wrongly drop the open tail
+            #    (the midnight-shed, same-state-recurs variant).
+            #  * Non-empty bucket, not watermark alone — ``_async_backfill`` advances
+            #    the watermark for EVERY processed day but only writes a bucket when
+            #    the recorder returned rows (``if blocks:``, see coordinator). A day
+            #    with no recorder data (HA-down gap, entity unavailable all day, or
+            #    below recorder retention) is watermark-covered yet has NO bucket to
+            #    supply the tail, so skipping on the watermark alone would drop the
+            #    open visit's seconds for that day (undercount). When the bucket is
+            #    empty the ledger owns nothing, so the carry must fill it.
+            # This matches ``_fold_visit``'s ownership seam (days > watermark are the
+            # live path's) while closing the empty-watermarked-day hole.
+            day_owned = (
+                ledger_last_updated_day is not None
+                and day_iso <= ledger_last_updated_day
+                and bool(ledger_daily.get(day_iso))
+            )
+            if day_owned:
+                continue
             row = combined.setdefault(open_key, {"secs": 0.0, "count": 0})
             row["secs"] += secs
 

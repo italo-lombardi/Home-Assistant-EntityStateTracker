@@ -1046,6 +1046,128 @@ def test_r10_hysteresis_flips_when_margin_exceeded() -> None:
     assert fr.dominant == "off"
 
 
+# --------------------------------------------------------------------------- #
+# Open-visit midnight carry — watermark gate (not state-name presence)
+# --------------------------------------------------------------------------- #
+
+
+def test_open_visit_carry_uses_fold_watermark_not_presence() -> None:
+    # Regression (midnight-shed, same-state-recurs variant): an OPEN visit whose
+    # state recurred EARLIER the same day must still have its unfolded tail carried
+    # into that closed day. The skip is gated on the fold watermark
+    # (ledger_last_updated_day), NOT on whether the day's bucket already holds the
+    # state name — a presence test dropped the open tail and the cumulative frame
+    # dipped at the seam until the next transition folded it.
+    #
+    # now = Thu 2026-01-15; last_week = prev full week Mon 01-05 .. Sun 01-11,
+    # closed at this week's Monday midnight (seam upper = 2026-01-12). The entity
+    # has been "on" continuously since 01-10T20:00 local (no transition since), so
+    # that visit is UNFOLDED; the fold watermark sits at 01-09. Day 01-10 already
+    # carries an "on" bucket from an earlier CLOSED visit that day (08:00-12:00).
+    now = dt.datetime(2026, 1, 15, 12, 0, tzinfo=NY)
+    open_ts = dt.datetime(2026, 1, 10, 20, 0, tzinfo=NY)
+    ledger_daily = {
+        # Earlier closed "on" visit on 01-10 (08:00-12:00 = 14400s) already folded.
+        "2026-01-10": {"on": {"secs": 14400.0, "count": 1}},
+        # A fully-folded earlier day, for contrast.
+        "2026-01-07": {"off": {"secs": 86400.0, "count": 1}},
+    }
+    fr = E.compute_frame(
+        "last_week",
+        now,
+        NY,
+        {},  # closed frame: no recorder recent slice
+        ledger_daily,
+        None,
+        mode="all_states",
+        tracked_states=None,
+        target_states=None,
+        prior_dominant=None,
+        ledger_last_updated_day="2026-01-09",
+        open_state="on",
+        open_ts=open_ts,
+    )
+    # The open visit's tail inside last_week spans 01-10T20:00 .. 01-12T00:00 (seam):
+    #   01-10 20:00-24:00 = 4h  = 14400s  (carried — day 01-10 > watermark 01-09)
+    #   01-11 00:00-24:00 = 24h = 86400s  (carried)
+    # 01-12 is the seam (>= upper), excluded. Plus the pre-existing folded 14400s.
+    # So "on" = 14400 (folded) + 14400 (01-10 tail) + 86400 (01-11) = 115200s.
+    assert fr.breakdown_seconds["on"] == pytest.approx(115200.0)
+    # The folded "off" day is untouched.
+    assert fr.breakdown_seconds["off"] == pytest.approx(86400.0)
+
+
+def test_open_visit_carry_skips_folded_day_below_watermark() -> None:
+    # Dual of the above: a day AT or BELOW the watermark is owned by the ledger, so
+    # the open visit's split for that day must NOT be carried (would double-count).
+    now = dt.datetime(2026, 1, 15, 12, 0, tzinfo=NY)
+    open_ts = dt.datetime(2026, 1, 10, 20, 0, tzinfo=NY)
+    ledger_daily = {
+        # 01-10 is fully folded (watermark reaches it): the whole-day "on" bucket
+        # already includes the 20:00-24:00 tail via backfill/fold.
+        "2026-01-10": {"on": {"secs": 86400.0, "count": 1}},
+    }
+    fr = E.compute_frame(
+        "last_week",
+        now,
+        NY,
+        {},
+        ledger_daily,
+        None,
+        mode="all_states",
+        tracked_states=None,
+        target_states=None,
+        prior_dominant=None,
+        ledger_last_updated_day="2026-01-10",  # watermark AT 01-10
+        open_state="on",
+        open_ts=open_ts,
+    )
+    # 01-10 is <= watermark → skipped (no double-count); only 01-11 (> watermark,
+    # inside window) carries the open tail = 86400s. Total = 86400 (folded 01-10) +
+    # 86400 (01-11 carried) = 172800s.
+    assert fr.breakdown_seconds["on"] == pytest.approx(172800.0)
+
+
+def test_open_visit_carry_fills_empty_bucket_under_watermark() -> None:
+    # The compound-guard branch: a day AT/BELOW the watermark whose bucket is
+    # EMPTY/absent is NOT owned by the ledger, so the open tail must still be
+    # carried (not skipped on the watermark alone). _async_backfill advances the
+    # watermark for every processed day but writes a bucket only when the recorder
+    # returned rows (`if blocks:`); a day with no recorder data (HA-down gap,
+    # entity unavailable all day, below retention) is watermark-covered yet has NO
+    # bucket. Skipping it on the watermark alone would drop the visit's seconds.
+    # Regression guard: deleting the `and bool(ledger_daily.get(day_iso))` clause
+    # must fail here (the other watermark tests still pass without it).
+    now = dt.datetime(2026, 1, 15, 12, 0, tzinfo=NY)
+    open_ts = dt.datetime(2026, 1, 9, 20, 0, tzinfo=NY)
+    ledger_daily = {
+        # 01-11 folded normally; 01-09 and 01-10 are watermark-covered but have NO
+        # bucket (recorder gap) — the carry must fill them.
+        "2026-01-11": {"on": {"secs": 86400.0, "count": 1}},
+    }
+    fr = E.compute_frame(
+        "last_week",
+        now,
+        NY,
+        {},
+        ledger_daily,
+        None,
+        mode="all_states",
+        tracked_states=None,
+        target_states=None,
+        prior_dominant=None,
+        ledger_last_updated_day="2026-01-11",  # watermark covers 01-09..01-11
+        open_state="on",
+        open_ts=open_ts,
+    )
+    # last_week window = 01-05..01-11 (upper 01-12). Open tail split:
+    #   01-09 20:00-24:00 = 14400 (bucket absent -> carried)
+    #   01-10 full        = 86400 (bucket absent -> carried)
+    #   01-11 full        = 86400 (bucket NON-empty + <= wm -> owned, skipped)
+    # Total = 86400 (folded 01-11) + 14400 + 86400 (carried) = 187200s.
+    assert fr.breakdown_seconds["on"] == pytest.approx(187200.0)
+
+
 def test_pick_dominant_empty_none() -> None:
     assert E._pick_dominant({}, 100.0, None) is None
 
