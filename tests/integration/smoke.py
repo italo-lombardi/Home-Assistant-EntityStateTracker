@@ -4232,6 +4232,10 @@ def main():
         if ec_enabled(35):
             run_ec(ec35_config_heal_rewrites_drifted_states)
 
+        # EC49 restarts HA (dominant hysteresis survives restart); restart cluster.
+        if ec_enabled(49):
+            run_ec(ec49_dominant_persists_across_restart)
+
     finally:
         cleanup()
 
