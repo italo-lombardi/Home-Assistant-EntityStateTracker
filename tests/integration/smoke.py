@@ -4091,6 +4091,68 @@ def ec49_dominant_persists_across_restart():
     return entry, eid
 
 
+def ec50_no_phantom_dominant_edge_without_real_flip():
+    """EC50: a held-state tracker fires NO dominant_changed during same-window ticks.
+
+    Symptom-lock + wiring smoke for Bug A (the phantom midnight edge, coordinator
+    Invariant D). This is NOT the test that proves Bug A — the fail-on-broken proof
+    lives in the unit suite (tests/test_triggers.py: the Invariant-D window_start
+    reset guard + the "same window_start still fires a real flip" counter-test).
+    Un-fixed main PASSES EC50 too, because the phantom only fires at a real
+    window_start reset, which the live harness cannot force (no clock control, API
+    won't backdate last_changed — EC46/EC47 class).
+
+    What EC50 DOES add over the mocked-_fire_frame_edges unit tests: it proves, on
+    live HA over the real event bus, that an entity held in ONE state across
+    several same-day refreshes (window_start unchanged) emits ZERO
+    dominant_changed. That catches a regression the unit tests can't — e.g. the
+    coordinator ceasing to call the edge gate, or the wiring dropping window_start
+    so every tick looks like a reset. Symptom invariant: no real flip → no edge.
+    Needs the websocket to observe the event bus.
+    """
+    print(
+        "\n=== EC50: held state fires no phantom dominant_changed (same window) ===",
+        flush=True,
+    )
+    if not _WS_AVAILABLE:
+        note("EC50 SKIPPED: needs websocket-client to observe the event bus.")
+        return None, None
+
+    eid = make_entity("nophantom", "on")
+    # All-states mode: dominant is surfaced and dominant_changed is meaningful
+    # (the trigger is gated to all-states in the coordinator).
+    entry = create_tracker(eid, "all_states", frames={"today": True})
+    reg = wait_entities(entry, min_count=1)
+    bd = eid_for(entry, "today", M_BREAKDOWN, reg)
+    chk("EC50 today breakdown sensor exists", bd is not None, True)
+    if not bd:
+        return entry, eid
+
+    # Let `on` become the established dominant, then hold it. Capture the event bus
+    # across several forced refreshes within the same calendar day — window_start
+    # does not move, the state never changes, so no edge must fire.
+    def _hold_and_refresh():
+        time.sleep(2)
+        for _ in range(4):
+            api("POST", "/api/services/homeassistant/update_entity", {"entity_id": bd})
+            time.sleep(2 if FAST else 3)
+
+    phantom = capture_events(
+        EVENT_DOMINANT_CHANGED,
+        _hold_and_refresh,
+        timeout=20 if FAST else 30,
+    )
+    # Scope to this entry so a parallel tracker's legitimate edge can't false-fail.
+    mine = [e for e in phantom if e.get("entry_id") == entry]
+    chk(
+        "EC50 no dominant_changed while state held across same-window ticks",
+        mine,
+        [],
+        f"captured={mine}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -4218,6 +4280,9 @@ def main():
 
         if ec_enabled(48):
             run_ec(ec48_compliant_trigger_events)
+
+        if ec_enabled(50):
+            run_ec(ec50_no_phantom_dominant_edge_without_real_flip)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):
