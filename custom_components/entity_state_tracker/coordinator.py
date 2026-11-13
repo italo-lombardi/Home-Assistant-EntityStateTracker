@@ -99,6 +99,14 @@ FRAME_FAIL_ESCALATE = 10
 # need no such treatment (their windows are whole local days already).
 _ROLLING_FRAMES = ("24h", "7d", "30d", "365d")
 
+# Calendar frames snap their window to a local boundary (midnight/Monday/1st/
+# Jan-1) and RESET to a disjoint window when that boundary passes — unlike
+# rolling frames, whose start merely slides a tick each poll. Only these can
+# straddle a reset between two ticks, so only these gate the edge suppression in
+# ``_fire_frame_edges`` (Invariant D). Derived from FRAMES so a new calendar
+# frame is covered automatically — single source of truth.
+_CALENDAR_EDGE_FRAMES = frozenset(k for k, kind in FRAMES.items() if kind == "calendar")
+
 # Upper bound on the durable per-session ``_seen`` set. A pathological entity
 # that emits a unique state per transition (e.g. a timestamp as its state) would
 # otherwise grow ``_seen`` without bound AND fire a persistent notification per
@@ -499,8 +507,38 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         (first refresh — ``self.data`` was None — or a frame enabled mid-session),
         so no edge exists yet; suppress. This prevents a spurious edge on startup
         and when a new frame comes online.
+
+        Invariant D: suppress every edge when the frame's WINDOW reset between
+        ticks (``window_start`` moved). A calendar frame rolls its lower bound at
+        a local boundary — ``today`` at midnight, ``week`` at Monday, ``month`` at
+        the 1st, ``year`` at Jan 1 — so ``prior`` (last tick) and ``result`` (this
+        tick) describe DISJOINT windows. ``prior``'s verdict is yesterday's, not a
+        valid baseline for today's: an open visit straddling midnight carries into
+        the new ``today`` as its dominant, which compared against the old day's
+        dominant would fire a phantom ``dominant_changed`` for an entity that never
+        changed state (same for a compliance flip across the reset). The window's
+        own first verdict is a fresh start, not an edge. ``window_start`` is a
+        local-ISO string from :func:`resolve_frame_bounds`, the one boundary
+        source, so rolling frames (whose start slides every tick) are unaffected:
+        a per-tick slide is a different window_start too, but rolling frames never
+        reset to a disjoint window — their dominant is continuous across the small
+        slide, so suppressing their edge on a 1-tick start delta would lose real
+        flips. Guard therefore keys on calendar frames only.
+
+        Known limitation: a REAL flip that lands in the very tick the window
+        resets is swallowed with the phantom, and won't re-fire next tick (prior
+        == result by then). The exposure is one poll interval at the exact reset
+        boundary — vanishingly small, and seeding prior from the carried open
+        visit instead carries its own corner cases; the suppression is the simpler
+        correct default.
         """
         if prior is None:
+            return
+
+        if (
+            frame_key in _CALENDAR_EDGE_FRAMES
+            and prior.window_start != result.window_start
+        ):
             return
 
         # Invariant B: dominant edge only between two real state names. ``dominant``
