@@ -388,6 +388,69 @@ def test_duration_native_value_none_when_frame_missing() -> None:
     assert sensor.native_value is None
 
 
+# --------------------------------------------------------------------------
+# Write behaviour — no suppression layer (§ write-amp).
+#
+# EST rides stock CoordinatorEntity: every tick calls async_write_ha_state.
+# HA writes a recorder States row only when the published (state, FULL attr
+# dict) actually changed (core.async_set_internal same_attr compare); an
+# identical recompute yields STATE_REPORTED with no row. These tests assert the
+# INVARIANT HA keys that decision on — not a mocked write count:
+#   * a CLOSED frame recomputed with identical inputs is byte-identical, so an
+#     idle tick is a no-op row (STATE_REPORTED). This is the only write-amp HA
+#     can eliminate, and it does so with no code from us.
+#   * an OPEN frame genuinely advances tick-to-tick, so a row per tick is
+#     correct for a live-growing measurement — and the card reads those live
+#     values, so suppressing the write would freeze it (the deleted mixin bug).
+# --------------------------------------------------------------------------
+
+
+def test_closed_frame_idle_recompute_is_identical_state() -> None:
+    """A closed frame recomputed with the same inputs publishes an identical
+    (value, attrs) pair → HA fires STATE_REPORTED, no recorder row."""
+    res = _frame_result()  # a fixed, fully-populated frame (no now-relative bits)
+    coord = _fake_coordinator(
+        mode=MODE_SPECIFIC,
+        enabled_frames=["yesterday"],
+        tracked_states=["heat", "auto"],
+        target_states=None,
+        data=TrackerData(frames={"yesterday": res}),
+    )
+    s1 = DurationSensor(coord, "yesterday")
+    s2 = DurationSensor(coord, "yesterday")
+    assert s1.native_value == s2.native_value
+    assert s1.extra_state_attributes == s2.extra_state_attributes
+
+
+def test_open_frame_tick_advances_value_and_window() -> None:
+    """An open frame's window_seconds (and the tracked-state duration) strictly
+    increase as wall-clock advances → a row per tick is correct, not a bug.
+
+    The card reads window_seconds/duration_seconds live, so this growth MUST
+    reach the state machine every tick (a suppression layer would freeze it)."""
+    early = _frame_result(
+        window_seconds=3600.0,
+        breakdown_seconds={"heat": 1800.0, "auto": 600.0, "off": 1200.0},
+    )
+    later = _frame_result(
+        window_seconds=3660.0,  # +60s wall-clock
+        breakdown_seconds={
+            "heat": 1860.0,
+            "auto": 600.0,
+            "off": 1200.0,
+        },  # +60s in heat
+    )
+    coord_e = _duration_coord(tracked=("heat", "auto"), result=early)
+    coord_l = _duration_coord(tracked=("heat", "auto"), result=later)
+    s_early = DurationSensor(coord_e, "today")
+    s_later = DurationSensor(coord_l, "today")
+    assert s_later.native_value > s_early.native_value
+    assert (
+        s_later.extra_state_attributes["window_seconds"]
+        > s_early.extra_state_attributes["window_seconds"]
+    )
+
+
 def test_duration_entity_descriptors() -> None:
     """Duration sensor carries the §5.1 descriptor contract."""
     coord = _duration_coord()
