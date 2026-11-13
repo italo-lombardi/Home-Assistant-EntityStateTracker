@@ -107,6 +107,9 @@ async def test_diagnostics_full_dump(
     assert frames["today"]["percent"] == 75.0
     assert frames["today"]["dominant"] == "heat"
     assert frames["today"]["states"] == 2
+    # Per-state seconds dict is dumped for seam/transient diagnosis (observability).
+    assert frames["today"]["breakdown_seconds"] == {"heat": 1800.0, "off": 600.0}
+    assert "unaccounted_seconds" in frames["today"]
 
     ledger = result["ledger"]
     assert ledger["loaded"] is True

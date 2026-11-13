@@ -72,6 +72,13 @@ def _frame_summary(coordinator: EntityStateTrackerCoordinator) -> dict[str, Any]
             "has_gap": result.has_gap,
             "data_start": result.data_start,
             "states": len(result.breakdown_seconds),
+            # Per-state seconds (not just the count) so a dump captures the exact
+            # per-state attribution at that tick — the ground truth needed to pin
+            # a transient/seam anomaly (e.g. a one-tick cumulative dip) that the
+            # aggregate count cannot reveal. Observability only; no behaviour
+            # change. unaccounted_seconds rounds out the window.
+            "breakdown_seconds": dict(result.breakdown_seconds),
+            "unaccounted_seconds": result.unaccounted_seconds,
         }
         for frame_key, result in data.frames.items()
     }
