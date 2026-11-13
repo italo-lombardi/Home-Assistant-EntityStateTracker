@@ -40,13 +40,14 @@ from custom_components.entity_state_tracker.coordinator import (
 from custom_components.entity_state_tracker.models import FrameResult
 
 
-def _frame(dominant=None, compliance=None, pct=None) -> FrameResult:
+def _frame(dominant=None, compliance=None, pct=None, window_start=None) -> FrameResult:
     """Build a FrameResult carrying just the fields the edge emitter reads."""
     return FrameResult(
         window_seconds=3600.0,
         dominant=dominant,
         compliance_percent=compliance,
         breakdown_pct=pct or {},
+        window_start=window_start,
     )
 
 
@@ -204,6 +205,95 @@ async def test_no_compliant_edge_without_threshold(
     c._fire_frame_edges("today", _frame(compliance=10.0), _frame(compliance=99.0))
     await hass.async_block_till_done()
     assert on == []
+
+
+# --- _fire_frame_edges: Invariant D (calendar window reset) ---------------
+# Regression: a `today` frame resets its window at local midnight. An entity
+# whose open visit straddles midnight carries into the new day as its dominant,
+# which — compared against the OLD day's dominant — fired a phantom
+# dominant_changed for an entity that never physically changed state. Observed
+# 2026-11-13 00:00 on a prod PIR switch (off→on phantom). Invariant D suppresses
+# EVERY edge when window_start advances between ticks (disjoint windows).
+
+
+async def test_no_dominant_edge_when_calendar_window_reset(
+    hass: HomeAssistant, all_states_coord
+) -> None:
+    """Phantom dominant flip across a `today` midnight reset is suppressed.
+
+    prior (old day) dominant=off, result (new day, open visit carried) dominant=on
+    with a DIFFERENT window_start → the apparent off→on is a window reset, not a
+    real flip. No dominant_changed must fire.
+    """
+    events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
+    prior = _frame(dominant="off", window_start="2026-11-12T00:00:00+00:00")
+    new = _frame(
+        dominant="on",
+        pct={"on": 100.0},
+        window_start="2026-11-13T00:00:00+00:00",
+    )
+    all_states_coord._fire_frame_edges("today", prior, new)
+    await hass.async_block_till_done()
+    assert events == []
+
+
+async def test_no_compliant_edge_when_calendar_window_reset(
+    hass: HomeAssistant, coord
+) -> None:
+    """A compliance verdict flip across a calendar reset is also suppressed."""
+    on = async_capture_events(hass, EVENT_COMPLIANT_ON)
+    off = async_capture_events(hass, EVENT_COMPLIANT_OFF)
+    # prior (old day) below threshold, new (reset day) above — not a real cross.
+    coord._fire_frame_edges(
+        "today",
+        _frame(compliance=50.0, window_start="2026-11-12T00:00:00+00:00"),
+        _frame(compliance=95.0, window_start="2026-11-13T00:00:00+00:00"),
+    )
+    await hass.async_block_till_done()
+    assert on == [] and off == []
+
+
+async def test_dominant_edge_fires_within_same_calendar_window(
+    hass: HomeAssistant, all_states_coord
+) -> None:
+    """Invariant D must NOT swallow a real flip when window_start is unchanged.
+
+    Same window_start on both ticks = same day → a genuine off→on dominant flip
+    still fires. Guards against the suppression being too broad.
+    """
+    events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
+    ws = "2026-11-13T00:00:00+00:00"
+    all_states_coord._fire_frame_edges(
+        "today",
+        _frame(dominant="off", window_start=ws),
+        _frame(dominant="on", pct={"on": 60.0}, window_start=ws),
+    )
+    await hass.async_block_till_done()
+    assert len(events) == 1
+    assert events[0].data["dominant"] == "on"
+    assert events[0].data["previous_dominant"] == "off"
+
+
+async def test_rolling_frame_edge_fires_despite_window_start_drift(
+    hass: HomeAssistant, all_states_coord
+) -> None:
+    """A rolling frame (7d) slides window_start every tick but never resets to a
+    disjoint window — its real flips must still fire (guard keys on calendar
+    frames only, so a per-tick start drift does not suppress 7d).
+    """
+    events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
+    all_states_coord._fire_frame_edges(
+        "7d",
+        _frame(dominant="off", window_start="2026-11-06T09:00:00+00:00"),
+        _frame(
+            dominant="on",
+            pct={"on": 51.0},
+            window_start="2026-11-06T09:01:00+00:00",
+        ),
+    )
+    await hass.async_block_till_done()
+    assert len(events) == 1
+    assert events[0].data["dominant"] == "on"
 
 
 # --- trigger.py platform --------------------------------------------------
