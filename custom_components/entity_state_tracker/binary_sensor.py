@@ -12,19 +12,24 @@ Conditional binary sensors (§5.1):
   ``target_threshold`` is configured. Each is ``on`` when its frame's compliance
   percentage meets or exceeds that threshold.
 
-Both ride :class:`~.write_dedup.DedupCoordinatorBinarySensor`, so an idle 5-min
-coordinator tick that recomputes an unchanged value writes no recorder row.
+Both ride ``CoordinatorEntity``. An idle recompute whose state + attributes are
+byte-identical (a closed frame, or a currently-in-state sensor whose live state
+held) yields the same ``State``, so Home Assistant fires ``STATE_REPORTED`` and
+writes no recorder row; a genuinely changed value writes one row, which is
+correct for a live measurement.
 """
 
 from __future__ import annotations
 
 from typing import Any
 
+from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import Event, EventStateChangedData, HomeAssistant, callback
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
@@ -42,7 +47,6 @@ from .helpers import (
     unique_id,
 )
 from .models import frame_compliant
-from .write_dedup import DedupCoordinatorBinarySensor
 
 
 async def async_setup_entry(
@@ -55,7 +59,7 @@ async def async_setup_entry(
 
     coordinator: EntityStateTrackerCoordinator = hass.data[DOMAIN][entry.entry_id]
 
-    entities: list[DedupCoordinatorBinarySensor] = []
+    entities: list[BinarySensorEntity] = []
     # Currently-in-state only makes sense when we know which states count.
     if coordinator.mode == MODE_SPECIFIC and coordinator.tracked_states:
         entities.append(CurrentlyInStateBinarySensor(coordinator))
@@ -92,7 +96,9 @@ def _device_info(coordinator: EntityStateTrackerCoordinator) -> DeviceInfo:
     )
 
 
-class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
+class CurrentlyInStateBinarySensor(
+    CoordinatorEntity[EntityStateTrackerCoordinator], BinarySensorEntity
+):
     """ON while the tracked entity's live state is one of the tracked states."""
 
     _attr_has_entity_name = True
@@ -125,7 +131,7 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
         """Repaint immediately on every source-entity state change.
 
         ``is_on``/``current_state`` read the source's LIVE state, but the base
-        class only writes on coordinator ticks (~5 min) — so between the source
+        class only writes on coordinator ticks (~1 min) — so between the source
         changing and the next tick the published state lags, and right after a
         restart the sensor can publish before the source entity has been
         restored (reading it as unavailable). Subscribing to the source's
@@ -191,7 +197,9 @@ class CurrentlyInStateBinarySensor(DedupCoordinatorBinarySensor):
         }
 
 
-class CompliantBinarySensor(DedupCoordinatorBinarySensor):
+class CompliantBinarySensor(
+    CoordinatorEntity[EntityStateTrackerCoordinator], BinarySensorEntity
+):
     """ON when ONE frame's compliance percentage meets the configured threshold.
 
     One instance per enabled frame (setup loops ``coordinator.enabled_frames``),

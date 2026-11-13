@@ -4153,6 +4153,133 @@ def ec50_no_phantom_dominant_edge_without_real_flip():
     return entry, eid
 
 
+def ec51_write_behaviour_fresh_open_quiet_closed():
+    """EC51: open-frame sensors stay LIVE every tick; closed frames write no idle row.
+
+    There is no write-suppression layer (write_dedup.py was removed — it could
+    only freeze the card or no-op). EST rides stock CoordinatorEntity. HA writes
+    a States row only when the published (state, FULL attr dict) changed; an
+    identical recompute fires STATE_REPORTED with no row. That gives two
+    invariants this EC asserts live:
+
+    FRESHNESS (open frame): the `today` duration sensor's window_seconds AND
+    duration_seconds genuinely advance every recompute, and the card reads them
+    live, so each tick MUST reach the state machine. A suppression layer froze
+    window_seconds (the old dedup bug; smoke EC6/EC7 caught the sibling freeze) —
+    this asserts the LIVE value advances, i.e. never frozen.
+
+    NO-WRITE-AMP (closed frame): the `yesterday` duration sensor is a fixed past
+    window — identical every recompute — so stock HA emits STATE_REPORTED and
+    writes NO new row. This is the only idle write-amp that can be eliminated,
+    and plain HA eliminates it once the suppression layer is gone. Zero code.
+
+    For an OPEN frame a row per tick is CORRECT (live-growing measurement), not
+    amplification — so the open-frame row count is a sane band (~N), not ~0.
+
+    EC9 proves churn attrs are stripped from history; EC51 proves the LIVE object
+    stays fresh on open frames AND idle closed frames don't flood the recorder.
+    """
+    print(
+        "\n=== EC51: open frame stays fresh every tick; closed frame writes no idle row ===",
+        flush=True,
+    )
+    eid = make_entity("writeamp", "on")
+    # Tracked state == "on", and the source SITS in "on" the whole test, so the
+    # tracked-seconds (duration_seconds / native_value) genuinely GROW on the
+    # open `today` frame — the live value the card reads. `yesterday` is a closed
+    # past window: identical every recompute regardless of the live state.
+    entry = create_tracker(
+        eid,
+        "specific_states",
+        states=["on"],
+        frames={"today": True, "yesterday": True},
+    )
+    reg = wait_entities(entry, min_count=1)
+    today_dur = eid_for(entry, "today", M_DURATION, reg)
+    yday_dur = eid_for(entry, "yesterday", M_DURATION, reg)
+    chk(
+        "EC51 today + yesterday duration sensors exist",
+        today_dur is not None and yday_dur is not None,
+        True,
+        f"uids={list(reg)}",
+    )
+
+    start_iso = (dt.datetime.now(dt.UTC) - dt.timedelta(seconds=5)).isoformat()
+
+    n_recomputes = 5
+    seen_window = set()
+    seen_duration = set()
+    for _ in range(n_recomputes):
+        for e in (today_dur, yday_dur):
+            api(
+                "POST",
+                "/api/services/homeassistant/update_entity",
+                {"entity_id": e},
+            )
+        time.sleep(2)
+        attrs = gs(today_dur).get("attributes", {})
+        ws = attrs.get("window_seconds")
+        ds = attrs.get("duration_seconds")
+        if ws is not None:
+            seen_window.add(round(float(ws)))
+        if ds is not None:
+            seen_duration.add(round(float(ds)))
+
+    # FRESHNESS: the live open-frame values advanced across recomputes — the
+    # state object the frontend reads is never frozen (the old dedup-freeze bug).
+    chk(
+        "EC51 open-frame window_seconds stays live (advances every tick)",
+        len(seen_window) >= 2,
+        True,
+        f"distinct_window_seconds={sorted(seen_window)}",
+    )
+    chk(
+        "EC51 open-frame duration_seconds stays live (advances every tick)",
+        len(seen_duration) >= 2,
+        True,
+        f"distinct_duration_seconds={sorted(seen_duration)}",
+    )
+
+    def _rows(entity):
+        hist = api(
+            "GET",
+            f"/api/history/period/{start_iso}"
+            f"?filter_entity_id={entity}&minimal_response&no_attributes=true",
+        )
+        return len(hist[0]) if hist and hist[0] else 0
+
+    # OPEN frame: a row per genuine tick is correct. Band: rows were written
+    # (live data persisted) and no multi-row-per-tick amplification.
+    today_rows = _rows(today_dur)
+    chk(
+        "EC51 open frame persists live rows (data written, not frozen)",
+        today_rows >= 1,
+        True,
+        f"today_rows={today_rows} over {n_recomputes} recomputes",
+    )
+    # ponytail: provisional upper band, calibrate on first live run. One row per
+    # recompute is expected; +2 absorbs a boundary/coordinator tick landing in
+    # the window. A suppression bug (frozen) would read FAR below N; a multi-row
+    # amplification would read FAR above N+2.
+    chk(
+        "EC51 open frame not multi-row-amplified",
+        today_rows <= n_recomputes + 2,
+        True,
+        f"today_rows={today_rows} (expect ~{n_recomputes})",
+    )
+
+    # CLOSED frame: identical every recompute → STATE_REPORTED → no new row.
+    # This is the genuine no-write-amp guarantee, delivered by stock HA.
+    yday_rows = _rows(yday_dur)
+    chk(
+        "EC51 closed frame writes no redundant idle row (STATE_REPORTED)",
+        yday_rows <= 2,
+        True,
+        f"yesterday_rows={yday_rows} over {n_recomputes} idle recomputes (amp would write ~{n_recomputes})",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -4283,6 +4410,9 @@ def main():
 
         if ec_enabled(50):
             run_ec(ec50_no_phantom_dominant_edge_without_real_flip)
+
+        if ec_enabled(51):
+            run_ec(ec51_write_behaviour_fresh_open_quiet_closed)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

@@ -26,13 +26,18 @@ from __future__ import annotations
 
 from typing import Any
 
-from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, EntityCategory, UnitOfTime
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from .const import (
     DOMAIN,
@@ -55,7 +60,6 @@ from .helpers import (
     zone_label_map,
 )
 from .models import FrameResult
-from .write_dedup import DedupCoordinatorSensor
 
 _ZONE_STATE_DOMAINS = ("person", "device_tracker")
 
@@ -141,7 +145,7 @@ def _device_info(coordinator: EntityStateTrackerCoordinator) -> DeviceInfo:
     )
 
 
-class _FrameSensor(DedupCoordinatorSensor):
+class _FrameSensor(CoordinatorEntity[EntityStateTrackerCoordinator], SensorEntity):
     """Base for a sensor scoped to one frame of a tracker.
 
     Wires unique_id/device_info/translation once; subclasses set the metric and
