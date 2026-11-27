@@ -64,6 +64,12 @@ LEDGER_MAX_DAYS = 400
 # Dominant-state hysteresis margin in percent of window (§6.6, guards R10).
 DOMINANT_HYSTERESIS_PCT = 1.0
 
+# Fresh calendar-window settling period: dominant/compliance edges are
+# suppressed until a frame's window is at least this old, so the first poll of a
+# new day/week/month/year cannot fire a phantom edge off a transient state that
+# briefly leads a near-empty window (§5.4 named-trigger edge emission).
+DOMINANT_SETTLE = SCAN_INTERVAL
+
 # Bus event fired when an all-states tracker sees a previously unseen state (§5.2).
 EVENT_NEW_STATE = "entity_state_tracker_new_state"
 

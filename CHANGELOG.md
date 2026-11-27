@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1]
+
+### Fixed
+- **Phantom `Dominant state changed` in the first minute of a new day/week/month/year** — when a calendar frame reset at its local boundary (`Today` at midnight, `This week` at Monday, `This month` at the 1st, `This year` at Jan 1), the fresh window was only seconds wide, so whichever state the entity happened to be in at the stroke of the boundary briefly "dominated" a near-empty window. If that was a transient state (e.g. a camera that blipped `off` at midnight after a Wi-Fi hiccup, then settled `on` seconds later), the next poll saw the real leader overtake it and fired a spurious `dominant_changed` (and likewise a `compliant` edge) — for an entity whose state never meaningfully changed. The previous guard only covered the single reset tick; it missed the later same-window tick where the overtake actually landed. Edges on a calendar frame are now suppressed until that frame's own window has aged at least one poll interval past its reset, so the first (untrustworthy) sample of a fresh window can no longer fire an edge. A genuine dominant/compliance change in that first interval is delayed by at most one tick; real changes later in the window are unaffected, and rolling frames (`Last 24 hours`/`7 days`/`30 days`/`365 days`) are not touched.
+
 ## [0.2.0]
 
 ### Added

@@ -52,6 +52,7 @@ from .const import (
     CONF_TARGET_THRESHOLD,
     DEFAULT_MIN_STATE_DURATION,
     DOMAIN,
+    DOMINANT_SETTLE,
     EVENT_COMPLIANT_OFF,
     EVENT_COMPLIANT_ON,
     EVENT_DOMINANT_CHANGED,
@@ -500,6 +501,8 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         frame_key: str,
         prior: FrameResult | None,
         result: FrameResult,
+        *,
+        window_settled: bool = True,
     ) -> None:
         """Fire the per-frame verdict edge events backing the named triggers (§5.4).
 
@@ -508,37 +511,41 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         so no edge exists yet; suppress. This prevents a spurious edge on startup
         and when a new frame comes online.
 
-        Invariant D: suppress every edge when the frame's WINDOW reset between
-        ticks (``window_start`` moved). A calendar frame rolls its lower bound at
-        a local boundary — ``today`` at midnight, ``week`` at Monday, ``month`` at
-        the 1st, ``year`` at Jan 1 — so ``prior`` (last tick) and ``result`` (this
-        tick) describe DISJOINT windows. ``prior``'s verdict is yesterday's, not a
-        valid baseline for today's: an open visit straddling midnight carries into
-        the new ``today`` as its dominant, which compared against the old day's
-        dominant would fire a phantom ``dominant_changed`` for an entity that never
-        changed state (same for a compliance flip across the reset). The window's
-        own first verdict is a fresh start, not an edge. ``window_start`` is a
-        local-ISO string from :func:`resolve_frame_bounds`, the one boundary
-        source, so rolling frames (whose start slides every tick) are unaffected:
-        a per-tick slide is a different window_start too, but rolling frames never
-        reset to a disjoint window — their dominant is continuous across the small
-        slide, so suppressing their edge on a 1-tick start delta would lose real
-        flips. Guard therefore keys on calendar frames only.
+        Invariant D (window-age gate): suppress every edge on a calendar frame
+        until its window has aged at least ``DOMINANT_SETTLE`` past its own reset.
+        A calendar frame rolls its lower bound at a local boundary — ``today`` at
+        midnight, ``week`` at Monday, ``month`` at the 1st, ``year`` at Jan 1 — and
+        for the first poll(s) after that reset the window is only seconds wide, so
+        whatever state the entity happens to sit in at the boundary trivially
+        "dominates" a near-empty window. That is the first sample, not a real
+        day/week dominant: hysteresis cannot damp it (its margin is a percent of a
+        tiny ``window_seconds``), and which state leads is decided by sub-second
+        refresh-vs-transition timing — non-deterministic, i.e. an artifact. If the
+        reset tick captures a transient loser (e.g. a camera briefly ``off`` at
+        00:00 after a wifi blip) and the true leader overtakes a tick later, the
+        later edge would fire a phantom ``dominant_changed``/compliance flip for an
+        entity whose real state never meaningfully changed. ``window_settled`` is
+        ``(now - start_utc) >= DOMINANT_SETTLE`` computed at the call site from the
+        frame's aware-UTC bounds, so the gate is per-frame-relative (each frame's
+        own first ``DOMINANT_SETTLE`` after ITS reset) and tz-agnostic — it holds
+        in DST months where local midnight is not 00:00Z. It subsumes the older
+        single-reset-tick guard: the reset tick always has age ≈ 0 < settle, and so
+        does every same-window tick inside the settle period that the single-tick
+        guard used to miss. Rolling frames (``24h``/``7d``/``30d``/``365d``) never
+        enter this branch — their start slides every tick but never resets to a
+        disjoint window, so their dominant is continuous and real flips must fire.
 
-        Known limitation: a REAL flip that lands in the very tick the window
-        resets is swallowed with the phantom, and won't re-fire next tick (prior
-        == result by then). The exposure is one poll interval at the exact reset
-        boundary — vanishingly small, and seeding prior from the carried open
-        visit instead carries its own corner cases; the suppression is the simpler
-        correct default.
+        Tradeoff: a GENUINE dominant/compliance flip that lands within the first
+        ``DOMINANT_SETTLE`` of a fresh window is delayed until the next tick (once
+        the window has aged past settle, if still crossed) or suppressed entirely
+        if it was only a startup transient. That is the correct bias — a window's
+        dominant is not meaningful seconds after it opens — and the exposure is one
+        settle period at each calendar boundary only.
         """
         if prior is None:
             return
 
-        if (
-            frame_key in _CALENDAR_EDGE_FRAMES
-            and prior.window_start != result.window_start
-        ):
+        if frame_key in _CALENDAR_EDGE_FRAMES and not window_settled:
             return
 
         # Invariant B: dominant edge only between two real state names. ``dominant``
@@ -818,7 +825,8 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         frames: dict[str, Any] = {}
         prior = self.data.frames if self.data is not None else {}
         for frame_key in self.enabled_frames:
-            _start_utc, end_utc = resolve_frame_bounds(frame_key, now, self.tz)
+            start_utc, end_utc = resolve_frame_bounds(frame_key, now, self.tz)
+            window_settled = (now - start_utc) >= DOMINANT_SETTLE
             ledger_upper_local_day: str | None = None
             if frame_key in _ROLLING_FRAMES and states is not None:
                 # Recorder covers [recorder_floor, now) at real seconds; the
@@ -896,7 +904,9 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
             elif frame_key in ledger.last_dominant:
                 del ledger.last_dominant[frame_key]
                 self._dirty = True
-            self._fire_frame_edges(frame_key, prior.get(frame_key), result)
+            self._fire_frame_edges(
+                frame_key, prior.get(frame_key), result, window_settled=window_settled
+            )
 
         # A frame dropped from enabled_frames (toggled off / default narrowed)
         # is never revisited by the loop above, so a Repair issue it raised while
