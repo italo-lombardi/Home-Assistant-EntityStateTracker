@@ -4280,6 +4280,74 @@ def ec51_write_behaviour_fresh_open_quiet_closed():
     return entry, eid
 
 
+def ec52_transient_state_no_phantom_edge():
+    """EC52: a transient state that never truly dominates fires NO dominant_changed.
+
+    Live analog of the 0.2.1 phantom: the midnight bug was a transient state
+    (a camera briefly `off` at 00:00) that led a seconds-wide fresh window and
+    produced a spurious off→on edge once the real leader overtook it. The live
+    harness cannot force a real midnight reset (no clock control — same limitation
+    EC50 notes), so the fail-on-broken proof of the age gate itself lives in the
+    unit suite (tests/test_triggers.py). What EC52 adds live, on the real event
+    bus: a tracker sitting in a settled window whose entity BLIPS to a second
+    state briefly (a sub-dominant transient) and returns must emit ZERO
+    dominant_changed — the transient never accrues enough to overtake the
+    incumbent (hysteresis, R10), so no real flip exists and no edge may fire. This
+    is the symptom the phantom violated (a transient firing an edge) in the one
+    shape the harness CAN reproduce without a clock: a same-window transient
+    blip rather than a window reset. Complements EC50 (held state, no blip) and
+    EC14 (hysteresis holds the dominant) with an explicit event-bus assertion.
+    Needs the websocket to observe the event bus.
+    """
+    print(
+        "\n=== EC52: a transient (sub-dominant) blip fires no dominant_changed ===",
+        flush=True,
+    )
+    if not _WS_AVAILABLE:
+        note("EC52 SKIPPED: needs websocket-client to observe the event bus.")
+        return None, None
+
+    eid = make_entity("transientblip", "alpha")
+    entry = create_tracker(eid, "all_states", frames={"today": True})
+    reg = wait_entities(entry, min_count=1)
+    bd = eid_for(entry, "today", M_BREAKDOWN, reg)
+    chk("EC52 today breakdown sensor exists", bd is not None, True)
+    if not bd:
+        return entry, eid
+
+    # Establish alpha as the settled incumbent dominant.
+    ss(eid, "alpha")
+    time.sleep(12 if not FAST else 8)
+    dom0 = wait_for(lambda: gs(bd).get("state"), "alpha")
+    chk("EC52 alpha is the incumbent dominant", dom0, "alpha")
+
+    # Blip to beta briefly (a transient far below alpha's lead → below the 1%
+    # hysteresis margin), then return to alpha. Beta never dominates, so NO
+    # dominant_changed may fire across these same-window refreshes.
+    def _blip_beta_and_return():
+        ss(eid, "beta")
+        time.sleep(1)
+        ss(eid, "alpha")
+        time.sleep(2)
+        for _ in range(3):
+            api("POST", "/api/services/homeassistant/update_entity", {"entity_id": bd})
+            time.sleep(2 if FAST else 3)
+
+    fired = capture_events(
+        EVENT_DOMINANT_CHANGED,
+        _blip_beta_and_return,
+        timeout=20 if FAST else 30,
+    )
+    mine = [e for e in fired if e.get("entry_id") == entry]
+    chk(
+        "EC52 no dominant_changed for a sub-dominant transient blip",
+        mine,
+        [],
+        f"captured={mine}",
+    )
+    return entry, eid
+
+
 def main():
     print("=== Entity State Tracker smoke tests ===", flush=True)
     print(f"BASE={BASE}  FAST={FAST}  WS={_WS_AVAILABLE}  RUN={RUN}", flush=True)
@@ -4413,6 +4481,9 @@ def main():
 
         if ec_enabled(51):
             run_ec(ec51_write_behaviour_fresh_open_quiet_closed)
+
+        if ec_enabled(52):
+            run_ec(ec52_transient_state_no_phantom_edge)
 
         # EC12 last — it restarts HA.
         if ec_enabled(12):

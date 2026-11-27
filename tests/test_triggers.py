@@ -207,89 +207,163 @@ async def test_no_compliant_edge_without_threshold(
     assert on == []
 
 
-# --- _fire_frame_edges: Invariant D (calendar window reset) ---------------
-# Regression: a `today` frame resets its window at local midnight. An entity
-# whose open visit straddles midnight carries into the new day as its dominant,
-# which — compared against the OLD day's dominant — fired a phantom
-# dominant_changed for an entity that never physically changed state. Observed
-# 2026-11-13 00:00 on a prod PIR switch (off→on phantom). Invariant D suppresses
-# EVERY edge when window_start advances between ticks (disjoint windows).
+# --- _fire_frame_edges: Invariant D (fresh-window settling-age gate) -------
+# Regression: a calendar frame resets its window at its local boundary (today at
+# midnight, week at Monday, month at the 1st, year at Jan 1). For the first poll(s)
+# after the reset the window is only seconds wide, so a transient state that
+# briefly leads it "dominates" a near-empty window and, once the true leader
+# overtakes a tick later, fired a phantom dominant_changed. Observed 2026-11-27
+# ~00:01 on a prod camera sleep_status (off→on 93.57%): the camera blipped off at
+# midnight (wifi drop) then went on 4s into the new day — the reset tick captured
+# dominant=off, the next same-window tick captured dominant=on, and the off→on
+# edge fired for an entity whose real state never meaningfully changed. The
+# window-age gate suppresses calendar-frame edges while the frame's own window is
+# younger than DOMINANT_SETTLE (one poll), per-frame-relative and tz-agnostic.
 
 
-async def test_no_dominant_edge_when_calendar_window_reset(
+async def test_no_dominant_edge_in_fresh_calendar_window(
     hass: HomeAssistant, all_states_coord
 ) -> None:
-    """Phantom dominant flip across a `today` midnight reset is suppressed.
+    """The real prod bug: a transient-loser dominant in a just-reset `today`
+    window that crosses to the true leader a tick later must NOT fire.
 
-    prior (old day) dominant=off, result (new day, open visit carried) dominant=on
-    with a DIFFERENT window_start → the apparent off→on is a window reset, not a
-    real flip. No dominant_changed must fire.
+    prior (old day) dominant=off; result (new day, on has overtaken the 4s off
+    sliver) dominant=on at 93.57% — but the window is younger than DOMINANT_SETTLE
+    (window_settled=False), so the apparent off→on is fresh-window noise, not a
+    real flip. No dominant_changed must fire. FAILS on the pre-fix single-reset-
+    tick guard (which saw the same window_start and let it through).
     """
     events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
-    prior = _frame(dominant="off", window_start="2026-11-12T00:00:00+00:00")
-    new = _frame(
-        dominant="on",
-        pct={"on": 100.0},
-        window_start="2026-11-13T00:00:00+00:00",
-    )
-    all_states_coord._fire_frame_edges("today", prior, new)
+    ws = "2026-11-27T00:00:00+00:00"
+    prior = _frame(dominant="off", window_start=ws)
+    new = _frame(dominant="on", pct={"on": 93.57}, window_start=ws)
+    all_states_coord._fire_frame_edges("today", prior, new, window_settled=False)
     await hass.async_block_till_done()
     assert events == []
 
 
-async def test_no_compliant_edge_when_calendar_window_reset(
-    hass: HomeAssistant, coord
-) -> None:
-    """A compliance verdict flip across a calendar reset is also suppressed."""
-    on = async_capture_events(hass, EVENT_COMPLIANT_ON)
-    off = async_capture_events(hass, EVENT_COMPLIANT_OFF)
-    # prior (old day) below threshold, new (reset day) above — not a real cross.
-    coord._fire_frame_edges(
-        "today",
-        _frame(compliance=50.0, window_start="2026-11-12T00:00:00+00:00"),
-        _frame(compliance=95.0, window_start="2026-11-13T00:00:00+00:00"),
-    )
-    await hass.async_block_till_done()
-    assert on == [] and off == []
-
-
-async def test_dominant_edge_fires_within_same_calendar_window(
+async def test_fresh_window_phantom_would_fire_when_settled_documents_the_bug(
     hass: HomeAssistant, all_states_coord
 ) -> None:
-    """Invariant D must NOT swallow a real flip when window_start is unchanged.
+    """Behavioural documentation of the pre-0.2.1 defect.
 
-    Same window_start on both ticks = same day → a genuine off→on dominant flip
-    still fires. Guards against the suppression being too broad.
+    The SAME transient-loser→leader cross as the test above (prior=off, result=on,
+    SAME window_start) is exactly what fired the phantom when the window was
+    treated as settled: the old guard keyed on ``prior.window_start !=
+    result.window_start``, so a same-window second tick (off→on at ~00:01) sailed
+    through and fired. This test pins that: with ``window_settled=True`` the edge
+    DOES fire — proving the only thing standing between the phantom and the user is
+    the age gate. The fix is the age gate deciding this cross is unsettled
+    (above); this test guards against a regression that reverts the gate to the
+    old window_start-equality logic (under which an equal-window cross like this
+    one would fire again).
     """
     events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
-    ws = "2026-11-13T00:00:00+00:00"
-    all_states_coord._fire_frame_edges(
-        "today",
-        _frame(dominant="off", window_start=ws),
-        _frame(dominant="on", pct={"on": 60.0}, window_start=ws),
-    )
+    ws = "2026-11-27T00:00:00+00:00"
+    prior = _frame(dominant="off", window_start=ws)
+    new = _frame(dominant="on", pct={"on": 93.57}, window_start=ws)
+    all_states_coord._fire_frame_edges("today", prior, new, window_settled=True)
     await hass.async_block_till_done()
     assert len(events) == 1
     assert events[0].data["dominant"] == "on"
     assert events[0].data["previous_dominant"] == "off"
 
 
-async def test_rolling_frame_edge_fires_despite_window_start_drift(
+async def test_no_compliant_edge_in_fresh_calendar_window(
+    hass: HomeAssistant, coord
+) -> None:
+    """A compliance verdict flip in a just-reset (unsettled) window is suppressed."""
+    on = async_capture_events(hass, EVENT_COMPLIANT_ON)
+    off = async_capture_events(hass, EVENT_COMPLIANT_OFF)
+    coord._fire_frame_edges(
+        "today",
+        _frame(compliance=50.0),
+        _frame(compliance=95.0),
+        window_settled=False,
+    )
+    await hass.async_block_till_done()
+    assert on == [] and off == []
+
+
+async def test_dominant_edge_held_state_across_reset_no_fire(
     hass: HomeAssistant, all_states_coord
 ) -> None:
-    """A rolling frame (7d) slides window_start every tick but never resets to a
-    disjoint window — its real flips must still fire (guard keys on calendar
-    frames only, so a per-tick start drift does not suppress 7d).
+    """An entity held in one state across midnight has prior==result dominant, so
+    there is no edge to fire regardless of settling — guards the pure-held path
+    (the balcony-camera case: on across midnight, no transition, no edge).
+    """
+    events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
+    all_states_coord._fire_frame_edges(
+        "today",
+        _frame(dominant="on"),
+        _frame(dominant="on", pct={"on": 100.0}),
+        window_settled=False,
+    )
+    await hass.async_block_till_done()
+    assert events == []
+
+
+async def test_dominant_edge_fires_in_settled_calendar_window(
+    hass: HomeAssistant, all_states_coord
+) -> None:
+    """Anti-over-suppression: a genuine dominant flip in a SETTLED window (age ≥
+    DOMINANT_SETTLE) with an UNCHANGED window_start (same period, e.g. a
+    mid-afternoon cross) must still fire. Proves neither guard — age nor
+    window-identity — swallows a real same-window edge away from the boundary.
+    """
+    events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
+    ws = "2026-11-27T00:00:00+00:00"
+    all_states_coord._fire_frame_edges(
+        "today",
+        _frame(dominant="a", window_start=ws),
+        _frame(dominant="b", pct={"b": 60.0}, window_start=ws),
+        window_settled=True,
+    )
+    await hass.async_block_till_done()
+    assert len(events) == 1
+    assert events[0].data["dominant"] == "b"
+    assert events[0].data["previous_dominant"] == "a"
+
+
+async def test_no_dominant_edge_on_closed_frame_roll(
+    hass: HomeAssistant, all_states_coord
+) -> None:
+    """A CLOSED calendar frame (yesterday/last_week/last_month) rolls to a new
+    COMPLETE period whose window is already old (settled), but prior and result
+    describe DISJOINT periods — their dominants are unrelated, so comparing them
+    must not fire. prior = the previous `yesterday` (dominant=off), result = the
+    new `yesterday` one day later (dominant=on), DIFFERENT window_start, and
+    window_settled=True (a day-old window is well past DOMINANT_SETTLE). The
+    age gate alone would let this through (settled) — the window-identity guard
+    must suppress it. Guards against the closed-frame disjoint-window phantom.
+    """
+    events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
+    all_states_coord._fire_frame_edges(
+        "yesterday",
+        _frame(dominant="off", window_start="2026-11-25T00:00:00+00:00"),
+        _frame(
+            dominant="on", pct={"on": 100.0}, window_start="2026-11-26T00:00:00+00:00"
+        ),
+        window_settled=True,
+    )
+    await hass.async_block_till_done()
+    assert events == []
+
+
+async def test_rolling_frame_edge_fires_despite_unsettled_flag(
+    hass: HomeAssistant, all_states_coord
+) -> None:
+    """A rolling frame (7d) never enters the calendar age gate — its real flips
+    must fire even when window_settled is False (the gate keys on calendar frames
+    only; a rolling frame's start slides every tick but never resets to a disjoint
+    window, so its dominant is continuous and genuine flips must surface).
     """
     events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
     all_states_coord._fire_frame_edges(
         "7d",
-        _frame(dominant="off", window_start="2026-11-06T09:00:00+00:00"),
-        _frame(
-            dominant="on",
-            pct={"on": 51.0},
-            window_start="2026-11-06T09:01:00+00:00",
-        ),
+        _frame(dominant="off"),
+        _frame(dominant="on", pct={"on": 51.0}),
+        window_settled=False,
     )
     await hass.async_block_till_done()
     assert len(events) == 1

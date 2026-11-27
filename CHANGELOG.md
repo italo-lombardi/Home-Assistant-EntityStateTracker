@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1]
+
+### Fixed
+- **Phantom `Dominant state changed`/`Compliant` edges at a calendar-frame boundary** — a calendar frame (`Today`/`Yesterday`/`This week`/`Last week`/`This month`/`Last month`/`This year`) resets its window at its local boundary (midnight / Monday / the 1st / Jan 1), and that reset could fire a spurious `dominant_changed` (or `compliant_on`/`compliant_off`) for an entity whose state never meaningfully changed. Two cases are now closed:
+  - **Open frames** (`Today`/`This week`/`This month`/`This year`, which end at *now*): for the first poll after the reset the window is only seconds wide, so whichever state the entity happened to be in at the stroke of the boundary briefly "dominated" a near-empty window. If that was a transient state (e.g. a camera that blipped `off` at midnight after a Wi-Fi hiccup, then settled `on` seconds later), the next poll saw the real leader overtake it and fired a spurious edge. Calendar-frame edges are now suppressed until that frame's own window has aged at least one poll interval (60 s) past its reset, so the first, untrustworthy sample of a fresh window can no longer fire. A genuine change in that first interval is delayed by at most one tick; real changes later in the window are unaffected.
+  - **Closed frames** (`Yesterday`/`Last week`/`Last month`, which end at an earlier midnight): at a roll these jump to a new, already-complete past period, so the previous period's dominant was compared against the new period's — two unrelated historical facts — and fired a phantom. As a result, **closed calendar frames no longer emit `dominant_changed`/`compliant` edges at all**: a closed period's dominant is a fixed historical value and its roll is a bookkeeping reset, not a real state change. To act on "yesterday's dominant", use a time-triggered automation that reads the sensor rather than an edge event.
+  - Rolling frames (`Last 24 hours`/`7 days`/`30 days`/`365 days`) are unaffected — they never reset to a disjoint window, so their real edges always fire.
+
 ## [0.2.0]
 
 ### Added
