@@ -307,20 +307,47 @@ async def test_dominant_edge_fires_in_settled_calendar_window(
     hass: HomeAssistant, all_states_coord
 ) -> None:
     """Anti-over-suppression: a genuine dominant flip in a SETTLED window (age ≥
-    DOMINANT_SETTLE, e.g. a mid-afternoon cross) must still fire. Proves the
-    age gate does not swallow real edges away from the boundary.
+    DOMINANT_SETTLE) with an UNCHANGED window_start (same period, e.g. a
+    mid-afternoon cross) must still fire. Proves neither guard — age nor
+    window-identity — swallows a real same-window edge away from the boundary.
     """
     events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
+    ws = "2026-11-27T00:00:00+00:00"
     all_states_coord._fire_frame_edges(
         "today",
-        _frame(dominant="a"),
-        _frame(dominant="b", pct={"b": 60.0}),
+        _frame(dominant="a", window_start=ws),
+        _frame(dominant="b", pct={"b": 60.0}, window_start=ws),
         window_settled=True,
     )
     await hass.async_block_till_done()
     assert len(events) == 1
     assert events[0].data["dominant"] == "b"
     assert events[0].data["previous_dominant"] == "a"
+
+
+async def test_no_dominant_edge_on_closed_frame_roll(
+    hass: HomeAssistant, all_states_coord
+) -> None:
+    """A CLOSED calendar frame (yesterday/last_week/last_month) rolls to a new
+    COMPLETE period whose window is already old (settled), but prior and result
+    describe DISJOINT periods — their dominants are unrelated, so comparing them
+    must not fire. prior = the previous `yesterday` (dominant=off), result = the
+    new `yesterday` one day later (dominant=on), DIFFERENT window_start, and
+    window_settled=True (a day-old window is well past DOMINANT_SETTLE). The
+    age gate alone would let this through (settled) — the window-identity guard
+    must suppress it. Guards against the closed-frame disjoint-window phantom.
+    """
+    events = async_capture_events(hass, EVENT_DOMINANT_CHANGED)
+    all_states_coord._fire_frame_edges(
+        "yesterday",
+        _frame(dominant="off", window_start="2026-11-25T00:00:00+00:00"),
+        _frame(
+            dominant="on", pct={"on": 100.0}, window_start="2026-11-26T00:00:00+00:00"
+        ),
+        window_settled=True,
+    )
+    await hass.async_block_till_done()
+    assert events == []
 
 
 async def test_rolling_frame_edge_fires_despite_unsettled_flag(

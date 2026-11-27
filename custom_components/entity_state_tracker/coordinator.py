@@ -511,41 +511,52 @@ class EntityStateTrackerCoordinator(DataUpdateCoordinator[TrackerData]):
         so no edge exists yet; suppress. This prevents a spurious edge on startup
         and when a new frame comes online.
 
-        Invariant D (window-age gate): suppress every edge on a calendar frame
-        until its window has aged at least ``DOMINANT_SETTLE`` past its own reset.
-        A calendar frame rolls its lower bound at a local boundary — ``today`` at
-        midnight, ``week`` at Monday, ``month`` at the 1st, ``year`` at Jan 1 — and
-        for the first poll(s) after that reset the window is only seconds wide, so
-        whatever state the entity happens to sit in at the boundary trivially
-        "dominates" a near-empty window. That is the first sample, not a real
-        day/week dominant: hysteresis cannot damp it (its margin is a percent of a
-        tiny ``window_seconds``), and which state leads is decided by sub-second
-        refresh-vs-transition timing — non-deterministic, i.e. an artifact. If the
-        reset tick captures a transient loser (e.g. a camera briefly ``off`` at
-        00:00 after a wifi blip) and the true leader overtakes a tick later, the
-        later edge would fire a phantom ``dominant_changed``/compliance flip for an
-        entity whose real state never meaningfully changed. ``window_settled`` is
-        ``(now - start_utc) >= DOMINANT_SETTLE`` computed at the call site from the
-        frame's aware-UTC bounds, so the gate is per-frame-relative (each frame's
-        own first ``DOMINANT_SETTLE`` after ITS reset) and tz-agnostic — it holds
-        in DST months where local midnight is not 00:00Z. It subsumes the older
-        single-reset-tick guard: the reset tick always has age ≈ 0 < settle, and so
-        does every same-window tick inside the settle period that the single-tick
-        guard used to miss. Rolling frames (``24h``/``7d``/``30d``/``365d``) never
-        enter this branch — their start slides every tick but never resets to a
-        disjoint window, so their dominant is continuous and real flips must fire.
+        Invariant D (calendar-frame edge guard): suppress a calendar-frame edge
+        when EITHER (a) the frame's window has not yet aged ``DOMINANT_SETTLE`` past
+        its own reset, OR (b) ``prior`` and ``result`` describe DIFFERENT windows
+        (``window_start`` moved). The two cover distinct phantom modes and are both
+        required — neither subsumes the other:
 
-        Tradeoff: a GENUINE dominant/compliance flip that lands within the first
-        ``DOMINANT_SETTLE`` of a fresh window is delayed until the next tick (once
-        the window has aged past settle, if still crossed) or suppressed entirely
-        if it was only a startup transient. That is the correct bias — a window's
-        dominant is not meaningful seconds after it opens — and the exposure is one
-        settle period at each calendar boundary only.
+        (a) FRESH-WINDOW NOISE (open frames: ``today``/``week``/``month``/``year``).
+        A frame rolls its lower bound at a local boundary — ``today`` at midnight,
+        ``week`` at Monday, ``month`` at the 1st, ``year`` at Jan 1 — and for the
+        first poll(s) after that reset the window is only seconds wide, so whatever
+        state the entity sits in at the boundary trivially "dominates" a near-empty
+        window. That is the first sample, not a real dominant: hysteresis cannot
+        damp it (its margin is a percent of a tiny ``window_seconds``), and which
+        state leads is decided by sub-second refresh-vs-transition timing —
+        non-deterministic. If the reset tick captures a transient loser (e.g. a
+        camera briefly ``off`` at 00:00 after a wifi blip) and the true leader
+        overtakes a LATER same-window tick, that later edge (same ``window_start``,
+        so (b) alone would miss it) would fire a phantom. ``window_settled`` is
+        ``(now - start_utc) >= DOMINANT_SETTLE`` from the call site's aware-UTC
+        bounds — per-frame-relative (each frame's own first ``DOMINANT_SETTLE``
+        after ITS reset) and tz-agnostic (holds when local midnight is not 00:00Z).
+
+        (b) DISJOINT-WINDOW ROLL (closed frames: ``yesterday``/``last_week``/
+        ``last_month`` — and the reset tick of open frames too). A closed frame's
+        freshly-rolled window is a COMPLETE, OLD period (age ≫ settle, so (a) alone
+        passes it through), but ``prior`` describes the PREVIOUS period and
+        ``result`` the new one — disjoint windows whose dominants are unrelated.
+        Comparing them (e.g. ``yesterday`` rolling from a day whose dominant was
+        ``off`` to one whose dominant was ``on``) would fire a phantom
+        ``dominant_changed``/compliance flip for an entity that never changed state.
+        The ``window_start`` delta catches this for every calendar frame at its
+        roll. Rolling frames (``24h``/``7d``/``30d``/``365d``) never enter this
+        branch — their start slides every tick but never resets to a disjoint
+        window, so their dominant is continuous and real flips must fire.
+
+        Tradeoff (mode (a) only): a GENUINE flip within the first ``DOMINANT_SETTLE``
+        of a fresh open-frame window is delayed until the next tick (once aged past
+        settle, if still crossed) or suppressed if it was a startup transient — the
+        correct bias, a window's dominant is not meaningful seconds after it opens.
         """
         if prior is None:
             return
 
-        if frame_key in _CALENDAR_EDGE_FRAMES and not window_settled:
+        if frame_key in _CALENDAR_EDGE_FRAMES and (
+            not window_settled or prior.window_start != result.window_start
+        ):
             return
 
         # Invariant B: dominant edge only between two real state names. ``dominant``
