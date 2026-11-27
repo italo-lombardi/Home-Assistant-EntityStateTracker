@@ -434,17 +434,17 @@ def compute_frame(
     recent portion arrives via ``recent_blocks``. The seam between them is
     ``ledger_upper_local_day`` — the local day at which the recorder takes over.
 
-    * **Calendar frames** (``today``/``yesterday``/``30d``/``last_week``/
+    * **Calendar frames** (``today``/``yesterday``/``week``/``last_week``/
       ``month``/``last_month``/``year``) start on a local midnight, so their
       windows are whole local days and the seam defaults to ``end_utc``'s local
       day: an OPEN frame (``today``/``week``/``month``/``year``) ends at ``now``
       so that seam is today — the ledger owns every closed day and the recorder
-      recomputes the open day; ``yesterday``/``30d`` close AT today's midnight so
-      their seam is today too, and only ``last_week``/``last_month`` close on an
+      recomputes the open day; ``yesterday`` closes AT today's midnight so
+      its seam is today too, and only ``last_week``/``last_month`` close on an
       EARLIER local midnight, so the ledger owns only days below THAT midnight and
       never the days after the window closed (the ``last_week`` over-count this
       seam closes).
-    * **Rolling frames** (``24h``/``7d``) start MID-DAY. The caller anchors the
+    * **Rolling frames** (``24h``/``7d``/``30d``/``365d``) start MID-DAY. The caller anchors the
       recorder query at ``recorder_floor`` and passes that day here as
       ``ledger_upper_local_day``, so the ledger fills only WHOLE days strictly
       below it — the oldest partial day is counted at its real recorder seconds,
@@ -482,7 +482,7 @@ def compute_frame(
     # The ledger owns closed local days strictly below the point the recorder
     # (recent_blocks) takes over. That seam is end_utc's local day, NOT today:
     # an OPEN frame ends at now (seam == today, recorder owns the open day), and
-    # yesterday/30d close AT today's midnight (seam still today), but last_week/
+    # yesterday closes AT today's midnight (seam still today), but last_week/
     # last_month close on an EARLIER local midnight — defaulting the seam to today
     # would sum ledger days AFTER the window closed (the last_week 142.9%
     # over-count). Rolling frames still pass an explicit ledger_upper_local_day
