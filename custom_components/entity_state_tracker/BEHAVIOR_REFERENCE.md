@@ -93,12 +93,26 @@ trigger's top level.
 frame's `breakdown_pct`. `new_state` carries no `frame` — it is entity-level, not
 per-frame — so its trigger exposes only the tracker scope, not a frame scope.
 
+> **The three per-frame edges fire only for OPEN and ROLLING frames.** Closed
+> calendar frames (`yesterday`, `last_week`, `last_month`) never emit
+> `dominant_changed`/`compliant_on`/`compliant_off` (see §6 — their verdict is a
+> fixed historical fact, so the roll is not a real change). Scoping a per-frame
+> trigger to one of them produces an automation that **never fires**, and — unlike
+> an invalid tracker scope — the `frame` value is not validated, so you get no
+> error, just silence.
+
 **Scoping.** Every trigger accepts an optional `config_entry_id` to limit it to
 one tracker; the three per-frame triggers additionally accept a `frame` to limit
-them to one window. Both blank means fire for any entry / any frame. A
-`config_entry_id` that does not resolve to one of this integration's entries is
-**rejected at validation time** (a hard error), not silently dead — a dead scope
-gives the user no feedback otherwise.
+them to one window. Both blank means fire for **any** entry and **any** frame —
+so a blank-scope consumer fans out across every tracker and every enabled frame:
+the events it receives per poll scale as *(number of trackers × enabled frames
+per tracker)*. (A real deployment does exactly this — one catch-all automation
+relaying all events; keep that in mind before attaching heavy actions.) The
+`config_entry_id` scope option is the same identifier the payload reports as
+`entry_id` — two names for one ID. A `config_entry_id` that does not resolve to
+one of this integration's entries is **rejected at validation time** (a hard
+error), not silently dead; the `frame` scope, by contrast, is an unvalidated
+free string (hence the closed-frame trap above).
 
 > **Named triggers expose the payload at the top level.** Consumed as a named
 > trigger, the fields are `trigger.dominant`, `trigger.frame`, `trigger.state`,
@@ -145,7 +159,8 @@ rename them freely — history survives via the registry.
 ### All-states mode — per enabled frame
 
 - **Breakdown sensor**. State = the frame's **dominant** state (the
-  max-duration state, with hysteresis applied — see §5). Never `None` once data
+  max-duration state, with hysteresis applied — see §4 (R10); persisted across
+  restart in §5). Never `None` once data
   exists, and never the synthetic value `"unaccounted"`. There is no single
   percent, compliance, or duration sensor in all-states mode.
 
@@ -206,7 +221,7 @@ The **breakdown sensor** carries: `source_entity`, `frame`, and
 `avg_duration_seconds` — all keyed by the **real** recorded state names
 (identity, never folded, because the fold is many-to-one), sorted by seconds
 descending. `breakdown_pct` additionally carries an appended `"unaccounted"` key
-so a template summing it reaches ~100.00; that key has no `breakdown_seconds`
+so a template summing it reaches exactly 100.00 (see §4); that key has no `breakdown_seconds`
 entry and so is not in the sort. It also carries `previous_state`,
 `last_entered`, `last_exited`, `window_seconds`, `data_start`,
 `window_coverage`, `has_gap`, `unaccounted_seconds`, and `breakdown_labels` when
@@ -361,7 +376,10 @@ reports no `data_start`, coverage 1.0, and no gap.
 **Dominant and its hysteresis (R10).** The dominant is the max-seconds state,
 but it only flips **away** from the previous dominant when the new leader beats
 it by more than **1.0% of the window**. Near-ties therefore keep the incumbent
-and don't flap tick to tick. The dominant is picked only from real states (never
+and don't flap tick to tick. The 1.0% gate applies only while the previous
+dominant is still present in the window; if it has aged out entirely (zero
+seconds this window), the new leader takes over immediately with no gate. The
+dominant is picked only from real states (never
 the unaccounted remainder). This hysteresis lives in the frame math, so by the
 time an edge reaches the trigger emitter it is already debounced — no second
 debounce is applied there.
@@ -401,7 +419,8 @@ dropped.
 Once per enabled frame per tick, after that frame is computed, the coordinator
 decides whether to fire `dominant_changed` and/or a compliance edge. It compares
 this tick's result against the previous tick's result for the same frame, and
-runs four guards in order.
+runs four guards — labelled A/B/C/D below for reference, but executed in the
+order A, D, B, C (the A and D gates run first and can short-circuit before B/C).
 
 **Invariant A — no prior, no edge.** If there is no previous result for the
 frame, return without firing. The previous result is absent on the very first
@@ -410,7 +429,7 @@ startup edge and an edge the moment a new frame comes online. (This is the guard
 that, together with the restart re-seed in §5, makes a cross-restart near-tie
 flip not happen at all rather than fire.)
 
-**Invariant D — the calendar-frame guard (the 0.2.1 fix).** For a **calendar**
+**Invariant D — the calendar-frame guard.** For a **calendar**
 frame only, suppress the edge when **either**:
 
 - **(a) the window has not yet aged past the settle period** (`window_settled`
@@ -483,7 +502,9 @@ both a `dominant_changed` and a `compliant_on`/`compliant_off`.
 transition path, only in all-states mode, and only the first time a state name is
 seen this session. The "seen" set is seeded from the ledger at startup so an
 already-recorded state never re-announces, but it is **per-session, not
-persisted** — so a restart may re-announce a long-dormant state. The set is
+persisted** — so a restart may re-announce a long-dormant state. A notification
+automation built off `new_state` will therefore re-fire for a state it already
+announced before the restart; dedupe in the automation if that is unwanted. The set is
 capped at 10,000 distinct states; past the cap, new-state tracking and
 announcing stop and a single warning is logged. The event fires the bus event
 only — it deliberately raises no persistent notification; build one in an
@@ -581,7 +602,7 @@ explicitly without a storage-version bump.
 
 ## 9. When something goes wrong
 
-Two runtime degradations surface to the user instead of failing silently.
+Three runtime degradations surface to the user instead of failing silently.
 
 **A single frame's compute error is isolated.** Each enabled frame is computed
 independently; if one frame's compute raises a data anomaly
@@ -593,9 +614,17 @@ tracker's `last_update_success` to false and stranding **every** sensor. A
 persistent failure must still surface: after **10 consecutive failures** (~10
 minutes at the one-minute poll) a Repair issue (`frame_compute_failed`, severity
 ERROR, naming the entity and the frame) is raised. It clears automatically on the
-next successful compute of that frame, or when the frame is disabled. (A
-programming error of any other kind is not swallowed — it propagates and fails
-the tick visibly.)
+next successful compute of that frame, or when the frame is disabled.
+
+**Any other error strands the whole tracker.** The per-frame isolation above
+catches only the three data-anomaly types. Any *other* exception — raised in a
+frame compute, or anywhere else in the poll (ledger load, recorder prep, edge
+firing) — escapes the update, so `last_update_success` goes false and **every**
+sensor and binary sensor for that tracker goes `unavailable` until the next
+successful poll (≤60 s later). It self-recovers on the next good tick and raises
+**no** Repair issue, so it surfaces only as all-entities-unavailable plus an
+error in the log — transient by design (a genuine programming bug is not
+swallowed into a stale value).
 
 **The recorder is required for accurate history.** This integration reconstructs
 time-in-state from Home Assistant's recorder. If the recorder is disabled or
